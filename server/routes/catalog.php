@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/routes/catalog.php — API: cargos, jornadas, feriados, unidades e QR Codes
 declare(strict_types=1);
 
 // Cadastros de apoio: cargos e permissoes, jornadas e escalas, feriados, unidades e QR Codes.
