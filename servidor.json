@@ -1,0 +1,4 @@
+{
+  "_comentario": "Endereço ATUAL do servidor REOBOTE. O aplicativo (APK) lê este arquivo toda vez que abre. Quando o túnel de testes for religado e o endereço mudar, troque o valor de 'servidor' aqui (pode ser direto no site do GitHub). Deixe vazio para o app usar o endereço de app/js/config.js.",
+  "servidor": "https://hear-lincoln-travis-alternatives.trycloudflare.com"
+}
