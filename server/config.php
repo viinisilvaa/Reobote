@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/config.php — Servidor: configuração, banco de dados e validações
 declare(strict_types=1);
 
 // Configuracao, conexao com o banco e utilitarios compartilhados pela API e pelos scripts de terminal.
