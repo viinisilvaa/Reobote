@@ -1,3 +1,4 @@
+// REOBOTE | aplicativo-android/scripts/preparar-www.mjs — APK: copia o aplicativo para o APK e embute o servidor
 /**
  * Prepara a pasta "www", que é o conteúdo colocado dentro do APK.
  *
