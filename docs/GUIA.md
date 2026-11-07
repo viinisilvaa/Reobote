@@ -1,3 +1,4 @@
+<!-- REOBOTE | docs/GUIA.md — Guia completo: instalação, mapa, APK, regras e API -->
 # Guia completo do REOBOTE
 
 Instalação, configuração do mapa, geração do APK, regras de jornada, segurança e rotas da API. Para a visão geral do projeto, veja o [README](../README.md).
