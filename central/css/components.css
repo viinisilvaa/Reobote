@@ -274,6 +274,27 @@ html[data-theme="dark"] .app-dialog { border-color: var(--dark-border); backgrou
 html[data-theme="dark"] .app-dialog .dialog-heading h2 { color: var(--dark-text); }
 html[data-theme="dark"] .app-dialog :is(.text-control) { border-color: var(--dark-border); background: #1b1626; color: var(--dark-text); }
 html[data-theme="dark"] .app-dialog :is(.clear, .button-secondary, .icon-button) { border-color: var(--dark-border); background: var(--dark-raised); color: #e4d8ff; }
+/* Tema escuro nas janelas (cadastros): nomes dos campos claros e textos de ajuda legíveis.
+   As janelas abrem fora da área principal, por isso precisam das próprias regras. */
+html[data-theme="dark"] .app-dialog :is(.field, .field > span, label, legend, .checkbox-line, .dialog-message) { color: var(--dark-text); }
+html[data-theme="dark"] .app-dialog :is(.dialog-heading p, .form-hint, .panel-description, .helper-text, small) { color: var(--dark-muted); }
+html[data-theme="dark"] .app-dialog .text-control::placeholder { color: #9d93b5; opacity: 1; }
+html[data-theme="dark"] .app-dialog select.text-control option { background: #1b1626; color: var(--dark-text); }
+/* Tema escuro nos cartões de números (Jornadas, Colaboradores, Unidades, Relatórios...). */
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .stat-card:hover { border-color: var(--dark-border); background: var(--dark-surface); }
+html[data-theme="dark"] .stat-card:hover { border-color: #7d62c4; }
+html[data-theme="dark"] .stat-copy strong { color: var(--dark-text); }
+html[data-theme="dark"] .stat-copy :is(span, small) { color: var(--dark-muted); }
+html[data-theme="dark"] .stat-copy em { color: #cbb6ff; }
+html[data-theme="dark"] .holiday-date { color: #cbb6ff; }
+/* Tema escuro: nomes de pessoas em tabelas (Relatórios e outras) e números do perfil do colaborador. */
+html[data-theme="dark"] .person-cell strong { color: var(--dark-text); }
+html[data-theme="dark"] .person-cell small { color: var(--dark-muted); }
+html[data-theme="dark"] [data-page="profile"] .profile-stat { border-color: var(--dark-border); background: var(--dark-surface); }
+html[data-theme="dark"] [data-page="profile"] .profile-stat span { color: var(--dark-muted); }
+html[data-theme="dark"] [data-page="profile"] .profile-stat strong { color: var(--dark-text); }
+html[data-theme="dark"] [data-page="profile"] .profile-day-summary span { background: var(--dark-raised); color: var(--dark-muted); }
 html[data-theme="dark"] .avatar, html[data-theme="dark"] .person-avatar { background: #3a2b59; color: #e4d8ff; }
 html[data-theme="dark"] .qr-card-image { background: #fff; }
 html[data-theme="dark"] a.person-cell:hover strong { color: #d3b7ff; }
