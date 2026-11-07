@@ -42,7 +42,11 @@ route('GET', '/api/dashboard', static function (PDO $db): void {
     $tz = reobote_timezone();
     $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
     $today = $now->setTimezone($tz)->format('Y-m-d');
-    $period = in_array((int) ($_GET['period'] ?? 7), [7, 30, 90], true) ? (int) $_GET['period'] : 7;
+    // Período do gráfico em dias: só 7, 30 ou 90; qualquer outro valor (ou nenhum) vira 7.
+    $period = (int) ($_GET['period'] ?? 7);
+    if (!in_array($period, [7, 30, 90], true)) {
+        $period = 7;
+    }
     $from = $now->setTimezone($tz)->modify('-' . ($period - 1) . ' days')->format('Y-m-d');
 
     $employees = api_active_employees($db);
