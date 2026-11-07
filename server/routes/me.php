@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/routes/me.php — API do aplicativo: dia atual, registros, histórico e localização
 declare(strict_types=1);
 
 // Rotas do aplicativo do colaborador: situacao do dia, envio de registros (inclusive offline) e historico proprio.
