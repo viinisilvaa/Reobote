@@ -1,3 +1,4 @@
+/* REOBOTE | central/css/perfil-colaborador.css — Central: estilos do perfil do colaborador */
 /* Perfil individual, historico de ponto e compartilhamento autorizado. */
 [data-page="profile"] .dashboard { display:block; padding:28px 30px 18px 42px; }
 [data-page="profile"] .employee-profile { display:flex; flex-direction:column; gap:13px; }
