@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/router.php — Servidor: roteador para testes locais (php -S)
 declare(strict_types=1);
 
 // Roteador do servidor embutido do PHP (php -S 127.0.0.1:3000 server/router.php).
