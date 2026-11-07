@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/lib/auth.php — Servidor: login, sessão, perfis e permissões
 declare(strict_types=1);
 
 // Sessao, conta autenticada e permissoes configuraveis por cargo.
