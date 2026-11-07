@@ -1,3 +1,4 @@
+// REOBOTE | central/js/ajuda.js — Central: perguntas frequentes com busca
 // Ajuda: perguntas frequentes pesquisáveis e contato da administração.
 window.ReobotePage = {
   // Monta a página dentro de "root"; R são os utilitários da Central (app-core.js).
