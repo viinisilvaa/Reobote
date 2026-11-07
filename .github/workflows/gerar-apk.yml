@@ -1,3 +1,4 @@
+# REOBOTE | .github/workflows/gerar-apk.yml — Automação do GitHub que gera o APK Android e publica em Releases
 # Gera o APK do aplicativo REOBOTE na nuvem do GitHub (gratuito para repositórios).
 #
 # Quando roda:
