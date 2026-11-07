@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/lib/records.php — Servidor: registro de ponto, leitura de QR Code e fotos
 declare(strict_types=1);
 
 // Consultas e gravacoes compartilhadas entre as rotas: cadastro de colaboradores e registros de jornada.
