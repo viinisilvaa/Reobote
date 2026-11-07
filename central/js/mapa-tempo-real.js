@@ -176,6 +176,10 @@ window.ReobotePage = {
 
     // Carrega o Google Maps uma única vez com a chave configurada no servidor.
     function loadGoogleMaps(key) {
+      // O Google chama esta função quando recusa a chave (inválida, sem faturamento ou site não autorizado).
+      // Trocamos a tela genérica "Ops! Algo deu errado" por instruções em português.
+      window.gm_authFailure = () => notice("Chave do Google Maps recusada",
+        "O Google recusou a chave configurada. Confira no Google Cloud: 1) a Maps JavaScript API está ativada; 2) o faturamento do projeto está ativo; 3) o endereço deste site está liberado nas restrições da chave.", true);
       if (window.google?.maps) return Promise.resolve(window.google);
       return new Promise((resolve, reject) => {
         window.reoboteGoogleMapsReady = () => resolve(window.google);
