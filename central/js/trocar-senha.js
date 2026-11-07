@@ -1,3 +1,4 @@
+// REOBOTE | central/js/trocar-senha.js — Central: troca da senha temporária
 // Troca obrigatória da senha temporária e retorno para a área de origem.
 (function () {
   const api = window.ReoboteApi;
