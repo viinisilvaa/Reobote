@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/create-user.php — Servidor: cria o primeiro administrador pelo terminal
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
