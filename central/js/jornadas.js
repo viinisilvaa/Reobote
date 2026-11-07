@@ -1,3 +1,4 @@
+// REOBOTE | central/js/jornadas.js — Central: jornadas, escalas 12x36, tolerância e feriados
 // Jornadas e escalas: horários, intervalo de almoço, dias de trabalho, escalas 12x36, tolerância, horas extras e feriados.
 window.ReobotePage = {
   // Monta a página de jornadas e feriados dentro de "root"; R são os utilitários da Central (app-core.js).
