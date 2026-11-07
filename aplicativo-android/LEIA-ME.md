@@ -1,3 +1,4 @@
+<!-- REOBOTE | aplicativo-android/LEIA-ME.md — Explica a configuração do projeto Android (Capacitor) -->
 # aplicativo-android
 
 Esta pasta transforma o aplicativo web (pasta `../app`) num **APK Android** usando o [Capacitor](https://capacitorjs.com). O APK é gerado automaticamente pelo GitHub Actions (`.github/workflows/gerar-apk.yml`). Veja o passo a passo no README principal, seção "Aplicativo Android (APK)".
