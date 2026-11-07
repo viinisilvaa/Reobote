@@ -1,14 +1,17 @@
 // REOBOTE | app/js/config.js — Aplicativo: endereço do servidor embutido no APK
-// Configuração do aplicativo REOBOTE.
+// Configuração do aplicativo REOBOTE (só vale no APK; no navegador o app usa o próprio site).
 //
-// "servidor": endereço da Central que o APK usa.
-// - Agora (testes): o computador com o XAMPP na rede Wi-Fi, http://192.168.1.2:3000.
-//   O servidor precisa estar ligado com:  C:\xampp\php\php.exe -S 0.0.0.0:3000 server\router.php
-// - Em produção: troque pelo endereço da hospedagem (ex.: "https://reobote.com.br"), ou crie a
-//   variável SERVIDOR_APP no GitHub (Settings > Secrets and variables > Actions > Variables),
-//   que tem prioridade sobre este arquivo na geração do APK.
-// - Na versão web (navegador) este valor é ignorado: o app usa o próprio site.
-// - No celular, o endereço pode ser trocado tocando 5 vezes no logotipo da tela de login.
+// "descoberta": arquivo no GitHub com o endereço ATUAL do servidor (servidor.json, na raiz do
+//   repositório). O app lê esse arquivo toda vez que abre. Assim, quando o endereço muda (ex.: o túnel
+//   de testes foi religado), basta atualizar o servidor.json no GitHub, sem gerar outro APK.
+//
+// "servidor": endereço usado quando o servidor.json estiver vazio ou sem internet para lê-lo.
+//   Hoje: o computador com o XAMPP na rede Wi-Fi (http://192.168.1.2:3000).
+//   Em produção: o endereço da hospedagem (ex.: "https://reobote.com.br"), ou a variável SERVIDOR_APP
+//   no GitHub (Settings > Secrets and variables > Actions > Variables), que tem prioridade na geração do APK.
+//
+// No celular, o endereço também pode ser trocado tocando 5 vezes no logotipo da tela de login.
 window.REOBOTE_CONFIG = {
+  descoberta: "https://raw.githubusercontent.com/viinisilvaa/Reobote/main/servidor.json",
   servidor: "http://192.168.1.2:3000"
 };
