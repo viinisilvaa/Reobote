@@ -1,3 +1,4 @@
+/* REOBOTE | central/css/notificacoes.css — Central: estilos da página Notificações */
 /* Lista de avisos e sinalização visual dos itens já lidos. */
 [data-page="notifications"] .notification-list { display: flex; flex-direction: column; }
 [data-page="notifications"] .notification-card { min-height: 78px; padding: 12px 2px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #e5e8f1; }
