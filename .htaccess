@@ -1,3 +1,4 @@
+# REOBOTE | .htaccess — Apache em produção: rotas, HTTPS e cabeçalhos de segurança
 Options -Indexes
 # A Central fica em /central/ e o aplicativo do colaborador em /app/.
 DirectoryIndex index.html entrar.html
