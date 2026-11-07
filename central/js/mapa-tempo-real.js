@@ -1,3 +1,4 @@
+// REOBOTE | central/js/mapa-tempo-real.js — Central: mapa em tempo real com OpenStreetMap
 // Mapa em tempo real (OpenStreetMap, sem chave): unidades de atendimento, situação da equipe e localização autorizada pelos colaboradores.
 window.ReobotePage = {
   // Monta o mapa dentro de "root"; R são os utilitários da Central (app-core.js).
