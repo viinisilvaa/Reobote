@@ -1,3 +1,5 @@
+REOBOTE | downloads/LEIA-ME.txt — Pasta opcional para servir o APK pelo próprio servidor
+
 Pasta de downloads do REOBOTE
 
 Coloque aqui o arquivo reobote.apk (gerado pelo GitHub, em Releases) para que ele
