@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/api.php — Servidor: entrada da API (segurança, sessão e rotas)
 declare(strict_types=1);
 
 // Ponto de entrada da API REOBOTE: valida a origem, inicia a sessao e despacha a rota correspondente.
