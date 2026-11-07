@@ -1,3 +1,4 @@
+/* REOBOTE | central/css/ajuda.css — Central: estilos da página Ajuda */
 /* Organiza perguntas frequentes e contato de suporte em duas colunas. */
 [data-page="help"] .help-grid { grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr); align-items: start; }
 [data-page="help"] .faq-item[hidden] { display: none; }
