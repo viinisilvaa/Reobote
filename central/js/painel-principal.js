@@ -1,3 +1,4 @@
+// REOBOTE | central/js/painel-principal.js — Central: indicadores, gráfico e situação da equipe
 // Painel principal: indicadores do dia, presenças no período, situação da equipe e registros recentes.
 window.ReobotePage = {
   // Monta o painel dentro de "root"; R são os utilitários da Central (app-core.js).
