@@ -1,3 +1,4 @@
+// REOBOTE | app/js/config.js — Aplicativo: endereço do servidor embutido no APK
 // Configuração do aplicativo REOBOTE.
 //
 // "servidor": endereço da Central que o APK usa (ex.: "https://reobote.com.br").
