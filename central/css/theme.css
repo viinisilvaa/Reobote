@@ -1,0 +1,468 @@
+/* Controles e superfícies compartilhados em todas as telas. */
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #e0d9ef;
+  border-radius: 50%;
+  background: #fff;
+  color: #5423bd;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.theme-toggle:hover { background: #f4efff; }
+.theme-toggle:focus-visible { outline: 2px solid #8e6bd0; outline-offset: 2px; }
+.top-actions { gap: 12px; }
+
+/* Bloco de parceiros no rodapé do menu lateral. */
+.partners {
+  min-height: 207px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.partners-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.partners-heading i { font-size: 19px; }
+.partner-list { margin-top: 12px; }
+.partner-entry { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.partner-entry small { color: rgba(255,255,255,.82); font-size: 9px; }
+.partner-logo {
+  width: 132px;
+  height: 48px;
+  padding: 5px 10px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.7);
+  border-radius: 9px;
+  background: #fff;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.partner-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.partner-logo:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 9px rgba(0,0,0,.2);
+}
+
+.partner-logo:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.partner-divider { height: 1px; margin: 10px 0; background: rgba(255,255,255,.2); }
+
+/* Alterna superfícies, textos e controles sem mudar as cores semânticas de status. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  background: #171321;
+  color: #f3efff;
+  --dark-page: #171321;
+  --dark-surface: #211b2e;
+  --dark-raised: #2a2339;
+  --dark-border: #403650;
+  --dark-text: #f7f4ff;
+  --dark-muted: #d0c8df;
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] body[data-page="dashboard"] {
+  background: radial-gradient(ellipse at 68% 46%, rgba(80, 57, 123, .16), transparent 58%), var(--dark-page);
+  color: var(--dark-text);
+  font-size: 14px;
+}
+
+html[data-theme="dark"] .app,
+html[data-theme="dark"] body[data-page="dashboard"] .app,
+html[data-theme="dark"] .workspace,
+html[data-theme="dark"] .dashboard,
+html[data-theme="dark"] .primary-column,
+html[data-theme="dark"] .right-column {
+  background: transparent;
+}
+
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] body[data-page="dashboard"] .topbar {
+  background: rgba(33, 27, 46, .96);
+}
+
+html[data-theme="dark"] .welcome strong,
+html[data-theme="dark"] body[data-page="dashboard"] .welcome strong,
+html[data-theme="dark"] .page-heading h1,
+html[data-theme="dark"] .page-heading p,
+html[data-theme="dark"] .page-heading > i,
+html[data-theme="dark"] .app-dashboard :is(h1, h2, h3, p, label, th, td, small, .field, .panel-description, .toggle-row strong, .toggle-row small, .notification-copy strong, .notification-copy p, .notification-copy time, .read-label, .map-metric-copy, .profile-label) {
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] .welcome p,
+html[data-theme="dark"] body[data-page="dashboard"] .welcome p,
+html[data-theme="dark"] .app-dashboard :is(.muted, .helper-text, .updated, .map-metric-copy small) {
+  color: var(--dark-muted);
+}
+
+html[data-theme="dark"] .app-dashboard :is(.panel, .map-metric, .map-surface-card, .activity-panel, .map-panel, .schedule-panel, .notification-card, .settings-card, .help-card, .report-card, .employee-card, .profile-card, .table-wrap, .content-card, .card) {
+  border-color: var(--dark-border);
+  background: var(--dark-surface);
+  box-shadow: 0 5px 16px rgba(0,0,0,.18);
+}
+
+html[data-theme="dark"] body[data-page="dashboard"] .dashboard-metric,
+html[data-theme="dark"] body[data-page="dashboard"] .dashboard-card {
+  border-color: var(--dark-border);
+  background: var(--dark-surface);
+  color: var(--dark-text);
+  box-shadow: 0 5px 16px rgba(0,0,0,.18);
+}
+
+html[data-theme="dark"] body[data-page="dashboard"] :is(.metric-copy strong, .metric-copy > span, .dashboard-card-heading h2, .dashboard-team-member strong, .dashboard-activity strong, .dashboard-activity p, .chart-axis, .chart-labels, .dashboard-empty) {
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] body[data-page="dashboard"] .dashboard-preview-note {
+  color: var(--dark-muted);
+}
+
+html[data-theme="dark"] body[data-page="dashboard"] :is(.dashboard-period select, .dashboard-pill-link) {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+  color: #e4d8ff;
+}
+
+html[data-theme="dark"] .app-dashboard :is(.panel-heading, .activity-panel > h2, .map-panel > h2, .map-section-heading, .jobs-panel .panel-heading) {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] .app-dashboard :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea, .control, .text-control, .map-unit-select select, .map-status-select select) {
+  border-color: var(--dark-border);
+  background-color: #1b1626;
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] .app-dashboard :is(input, select, textarea)::placeholder {
+  color: #a79bbd;
+}
+
+html[data-theme="dark"] .app-dashboard :is(table, th, td, .notification-card, .toggle-row) {
+  border-color: var(--dark-border);
+}
+
+html[data-theme="dark"] .app-dashboard th {
+  background: var(--dark-raised);
+}
+
+html[data-theme="dark"] .app-dashboard :is(.search-control, .select-control) {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] body[data-page="jobs"] .app-dashboard :is(.permissions, .permissions strong, .permissions label, .job-row strong, .job-row span) {
+  color: var(--dark-text);
+}
+
+/* Tema escuro: ajustes específicos de cada página (colaboradores, relatórios, mapa, perfil). */
+html[data-theme="dark"] body[data-page="employees"] .app-dashboard :is(.data-table td, .person-cell strong, .person-cell small, .result-count),
+html[data-theme="dark"] body[data-page="notifications"] .app-dashboard .result-count {
+  color: var(--dark-muted);
+}
+
+html[data-theme="dark"] body[data-page="employees"] .status-pill.muted {
+  border: 1px solid #625b70;
+  background: #494355;
+  color: #f0ebfb;
+}
+
+html[data-theme="dark"] body[data-page="jobs"] .app-dashboard :is(.activity-name strong, .activity-name time, .activity-info p) {
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] body[data-page="jobs"] .app-dashboard .updated {
+  background: var(--dark-raised);
+  color: var(--dark-muted);
+}
+
+html[data-theme="dark"] body[data-page="reports"] .app-dashboard .stat-card {
+  border-color: var(--dark-border);
+  background: var(--dark-surface);
+}
+
+html[data-theme="dark"] body[data-page="reports"] .app-dashboard .stat-copy :is(small, em) {
+  color: var(--dark-muted);
+}
+
+html[data-theme="dark"] body[data-page="reports"] .app-dashboard .stat-copy strong {
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] body[data-page="dashboard"] .online-count {
+  color: var(--dark-muted);
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard .map-team-person {
+  border-color: var(--dark-border);
+  background: var(--dark-surface);
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard .map-team-person:is(:hover, .selected) {
+  border-color: #9c78e0;
+  background: #302644;
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard .map-team-copy :is(strong, small) {
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard .map-team-person > .fa-chevron-right {
+  color: #d3b7ff;
+}
+
+html[data-theme="dark"] body[data-page="map"] .map-live-canvas .map-tooltip :is(strong, span, small) {
+  color: #252239;
+}
+
+html[data-theme="dark"] body[data-page="map"] .map-panel .map-tooltip :is(strong, span, small) {
+  color: #252239;
+}
+
+html[data-theme="dark"] body[data-page="jobs"] .map .map-tooltip :is(strong, span, small) {
+  color: #252239;
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard :is(.map-detail-main > div > strong, .map-detail-fields strong, .map-summary-list, .map-summary-list strong) {
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard .map-summary-list > div {
+  color: var(--dark-muted);
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard .map-detail-actions a:not(:first-child) {
+  border-color: var(--dark-border);
+  color: #d3b7ff;
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard .map-detail-fields > div {
+  color: var(--dark-muted);
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard .map-detail-fields small {
+  color: var(--dark-muted);
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard .map-status-badge.online {
+  color: #0b6b3b;
+}
+
+html[data-theme="dark"] body[data-page="map"] .app-dashboard .map-sync-status.error {
+  color: #ff8291;
+}
+
+html[data-theme="dark"] body[data-page="profile"] .profile-back {
+  color: #d3b7ff;
+}
+
+html[data-theme="dark"] body[data-page="profile"] .profile-card :is(.profile-contact, .profile-stat span, .profile-job strong, .profile-job small, .profile-day h3, .profile-event, .profile-consent p, .profile-empty, .profile-message) {
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] body[data-page="profile"] .profile-card :is(.profile-job, .profile-day, .profile-event, .profile-consent, .profile-day-summary span) {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+}
+
+html[data-theme="dark"] body[data-page="profile"] .profile-card :is(.profile-status, .profile-day-summary .late, .profile-day-summary .overtime) {
+  border-color: transparent;
+}
+
+html[data-theme="dark"] body[data-page="profile"] .profile-status {
+  background: #1f5035;
+  color: #b8f5cd;
+}
+
+html[data-theme="dark"] body[data-page="profile"] .profile-status.paused,
+html[data-theme="dark"] body[data-page="profile"] .profile-day-summary .late {
+  background: #5b451a;
+  color: #ffe4a3;
+}
+
+html[data-theme="dark"] body[data-page="profile"] .profile-status.offline {
+  background: #5b2730;
+  color: #ffb5be;
+}
+
+html[data-theme="dark"] body[data-page="profile"] .profile-day-summary .overtime {
+  background: #1f5035;
+  color: #b8f5cd;
+}
+
+html[data-theme="dark"] body[data-page="profile"] .profile-location-status {
+  color: #77e5a5;
+}
+
+html[data-theme="dark"] body[data-page="reports"] .chart-value,
+html[data-theme="dark"] body[data-page="reports"] .chart-column small,
+html[data-theme="dark"] body[data-page="reports"] .chart-caption {
+  color: var(--dark-muted);
+}
+
+html[data-theme="dark"] .app-dashboard :is(.clear, .button-secondary, .small-button, .map-expand, .icon-button) {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+  color: #e4d8ff;
+}
+
+html[data-theme="dark"] .app-dashboard .job-row button {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+}
+
+html[data-theme="dark"] .app-dashboard .job-row .edit { color: #e4d8ff; }
+html[data-theme="dark"] .app-dashboard .job-row .delete { color: #ff8291; }
+
+html[data-theme="dark"] .app-dashboard :is(.clear:hover, .button-secondary:hover, .small-button:hover, .map-expand:hover, .icon-button:hover) {
+  background: #382d4c;
+}
+
+html[data-theme="dark"] .notification-button,
+html[data-theme="dark"] .logout {
+  color: #e4d8ff;
+}
+
+html[data-theme="dark"] .partners {
+  border-color: rgba(165, 117, 255, .4);
+  background: rgba(89, 39, 150, .2);
+}
+
+html[data-theme="dark"] .theme-toggle {
+  border-color: #514367;
+  background: #2a2339;
+  color: #f5cf68;
+}
+
+html[data-theme="dark"] .theme-toggle:hover { background: #382d4c; }
+html[data-theme="dark"] .login-card button.theme-toggle {
+  border-color: #514367;
+  background: #2a2339;
+  color: #f5cf68;
+}
+
+html[data-theme="dark"] .login-card button.theme-toggle:hover { background: #382d4c; }
+html[data-theme="dark"] .toast,
+html[data-theme="dark"] .dialog,
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] #dialog-root > * {
+  border-color: var(--dark-border);
+  background: var(--dark-surface);
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] .map-live-canvas {
+  border-color: var(--dark-border);
+}
+
+html[data-theme="dark"] .map-config-notice {
+  background: linear-gradient(135deg, #29213a, #1d1927);
+  color: #d3b7ff;
+}
+
+html[data-theme="dark"] .map-config-notice :is(strong, span) { color: var(--dark-text); }
+
+html[data-theme="dark"] body.login-page {
+  background: radial-gradient(ellipse at 68% 46%, rgba(105, 74, 164, .2), transparent 58%), var(--dark-page);
+}
+
+html[data-theme="dark"] .login-card {
+  border-color: var(--dark-border);
+  background: rgba(33, 27, 46, .96);
+  box-shadow: 0 12px 30px rgba(0,0,0,.28);
+}
+
+html[data-theme="dark"] .login-brand,
+html[data-theme="dark"] .login-card h1,
+html[data-theme="dark"] .login-card label {
+  color: var(--dark-text);
+}
+
+html[data-theme="dark"] .login-card > p { color: var(--dark-muted); }
+html[data-theme="dark"] .login-card input { border-color: var(--dark-border); background: #1b1626; color: var(--dark-text); }
+
+/* Textos secundários mantêm contraste e tamanho legível em qualquer página. */
+body .app-dashboard :is(p, label, th, td, small, time, .field, .permissions, .job-row, .activity-name, .activity-info, .notification-copy, .read-label, .updated, .map-metric-copy > span, .map-sync-status, .map-place, .map-config-notice > span, .google-map-info, .toggle-row, .panel-description, .profile-label, .stat-label, .empty-state, .helper-text, .toolbar) {
+  font-size: max(12px, 1em);
+  line-height: 1.45;
+}
+
+body .app-dashboard :is(.chart-value, .chart-caption, .chart-labels, .online-count, .dashboard-team-member, .dashboard-activity, .dashboard-news, .activity, .result-count, .map-status-badge, .status-pill, .profile-status, .profile-contact, .profile-stat span, .profile-job, .profile-day-summary, .profile-event, .profile-location-status, .profile-empty, .map-detail-actions a, .map-team-copy) {
+  font-size: max(12px, 1em);
+  line-height: 1.45;
+}
+
+body .app-dashboard :is(button, input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  font-size: max(13px, 1em);
+}
+
+html[data-theme="dark"] .navigation .nav-link {
+  font-size: 11px;
+}
+
+html[data-theme="dark"] .brand small,
+html[data-theme="dark"] .partner-entry small {
+  font-size: 10px;
+}
+
+html[data-theme="dark"] body.login-page .login-card :is(p, label, input) {
+  font-size: max(13px, 1em);
+  line-height: 1.45;
+}
+
+/* Botão de tema na tela de login. */
+.login-theme-toggle,
+.login-card button.theme-toggle {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  min-height: 34px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e0d9ef;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: none;
+  color: #5423bd;
+  font-size: 14px;
+}
+
+.login-card button.theme-toggle:hover { filter: none; background: #f4efff; }
+
+/* Celulares: botão de tema mais compacto. */
+@media (max-width: 700px) {
+  body[data-page="dashboard"] .partners { display: flex; }
+}
+
+/* Transição suave de cores ao trocar o tema (só se o sistema permitir animações). */
+@media (prefers-reduced-motion: no-preference) {
+  body, .app, .topbar, .panel, .map-metric, .map-surface-card, .login-card {
+    transition: background-color .18s ease, color .18s ease, border-color .18s ease;
+  }
+}

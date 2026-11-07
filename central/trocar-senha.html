@@ -1,0 +1,40 @@
+<!-- Criação da senha definitiva no primeiro acesso ou após uma senha temporária. -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#32115f">
+  <title>REOBOTE | Criar senha</title>
+  <link rel="icon" href="../compartilhado/assets/reobote-mark.png">
+  <link rel="stylesheet" href="css/design.css">
+  <link rel="stylesheet" href="css/entrar.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <button class="theme-toggle login-theme-toggle" type="button" data-theme-toggle aria-label="Ativar tema escuro" title="Ativar tema escuro" aria-pressed="false"></button>
+    <div class="login-brand" aria-label="REOBOTE"><img src="../compartilhado/assets/reobote-mark.png" alt=""><strong>REOBOTE</strong></div>
+    <h1>Crie sua senha</h1>
+    <p id="password-intro">Por segurança, troque a senha temporária por uma senha pessoal antes de continuar.</p>
+    <form id="password-form">
+      <input type="hidden" name="username" autocomplete="username">
+      <label for="current-password">Senha temporária ou atual</label>
+      <input id="current-password" name="currentPassword" type="password" autocomplete="current-password" required maxlength="256">
+      <label for="new-password">Nova senha</label>
+      <input id="new-password" name="newPassword" type="password" autocomplete="new-password" required minlength="10" maxlength="256">
+      <label for="confirm-password">Confirmar nova senha</label>
+      <input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" required minlength="10" maxlength="256">
+      <p class="login-info">Mínimo de 10 caracteres, com letras e números. Não use a mesma senha de outros serviços.</p>
+      <p class="login-error" id="password-error" role="alert" hidden></p>
+      <button type="submit">Salvar e continuar</button>
+    </form>
+    <button type="button" class="login-link" id="password-logout">Sair</button>
+  </main>
+  <script src="../compartilhado/js/theme.js"></script>
+  <script src="../compartilhado/js/api-client.js"></script>
+  <script src="js/trocar-senha.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+/* Acesso com as mesmas cores, cartões e realces do painel principal. */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background:
+    radial-gradient(ellipse at 68% 46%, rgba(210,216,255,.42), transparent 58%),
+    #f0f2ff;
+}
+
+/* Cartão central do login, com faixa colorida no topo. */
+.login-card {
+  position: relative;
+  width: min(100%, 410px);
+  padding: 34px;
+  overflow: hidden;
+  border: 1px solid rgba(224,225,247,.9);
+  border-radius: 18px;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 12px 30px rgba(69,51,135,.1);
+}
+
+.login-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, #6825c9, #18c85a);
+  content: "";
+}
+
+/* Logotipo e nome REOBOTE dentro do cartão. */
+.login-brand {
+  margin: 0 auto 27px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: #211347;
+  text-decoration: none;
+}
+
+.login-brand img {
+  width: 72px;
+  height: 66px;
+  object-fit: contain;
+}
+
+.login-brand strong { font-size: 20px; font-weight: 800; letter-spacing: .2px; }
+
+/* Título, campos e botão de entrar. */
+.login-card h1 { margin: 0; color: #211347; font-size: 22px; font-weight: 800; }
+.login-card > p { margin: 8px 0 22px; color: #70628e; font-size: 12px; line-height: 1.5; }
+.login-card form { display: flex; flex-direction: column; gap: 9px; }
+.login-card label { color: #30234f; font-size: 11px; font-weight: 700; }
+
+.login-card input {
+  height: 42px;
+  margin-bottom: 5px;
+  padding: 0 11px;
+  border: 1px solid #dcd7e9;
+  border-radius: 9px;
+  background: #fff;
+  color: #201b36;
+  font: inherit;
+}
+
+.login-card input:focus { outline: 2px solid rgba(89,41,194,.2); border-color: #7545ce; }
+
+.login-card button {
+  min-height: 42px;
+  margin-top: 5px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(100deg, #6e22d1, #7824d9);
+  box-shadow: 0 5px 16px rgba(89,41,194,.15);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Estados do botão: passar o mouse e desativado durante o envio. */
+.login-card button:hover { filter: brightness(1.05); }
+.login-card button:disabled { opacity: .7; cursor: wait; }
+
+/* Mensagem de erro do login (senha incorreta, conta bloqueada etc.). */
+.login-error { margin: 0; color: #b7233e; font-size: 11px; }
+
+@media (max-width: 430px) {
+  .login-page { padding: 16px; }
+  .login-card { padding: 28px 22px; }
+}

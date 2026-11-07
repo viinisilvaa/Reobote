@@ -1,0 +1,11 @@
+# Senhas e chaves do servidor: NUNCA enviar para o GitHub.
+server/.env
+# Fotos dos colaboradores (dados pessoais, LGPD) e outros arquivos enviados.
+server/storage/
+# Dependências do Composer, se um dia forem usadas (só na raiz; as pastas js/vendor do projeto DEVEM ir).
+/vendor/
+# APK gerado (baixe do GitHub e coloque aqui no servidor; não precisa ir para o repositório).
+downloads/*.apk
+# Arquivos do sistema e de editores.
+Thumbs.db
+.DS_Store

@@ -1,0 +1,46 @@
+<!-- Aplicativo REOBOTE do colaborador (pasta separada da Central): login, registro por QR Code, almoço, encerramento e histórico. -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#32115f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="REOBOTE">
+  <title>REOBOTE | Aplicativo</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+  <!-- Ícones guardados dentro do app para funcionar sem internet (também no APK). -->
+  <link rel="stylesheet" href="vendor/fontawesome/css/fontawesome.min.css">
+  <link rel="stylesheet" href="vendor/fontawesome/css/solid.min.css">
+</head>
+<body>
+  <div class="m-app" id="app">
+    <header class="m-header">
+      <div class="m-brand"><img src="../compartilhado/assets/reobote-mark.png" alt=""><div><strong>REOBOTE</strong><small>Tecnologia que conecta.</small></div></div>
+      <button type="button" class="m-sync" id="sync-status" aria-live="polite"><i class="fa-solid fa-circle"></i><span>...</span></button>
+      <button class="m-icon-button" type="button" data-theme-toggle aria-label="Ativar tema escuro"></button>
+    </header>
+
+    <main class="m-main" id="screen" tabindex="-1">
+      <p class="m-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</p>
+    </main>
+
+    <nav class="m-tabs" aria-label="Navegação do aplicativo">
+      <button type="button" data-tab="home" class="active"><i class="fa-solid fa-house"></i><span>Início</span></button>
+      <button type="button" data-tab="scan"><i class="fa-solid fa-qrcode"></i><span>Registrar</span></button>
+      <button type="button" data-tab="history"><i class="fa-solid fa-clock-rotate-left"></i><span>Histórico</span></button>
+      <button type="button" data-tab="account"><i class="fa-solid fa-user"></i><span>Conta</span></button>
+    </nav>
+  </div>
+  <div class="m-toast" id="toast" role="status" aria-live="polite"></div>
+  <div id="dialog-root"></div>
+  <script src="../compartilhado/js/theme.js"></script>
+  <script src="../compartilhado/js/api-client.js"></script>
+  <script src="js/vendor/jsQR.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!-- Acesso à Central REOBOTE e ao aplicativo dos colaboradores. -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#32115f">
+  <title>REOBOTE | Entrar</title>
+  <link rel="icon" href="../compartilhado/assets/reobote-mark.png">
+  <link rel="stylesheet" href="css/design.css">
+  <link rel="stylesheet" href="css/entrar.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <button class="theme-toggle login-theme-toggle" type="button" data-theme-toggle aria-label="Ativar tema escuro" title="Ativar tema escuro" aria-pressed="false"></button>
+    <div class="login-brand" aria-label="REOBOTE">
+      <img src="../compartilhado/assets/reobote-mark.png" alt="">
+      <strong>REOBOTE</strong>
+    </div>
+    <h1>Entrar na conta</h1>
+    <p>Central REOBOTE — painel administrativo. Use seu e-mail corporativo para entrar.</p>
+    <form id="login-form">
+      <label for="login-email">E-mail</label>
+      <input id="login-email" name="email" type="email" autocomplete="username" required maxlength="190">
+      <label for="login-password">Senha</label>
+      <input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="256">
+      <label class="login-remember"><input type="checkbox" name="remember" checked> Manter conectado neste aparelho</label>
+      <p class="login-error" id="login-error" role="alert" hidden></p>
+      <button type="submit">Entrar</button>
+    </form>
+    <button type="button" class="login-link" id="forgot-toggle">Esqueci minha senha</button>
+    <form id="forgot-form" class="login-forgot" hidden>
+      <label for="forgot-email">Informe seu e-mail para avisarmos a administração</label>
+      <input id="forgot-email" name="email" type="email" required maxlength="190" autocomplete="username">
+      <button type="submit">Pedir nova senha</button>
+      <p class="login-info" id="forgot-message" role="status" hidden></p>
+    </form>
+    <p class="login-info login-app-link">É colaborador de campo? <a href="/app/">Abra o aplicativo REOBOTE</a>.</p>
+  </main>
+  <script src="../compartilhado/js/theme.js"></script>
+  <script src="../compartilhado/js/api-client.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

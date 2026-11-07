@@ -1,0 +1,875 @@
+/* Identidade visual da referência aplicada somente ao painel principal. */
+body[data-page="dashboard"] {
+  background: #f0f2ff;
+}
+
+body[data-page="dashboard"] .app {
+  grid-template-columns: 188px minmax(0, 1fr);
+  background:
+    radial-gradient(ellipse at 68% 46%, rgba(210, 216, 255, .42), transparent 58%),
+    #f0f2ff;
+}
+
+/* Marca e navegação lateral em roxo profundo. */
+body[data-page="dashboard"] .sidebar {
+  padding: 18px 12px 14px;
+  background: linear-gradient(165deg, #28104f 0%, #32115f 56%, #271044 100%);
+}
+
+body[data-page="dashboard"] .brand {
+  min-height: 139px;
+  margin-bottom: 4px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+body[data-page="dashboard"] .brand::before {
+  width: 75px;
+  height: 70px;
+  margin: 0 0 1px;
+}
+
+body[data-page="dashboard"] .brand strong {
+  font-size: 20px;
+  letter-spacing: .2px;
+}
+
+body[data-page="dashboard"] .brand small {
+  margin-top: 3px;
+  font-size: 9px;
+}
+
+body[data-page="dashboard"] .navigation {
+  margin-left: 0;
+  gap: 7px;
+}
+
+body[data-page="dashboard"] .nav-link {
+  min-height: 43px;
+  padding: 0 10px;
+  gap: 11px;
+  border-radius: 11px;
+  font-size: 10px;
+}
+
+body[data-page="dashboard"] .nav-link > i {
+  width: 19px;
+  font-size: 17px;
+}
+
+body[data-page="dashboard"] .nav-link:first-child:not(.selected) {
+  background: transparent;
+}
+
+body[data-page="dashboard"] .nav-link.selected {
+  background: linear-gradient(100deg, #6e22d1, #7824d9);
+  box-shadow: 0 5px 16px rgba(13, 4, 41, .18);
+}
+
+body[data-page="dashboard"] .nav-link.selected::before {
+  left: -12px;
+  width: 5px;
+  border-radius: 0 6px 6px 0;
+  background: #18c64f;
+}
+
+/* Cabeçalho compacto com avatar de marca, boas-vindas e ações. */
+body[data-page="dashboard"] .topbar {
+  height: 98px;
+  padding: 0 34px 0 40px;
+  border-bottom-width: 4px;
+  background: rgba(255, 255, 255, .82);
+}
+
+body[data-page="dashboard"] .welcome {
+  gap: 16px;
+}
+
+body[data-page="dashboard"] .account-avatar {
+  width: 62px;
+  height: 62px;
+  border: 3px solid transparent;
+  background:
+    linear-gradient(#35105f, #35105f) padding-box,
+    linear-gradient(135deg, #18c85a 0%, #6124ba 62%, #ed4855 83%, #18c85a 100%) border-box;
+  box-shadow: 0 2px 6px rgba(46, 22, 94, .16);
+  font-size: 0;
+}
+
+body[data-page="dashboard"] .account-avatar::after {
+  width: 43px;
+  height: 38px;
+  background: var(--reobote-mark-image) center / contain no-repeat;
+  content: "";
+}
+
+body[data-page="dashboard"] .welcome strong {
+  color: #211347;
+  font-size: 18px;
+}
+
+body[data-page="dashboard"] .welcome p {
+  margin-top: 4px;
+  color: #70628e;
+  font-size: 12px;
+}
+
+body[data-page="dashboard"] .top-actions {
+  gap: 22px;
+}
+
+body[data-page="dashboard"] .notification-button {
+  color: #211347;
+  cursor: pointer;
+}
+
+body[data-page="dashboard"] .logout {
+  width: 38px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #211347;
+  font-size: 0;
+  cursor: pointer;
+}
+
+body[data-page="dashboard"] .logout i {
+  margin: 0;
+  font-size: 21px;
+}
+
+/* Espaçamento e grade dos cartões do painel. */
+body[data-page="dashboard"] .dashboard {
+  padding: 28px 30px 18px 42px;
+}
+
+body[data-page="dashboard"] .app-dashboard {
+  display: block;
+}
+
+body[data-page="dashboard"] .app-dashboard > * {
+  margin-bottom: 0;
+}
+
+body[data-page="dashboard"] .dashboard-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 29px;
+}
+
+/* Indicadores com ícones, tendências e ondas coloridas ao fundo. */
+body[data-page="dashboard"] .dashboard-metric {
+  position: relative;
+  min-width: 0;
+  min-height: 130px;
+  padding: 18px 18px 16px;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  column-gap: 13px;
+  overflow: hidden;
+  border: 1px solid rgba(224, 225, 247, .86);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .84);
+  box-shadow: 0 5px 13px rgba(69, 51, 135, .07);
+  color: #211347;
+  text-decoration: none;
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+
+body[data-page="dashboard"] .dashboard-metric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 20px rgba(69, 51, 135, .13);
+}
+
+body[data-page="dashboard"] .metric-icon {
+  z-index: 1;
+  width: 48px;
+  height: 48px;
+  grid-row: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #6825c9;
+  color: #fff;
+  font-size: 21px;
+}
+
+body[data-page="dashboard"] .metric-copy {
+  z-index: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+body[data-page="dashboard"] .metric-copy strong {
+  color: #201345;
+  font-size: clamp(20px, 2vw, 27px);
+  font-weight: 800;
+  letter-spacing: -.7px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+body[data-page="dashboard"] .metric-copy > span {
+  color: #51416f;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+body[data-page="dashboard"] .metric-trend {
+  z-index: 1;
+  grid-column: 1 / -1;
+  align-self: end;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+body[data-page="dashboard"] .dashboard-preview-note {
+  margin: 4px 0 0 41px;
+  color: #70628e;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+body[data-page="dashboard"] .dashboard-quick-actions {
+  margin: -14px 0 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+body[data-page="dashboard"] .dashboard-quick-actions > :is(a, button) {
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+body[data-page="dashboard"] .trend-positive { color: #11b85b; }
+body[data-page="dashboard"] .trend-negative { color: #f02d4b; }
+
+body[data-page="dashboard"] .metric-wave {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 47px;
+}
+
+body[data-page="dashboard"] .metric-wave path {
+  fill: rgba(133, 71, 235, .15);
+}
+
+body[data-page="dashboard"] .metric-presence .metric-icon { background: #09bd8d; }
+body[data-page="dashboard"] .metric-presence .metric-wave path { fill: rgba(16, 200, 145, .15); }
+body[data-page="dashboard"] .metric-absence .metric-icon { background: #f2264b; }
+body[data-page="dashboard"] .metric-absence .metric-wave path { fill: rgba(242, 38, 75, .13); }
+body[data-page="dashboard"] .metric-shift .metric-icon { background: #8744e7; }
+body[data-page="dashboard"] .metric-shift .metric-wave path { fill: rgba(133, 71, 235, .2); }
+
+/* Cartões de desempenho, equipe, atividades e notícias. */
+body[data-page="dashboard"] .dashboard-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.31fr) minmax(350px, .92fr);
+  grid-template-areas:
+    "performance team"
+    "activities news";
+  column-gap: 16px;
+  row-gap: 22px;
+}
+
+body[data-page="dashboard"] .dashboard-card {
+  min-width: 0;
+  padding: 17px 19px;
+  border: 1px solid rgba(224, 225, 247, .9);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, .87);
+  box-shadow: 0 5px 13px rgba(69, 51, 135, .07);
+}
+
+body[data-page="dashboard"] .performance-card { grid-area: performance; min-height: 226px; }
+body[data-page="dashboard"] .team-card { grid-area: team; min-height: 226px; }
+body[data-page="dashboard"] .activities-card { grid-area: activities; min-height: 197px; }
+body[data-page="dashboard"] .dashboard-news { min-height: 197px; }
+body[data-page="dashboard"] .activities-card { padding: 13px 19px 9px; }
+
+body[data-page="dashboard"] .dashboard-card-heading {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+body[data-page="dashboard"] .dashboard-card-heading h2 {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #211347;
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -.2px;
+}
+
+body[data-page="dashboard"] .dashboard-card-heading h2 > i {
+  color: #5720b9;
+  font-size: 18px;
+}
+
+body[data-page="dashboard"] .dashboard-period {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+body[data-page="dashboard"] .dashboard-period select {
+  min-height: 32px;
+  padding: 0 28px 0 12px;
+  appearance: none;
+  border: 0;
+  border-radius: 20px;
+  outline-color: #9c79e4;
+  background: #f1edfc;
+  color: #44346d;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+body[data-page="dashboard"] .dashboard-period > i {
+  position: absolute;
+  top: 11px;
+  right: 11px;
+  color: #4a347e;
+  font-size: 9px;
+  pointer-events: none;
+}
+
+/* Gráfico SVG com linhas, área preenchida, eixo e dias do período. */
+body[data-page="dashboard"] .dashboard-chart {
+  height: 149px;
+  margin-top: 7px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 21px;
+  column-gap: 7px;
+}
+
+body[data-page="dashboard"] .chart-axis {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0 0 1px;
+  color: #574878;
+  font-size: 10px;
+  text-align: right;
+}
+
+body[data-page="dashboard"] .dashboard-chart > svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  grid-column: 2;
+  grid-row: 1;
+}
+
+body[data-page="dashboard"] .chart-grid-lines line {
+  stroke: #e6e2f5;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+body[data-page="dashboard"] .chart-area {
+  fill: url("#dashboard-chart-fill");
+}
+
+body[data-page="dashboard"] .chart-line {
+  fill: none;
+  stroke: #6323cf;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+body[data-page="dashboard"] .chart-points circle {
+  fill: #6323cf;
+  stroke: #fff;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+body[data-page="dashboard"] .chart-labels {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 4px;
+  color: #433366;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Avatares e indicadores de presença da equipe conectada. */
+body[data-page="dashboard"] .online-count {
+  flex: 0 0 auto;
+  color: #332654;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+body[data-page="dashboard"] .online-count i {
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  display: inline-block;
+  border-radius: 50%;
+  background: #13c650;
+}
+
+body[data-page="dashboard"] .dashboard-team {
+  min-height: 100px;
+  padding: 13px 2px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 9px;
+}
+
+body[data-page="dashboard"] .dashboard-team-member {
+  text-decoration: none;
+}
+
+body[data-page="dashboard"] .dashboard-avatar {
+  position: relative;
+  width: clamp(48px, 5vw, 66px);
+  height: clamp(48px, 5vw, 66px);
+  display: block;
+  border: 2px solid #f1eff8;
+  border-radius: 50%;
+  background: #e7e0f6;
+  box-shadow: 0 2px 7px rgba(43, 26, 83, .14);
+}
+
+body[data-page="dashboard"] .dashboard-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+body[data-page="dashboard"] .dashboard-avatar > span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #5123a3;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+body[data-page="dashboard"] .dashboard-avatar > span[hidden] {
+  display: none;
+}
+
+body[data-page="dashboard"] .dashboard-avatar i {
+  position: absolute;
+  right: -2px;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #13c650;
+}
+
+body[data-page="dashboard"] .dashboard-avatar i.offline {
+  background: #9da2b0;
+}
+
+body[data-page="dashboard"] .dashboard-pill-link {
+  min-height: 34px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 20px;
+  background: #eee5ff;
+  color: #5920bd;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+body[data-page="dashboard"] .team-card > .dashboard-pill-link {
+  margin: 1px 0 0 auto;
+  display: flex;
+  width: fit-content;
+}
+
+body[data-page="dashboard"] .dashboard-pill-link:hover {
+  background: #e4d6ff;
+}
+
+/* Atividades recentes em linhas compactas com ícones coloridos. */
+body[data-page="dashboard"] .activities-card .dashboard-card-heading {
+  padding-bottom: 7px;
+  border-bottom: 1px solid #eeebf7;
+}
+
+body[data-page="dashboard"] .dashboard-activities {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body[data-page="dashboard"] .dashboard-activity {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-bottom: 1px solid #efedf6;
+}
+
+body[data-page="dashboard"] .dashboard-activity:last-child {
+  border-bottom: 0;
+}
+
+body[data-page="dashboard"] .activity-symbol {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #eee5ff;
+  color: #6123bf;
+  font-size: 14px;
+}
+
+body[data-page="dashboard"] .activity-symbol-1 {
+  background: #e7fbf0;
+  color: #09b762;
+}
+
+body[data-page="dashboard"] .activity-symbol-2 {
+  background: #eee8ff;
+  color: #8241e6;
+}
+
+body[data-page="dashboard"] .activity-symbol-3 {
+  background: #fff0f2;
+  color: #ed3150;
+}
+
+body[data-page="dashboard"] .activity-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+body[data-page="dashboard"] .activity-copy strong {
+  overflow: hidden;
+  color: #271a4a;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body[data-page="dashboard"] .activity-copy small {
+  overflow: hidden;
+  color: #766b91;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body[data-page="dashboard"] .activity-copy small b {
+  color: #a298b8;
+}
+
+body[data-page="dashboard"] .activities-card .dashboard-card-heading .dashboard-pill-link {
+  min-height: 30px;
+  padding: 0 12px;
+}
+
+/* Cartão promocional com ilustração vetorial feita com CSS e ícones. */
+body[data-page="dashboard"] .dashboard-news {
+  position: relative;
+  min-height: 197px;
+  padding: 27px 28px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  grid-area: news;
+  border-radius: 17px;
+  background:
+    radial-gradient(ellipse at 84% 20%, rgba(194, 133, 255, .55), transparent 30%),
+    linear-gradient(112deg, #4714a0, #7524dc 70%, #8b3cf0);
+  box-shadow: 0 6px 15px rgba(75, 28, 155, .18);
+  color: #fff;
+}
+
+body[data-page="dashboard"] .news-copy {
+  z-index: 1;
+  max-width: 62%;
+}
+
+body[data-page="dashboard"] .news-copy h2 {
+  margin: 0 0 9px;
+  font-size: 18px;
+  font-weight: 750;
+}
+
+body[data-page="dashboard"] .news-copy p {
+  margin: 0 0 17px;
+  color: rgba(255, 255, 255, .92);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+body[data-page="dashboard"] .news-copy a {
+  min-height: 34px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 20px;
+  background: #fff;
+  color: #5920bd;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+body[data-page="dashboard"] .news-art {
+  position: absolute;
+  right: 23px;
+  bottom: 19px;
+  width: 135px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  transform: rotate(-17deg);
+}
+
+body[data-page="dashboard"] .news-art::before {
+  position: absolute;
+  right: -22px;
+  bottom: -27px;
+  width: 180px;
+  height: 62px;
+  border-radius: 50% 50% 0 0;
+  background: rgba(192, 129, 255, .42);
+  content: "";
+  transform: rotate(-9deg);
+}
+
+body[data-page="dashboard"] .news-art i {
+  z-index: 1;
+  color: #fff;
+  filter: drop-shadow(6px 9px 0 #361078);
+  font-size: 82px;
+}
+
+body[data-page="dashboard"] .news-art b,
+body[data-page="dashboard"] .news-art em {
+  position: absolute;
+  z-index: 1;
+  width: 11px;
+  height: 29px;
+  border-radius: 10px;
+  background: #26dc72;
+  content: "";
+}
+
+body[data-page="dashboard"] .news-art b {
+  top: 3px;
+  right: 11px;
+  transform: rotate(38deg);
+}
+
+body[data-page="dashboard"] .news-art em {
+  top: 33px;
+  right: -4px;
+  height: 23px;
+  transform: rotate(65deg);
+}
+
+body[data-page="dashboard"] .dashboard-empty {
+  margin: auto;
+  color: #766b91;
+  font-size: 11px;
+  text-align: center;
+}
+
+body[data-page="dashboard"] .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+/* Reorganiza os indicadores e a grade para tablets e telas médias. */
+@media (max-width: 1100px) {
+  body[data-page="dashboard"] .dashboard {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  body[data-page="dashboard"] .dashboard-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body[data-page="dashboard"] .dashboard-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "performance"
+      "team"
+      "activities"
+      "news";
+  }
+
+  body[data-page="dashboard"] .team-card {
+    min-height: 190px;
+  }
+}
+
+/* Compacta cabeçalho, navegação e cartões em celulares. */
+@media (max-width: 700px) {
+  body[data-page="dashboard"] .app {
+    display: block;
+  }
+
+  body[data-page="dashboard"] .sidebar {
+    min-height: auto;
+    padding: 10px;
+  }
+
+  body[data-page="dashboard"] .brand {
+    min-height: auto;
+    margin-bottom: 10px;
+  }
+
+  body[data-page="dashboard"] .brand::before {
+    width: 42px;
+    height: 42px;
+    font-size: 33px;
+  }
+
+  body[data-page="dashboard"] .brand strong { font-size: 17px; }
+  body[data-page="dashboard"] .brand small { display: none; }
+
+  body[data-page="dashboard"] .navigation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body[data-page="dashboard"] .topbar {
+    height: 76px;
+    padding: 0 13px;
+  }
+
+  body[data-page="dashboard"] .account-avatar {
+    width: 46px;
+    height: 46px;
+  }
+
+  body[data-page="dashboard"] .account-avatar::after { font-size: 27px; }
+  body[data-page="dashboard"] .welcome { gap: 9px; }
+  body[data-page="dashboard"] .welcome strong { font-size: 12px; }
+  body[data-page="dashboard"] .welcome p { font-size: 9px; }
+  body[data-page="dashboard"] .top-actions { gap: 8px; }
+
+  body[data-page="dashboard"] .dashboard {
+    padding: 16px 13px 22px;
+  }
+
+  body[data-page="dashboard"] .brand::before {
+    width: 50px;
+    height: 47px;
+    font-size: 50px;
+  }
+
+  body[data-page="dashboard"] .dashboard-overview {
+    gap: 10px;
+    margin-bottom: 13px;
+  }
+
+  body[data-page="dashboard"] .dashboard-metric {
+    min-height: 112px;
+    padding: 13px 11px;
+    grid-template-columns: 38px minmax(0, 1fr);
+    column-gap: 8px;
+    border-radius: 14px;
+  }
+
+  body[data-page="dashboard"] .metric-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  body[data-page="dashboard"] .metric-copy strong {
+    font-size: clamp(17px, 5vw, 22px);
+  }
+
+  body[data-page="dashboard"] .metric-copy > span { font-size: 9px; }
+  body[data-page="dashboard"] .metric-trend { font-size: 10px; }
+  body[data-page="dashboard"] .dashboard-main-grid { gap: 12px; }
+  body[data-page="dashboard"] .dashboard-card { padding: 14px 13px; }
+  body[data-page="dashboard"] .dashboard-card-heading h2 { font-size: 12px; }
+  body[data-page="dashboard"] .online-count { font-size: 9px; }
+  body[data-page="dashboard"] .dashboard-team { gap: 5px; }
+  body[data-page="dashboard"] .dashboard-avatar { width: 48px; height: 48px; }
+  body[data-page="dashboard"] .dashboard-news { min-height: 176px; padding: 20px; }
+  body[data-page="dashboard"] .news-copy { max-width: 68%; }
+  body[data-page="dashboard"] .news-copy h2 { font-size: 16px; }
+  body[data-page="dashboard"] .news-copy p { font-size: 11px; }
+  body[data-page="dashboard"] .news-art { right: 10px; transform: scale(.78) rotate(-17deg); }
+}
+
+/* Evita que o gráfico e a equipe estourem em aparelhos muito estreitos. */
+@media (max-width: 390px) {
+  body[data-page="dashboard"] .dashboard-card-heading {
+    align-items: flex-start;
+  }
+
+  body[data-page="dashboard"] .team-card .dashboard-card-heading {
+    flex-direction: column;
+  }
+
+  body[data-page="dashboard"] .dashboard-team {
+    min-height: 82px;
+  }
+
+  body[data-page="dashboard"] .dashboard-avatar {
+    width: 42px;
+    height: 42px;
+  }
+}

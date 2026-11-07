@@ -1,0 +1,14 @@
+/* Largura mínima das colunas para evitar cortes nos dados e nos botões. */
+[data-page="employees"] .data-table th:first-child { min-width: 205px; }
+[data-page="employees"] .data-table th:last-child { min-width: 115px; }
+[data-page="employees"] .toolbar .button-primary { flex: 0 0 auto; }
+
+/* Reorganiza filtros e cadastro antes que a barra ultrapasse o conteúdo. */
+@media (max-width: 1000px) {
+  [data-page="employees"] .toolbar { flex-wrap: wrap; }
+  [data-page="employees"] .toolbar .search-control { flex: 1 1 100%; min-width: 0; }
+}
+
+@media (max-width: 700px) {
+  [data-page="employees"] .toolbar .button-primary { width: 100%; }
+}

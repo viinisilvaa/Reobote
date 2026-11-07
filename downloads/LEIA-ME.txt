@@ -1,0 +1,8 @@
+Pasta de downloads do REOBOTE
+
+Coloque aqui o arquivo reobote.apk (gerado pelo GitHub, em Releases) para que ele
+fique disponível em: http://SEU-SERVIDOR/downloads/reobote.apk
+
+A página "Aplicativo" da Central mostra o botão de download e o QR Code automaticamente.
+Se preferir usar o link direto do GitHub, cole-o em Central > Configurações >
+"Link de download do APK" e esta pasta não é necessária.

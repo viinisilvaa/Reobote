@@ -1,0 +1,85 @@
+/* Perfil individual, historico de ponto e compartilhamento autorizado. */
+[data-page="profile"] .dashboard { display:block; padding:28px 30px 18px 42px; }
+[data-page="profile"] .employee-profile { display:flex; flex-direction:column; gap:13px; }
+
+/* Link de voltar e cartão do perfil. */
+[data-page="profile"] .profile-back { width:max-content; display:flex; align-items:center; gap:7px; color:#5722b2; font-size:11px; font-weight:700; text-decoration:none; }
+[data-page="profile"] .profile-card { min-width:0; overflow:hidden; border:1px solid #e3def1; border-radius:15px; background:rgba(255,255,255,.84); box-shadow:0 3px 9px rgba(48,31,96,.06); }
+
+/* Topo do perfil: foto, nome, estado atual e contatos. */
+[data-page="profile"] .profile-hero { padding:17px; display:flex; align-items:center; gap:15px; }
+[data-page="profile"] .profile-photo { width:76px; height:76px; flex:0 0 auto; display:grid; place-items:center; overflow:hidden; border-radius:50%; background:#eee8ff; color:#5924b1; font-size:22px; font-weight:800; }
+[data-page="profile"] .profile-photo img { width:100%; height:100%; object-fit:cover; }
+[data-page="profile"] .profile-heading { min-width:0; flex:1; }
+[data-page="profile"] .profile-heading h1 { margin:0; color:#28164f; font-size:21px; }
+[data-page="profile"] .profile-heading p { margin:5px 0; color:#6c6283; font-size:11px; }
+[data-page="profile"] .profile-status { padding:5px 9px; display:inline-flex; align-items:center; gap:5px; border-radius:16px; background:#e2f7e9; color:#17804a; font-size:9px; font-weight:700; }
+[data-page="profile"] .profile-status.paused { background:#fff1d2; color:#9a6605; }
+[data-page="profile"] .profile-status.offline { background:#ffe5e9; color:#bf2c45; }
+[data-page="profile"] .profile-contact { margin-left:auto; display:flex; flex-direction:column; gap:8px; color:#4e4169; font-size:10px; }
+[data-page="profile"] .profile-contact span { display:flex; align-items:center; gap:7px; }
+[data-page="profile"] .profile-contact i { width:14px; color:#642fc0; text-align:center; }
+
+/* Números do período: horas, atrasos, extras e faltas. */
+[data-page="profile"] .profile-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+[data-page="profile"] .profile-stat { padding:12px; display:flex; flex-direction:column; gap:5px; border:1px solid #e5e0f2; border-radius:12px; background:rgba(255,255,255,.82); }
+[data-page="profile"] .profile-stat span { color:#746b87; font-size:10px; }
+[data-page="profile"] .profile-stat strong { color:#2b1c54; font-size:18px; }
+
+/* Seções do perfil com título e ícone. */
+[data-page="profile"] .profile-section { padding:0 14px 13px; }
+[data-page="profile"] .profile-section h2 { min-height:40px; margin:0 -14px 10px; padding:0 14px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #ebe7f2; color:#321a69; font-size:13px; }
+[data-page="profile"] .profile-section h2 i { color:#642fc0; }
+
+/* Cargo, unidade e jornada do colaborador. */
+[data-page="profile"] .profile-job-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+[data-page="profile"] .profile-job { padding:10px; display:flex; align-items:flex-start; gap:9px; border:1px solid #ebe6f4; border-radius:10px; }
+[data-page="profile"] .profile-job > i { color:#632dbd; }
+[data-page="profile"] .profile-job span { display:flex; flex-direction:column; gap:4px; }
+[data-page="profile"] .profile-job strong { color:#30214e; font-size:11px; }
+[data-page="profile"] .profile-job small { color:#786e8b; font-size:9px; }
+
+/* Histórico de ponto por dia, com resumo e registros. */
+[data-page="profile"] .profile-history { display:flex; flex-direction:column; gap:8px; }
+[data-page="profile"] .profile-day { padding:10px; border:1px solid #ece8f3; border-radius:10px; }
+[data-page="profile"] .profile-day h3 { margin:0 0 8px; color:#34215f; font-size:11px; }
+[data-page="profile"] .profile-day-summary { margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px; }
+[data-page="profile"] .profile-day-summary span { padding:4px 7px; border-radius:12px; background:#f4f0fb; color:#56456f; font-size:9px; }
+[data-page="profile"] .profile-day-summary .late { background:#fff0d9; color:#9a5c08; }
+[data-page="profile"] .profile-day-summary .overtime { background:#e1f7e9; color:#167447; }
+[data-page="profile"] .profile-events { display:flex; flex-wrap:wrap; gap:7px; }
+[data-page="profile"] .profile-event { padding:5px 8px; display:flex; align-items:center; gap:5px; border-radius:8px; background:#faf9fc; color:#554b68; font-size:9px; }
+[data-page="profile"] .profile-event i { color:#632dbd; }
+
+/* Consentimento de localização (LGPD). */
+[data-page="profile"] .profile-consent { padding:12px; display:flex; align-items:center; gap:10px; border:1px solid #e5e0f2; border-radius:12px; background:#faf8ff; }
+[data-page="profile"] .profile-consent p { margin:0; flex:1; color:#675c7d; font-size:10px; line-height:1.5; }
+[data-page="profile"] .profile-consent button { min-height:34px; padding:0 11px; border:0; border-radius:8px; background:#5a25b3; color:#fff; font:inherit; font-size:10px; font-weight:700; cursor:pointer; }
+[data-page="profile"] .profile-consent button:disabled { opacity:.6; cursor:wait; }
+[data-page="profile"] .profile-location-status { color:#17804a; font-size:9px; }
+
+/* Mensagens de carregamento, erro e lista vazia. */
+[data-page="profile"] .profile-message { padding:16px; color:#5f526f; font-size:12px; }
+[data-page="profile"] .profile-message.error { color:#b4233d; }
+[data-page="profile"] .profile-empty { color:#756b88; font-size:10px; }
+
+/* Texto visível só para leitores de tela (acessibilidade). */
+[data-page="profile"] .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; clip-path:inset(50%); }
+
+/* Telas médias: menos colunas nos números. */
+@media (max-width:1100px) {
+  [data-page="profile"] .dashboard { padding:28px 22px 18px; }
+}
+
+/* Celulares: empilha o topo do perfil e as listas. */
+@media(max-width:700px) {
+  [data-page="profile"] .dashboard { padding:16px 13px 22px; }
+  [data-page="profile"] .profile-hero { align-items:flex-start; flex-wrap:wrap; }
+  [data-page="profile"] .profile-photo { width:62px; height:62px; }
+  [data-page="profile"] .profile-heading h1 { font-size:17px; }
+  [data-page="profile"] .profile-contact { width:100%; margin-left:0; }
+  [data-page="profile"] .profile-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  [data-page="profile"] .profile-job-list { grid-template-columns:1fr; }
+  [data-page="profile"] .profile-consent { align-items:flex-start; flex-direction:column; }
+  [data-page="profile"] .profile-consent button { width:100%; }
+}

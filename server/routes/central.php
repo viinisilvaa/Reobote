@@ -1,0 +1,404 @@
+<?php
+declare(strict_types=1);
+
+// Rotas da Central REOBOTE: painel, mapa, notificacoes, relatorios, configuracoes e auditoria.
+
+// Colaboradores ativos com cargo e escala, usados pelos calculos coletivos.
+function api_active_employees(PDO $db, ?string $jobId = null, ?string $unitId = null, ?string $employeeId = null, bool $includeInactive = false): array
+{
+    $sql = REOBOTE_EMPLOYEE_SELECT . ($includeInactive ? ' WHERE 1 = 1' : ' WHERE e.active = 1');
+    $params = [];
+    if ($jobId !== null) {
+        $sql .= ' AND e.job_id = ?';
+        $params[] = $jobId;
+    }
+    if ($unitId !== null) {
+        $sql .= ' AND e.unit_id = ?';
+        $params[] = $unitId;
+    }
+    if ($employeeId !== null) {
+        $sql .= ' AND e.id = ?';
+        $params[] = $employeeId;
+    }
+    $query = $db->prepare($sql . ' ORDER BY e.name');
+    $query->execute($params);
+    return $query->fetchAll();
+}
+
+// Lê um identificador numérico da URL (ex.: ?jobId=3); null quando ausente ou inválido.
+function api_query_id(string $key): ?string
+{
+    $value = (string) ($_GET[$key] ?? '');
+    return $value !== '' && ctype_digit($value) ? $value : null;
+}
+
+// Painel principal ----------------------------------------------------------------------------
+
+route('GET', '/api/dashboard', static function (PDO $db): void {
+    $user = reobote_user();
+    reobote_require($user, 'dashboard');
+    reobote_sweep_absences($db);
+
+    $tz = reobote_timezone();
+    $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+    $today = $now->setTimezone($tz)->format('Y-m-d');
+    $period = in_array((int) ($_GET['period'] ?? 7), [7, 30, 90], true) ? (int) $_GET['period'] : 7;
+    $from = $now->setTimezone($tz)->modify('-' . ($period - 1) . ' days')->format('Y-m-d');
+
+    $employees = api_active_employees($db);
+    $states = reobote_current_states($db, array_column($employees, 'id'), $now);
+    $metrics = ['total' => count($employees), 'active' => 0, 'late' => 0, 'absent' => 0, 'onBreak' => 0, 'finished' => 0, 'overtimeMinutes' => 0, 'lateMinutes' => 0];
+    $presence = [];
+    $team = [];
+    for ($cursor = new DateTimeImmutable($from); $cursor->format('Y-m-d') <= $today; $cursor = $cursor->modify('+1 day')) {
+        $presence[$cursor->format('Y-m-d')] = ['present' => 0, 'late' => 0];
+    }
+
+    foreach ($employees as $row) {
+        $id = (string) $row['id'];
+        $state = $states[$id];
+        $journey = reobote_journey($db, $row, $from, $today, $now);
+        $todayDay = null;
+        foreach ($journey['days'] as $day) {
+            if (isset($presence[$day['date']]) && in_array($day['status'], ['worked', 'in_progress'], true)) {
+                $presence[$day['date']]['present']++;
+                if ($day['lateMinutes'] > 0) {
+                    $presence[$day['date']]['late']++;
+                }
+            }
+            if ($day['date'] === $today) {
+                $todayDay = $day;
+            }
+        }
+        if (in_array($state['state'], ['working', 'in_transit', 'on_break'], true)) {
+            $metrics['active']++;
+        }
+        if ($state['state'] === 'on_break') {
+            $metrics['onBreak']++;
+        }
+        if ($state['state'] === 'finished') {
+            $metrics['finished']++;
+        }
+        if ($todayDay !== null && $todayDay['lateMinutes'] > 0) {
+            $metrics['late']++;
+        }
+        if ($todayDay !== null && $todayDay['status'] === 'not_arrived' && $state['state'] === 'waiting') {
+            $metrics['absent']++;
+        }
+        $metrics['overtimeMinutes'] += $journey['totals']['overtimeMinutes'];
+        $metrics['lateMinutes'] += $journey['totals']['lateMinutes'];
+        $team[] = reobote_employee_public($db, $row, $state) + [
+            'todayStatus' => $todayDay['status'] ?? 'off',
+            'todayLateMinutes' => $todayDay['lateMinutes'] ?? 0,
+        ];
+    }
+
+    // Grafico: presencas por dia (ou por semana no periodo de 90 dias).
+    $chart = [];
+    if ($period === 90) {
+        $chunks = array_chunk($presence, 7, true);
+        foreach ($chunks as $chunk) {
+            $dates = array_keys($chunk);
+            $chart[] = ['label' => (new DateTimeImmutable($dates[0]))->format('d/m'), 'from' => $dates[0], 'to' => end($dates),
+                'present' => array_sum(array_column($chunk, 'present')), 'late' => array_sum(array_column($chunk, 'late'))];
+        }
+    } else {
+        foreach ($presence as $date => $values) {
+            $chart[] = ['label' => (new DateTimeImmutable($date))->format('d/m'), 'from' => $date, 'to' => $date] + $values;
+        }
+    }
+
+    $query = $db->query(
+        'SELECT a.id, a.employee_id, a.event_type, a.occurred_at, a.received_at, a.unit_id, a.qr_code_id, a.source, a.notes, a.distance_m,
+                un.name AS unit_name, q.label AS qr_label, e.name, e.photo_path, j.name AS job_name
+         FROM attendance_events a
+         JOIN employees e ON e.id = a.employee_id
+         LEFT JOIN jobs j ON j.id = e.job_id
+         LEFT JOIN units un ON un.id = a.unit_id
+         LEFT JOIN qr_codes q ON q.id = a.qr_code_id
+         WHERE a.voided_at IS NULL
+         ORDER BY a.occurred_at DESC, a.id DESC LIMIT 12'
+    );
+    $recent = array_map(static fn ($row) => reobote_event_public(reobote_event_from_row($row)) + [
+        'employeeId' => (string) $row['employee_id'], 'employeeName' => $row['name'], 'hasPhoto' => (bool) $row['photo_path'],
+        'photoVersion' => $row['photo_path'] ? substr(md5((string) $row['photo_path']), 0, 8) : null, 'job' => $row['job_name'],
+    ], $query->fetchAll());
+
+    reobote_json(['period' => $period, 'metrics' => $metrics, 'chart' => $chart, 'team' => $team, 'recent' => $recent, 'serverTime' => $now->format('Y-m-d\TH:i:s\Z')]);
+});
+
+// Mapa ----------------------------------------------------------------------------------------
+
+route('GET', '/api/map', static function (PDO $db): void {
+    $user = reobote_user();
+    reobote_require($user, 'dashboard');
+    $employees = api_active_employees($db);
+    $states = reobote_current_states($db, array_column($employees, 'id'));
+    $locations = [];
+    $query = $db->query(
+        'SELECT l.employee_id, l.latitude, l.longitude, l.accuracy_m, l.recorded_at FROM employee_locations l
+         JOIN (SELECT employee_id, MAX(recorded_at) AS recorded_at FROM employee_locations
+               WHERE recorded_at >= UTC_TIMESTAMP() - INTERVAL 10 MINUTE GROUP BY employee_id) latest
+           ON latest.employee_id = l.employee_id AND latest.recorded_at = l.recorded_at'
+    );
+    foreach ($query->fetchAll() as $row) {
+        $locations[(string) $row['employee_id']] = $row;
+    }
+    $units = array_map('api_unit_public', $db->query(API_UNIT_SELECT . ' WHERE un.active = 1 ORDER BY un.name')->fetchAll());
+    $unitsById = array_column($units, null, 'id');
+
+    $team = [];
+    foreach ($employees as $row) {
+        $id = (string) $row['id'];
+        $item = reobote_employee_public($db, $row, $states[$id]);
+        $location = $row['tracking_enabled'] ? ($locations[$id] ?? null) : null;
+        $item['location'] = $location ? [
+            'latitude' => (float) $location['latitude'], 'longitude' => (float) $location['longitude'],
+            'accuracyM' => $location['accuracy_m'] === null ? null : (float) $location['accuracy_m'],
+            'recordedAt' => reobote_iso($location['recorded_at']),
+        ] : null;
+        // Distancia ate a unidade de referencia (a do ultimo registro ou a unidade do cadastro).
+        $unitId = $item['lastEvent']['unitId'] ?? $item['unitId'];
+        $unit = $unitId !== null ? ($unitsById[$unitId] ?? null) : null;
+        $item['referenceUnit'] = $unit ? $unit['name'] : null;
+        $item['distanceToUnitM'] = $location && $unit && $unit['latitude'] !== null
+            ? reobote_distance_m((float) $location['latitude'], (float) $location['longitude'], $unit['latitude'], $unit['longitude'])
+            : null;
+        $team[] = $item;
+    }
+    reobote_json(['employees' => $team, 'units' => $units, 'serverTime' => gmdate('Y-m-d\TH:i:s\Z')]);
+});
+
+// Notificacoes --------------------------------------------------------------------------------
+
+function api_unread_count(PDO $db, array $user): int
+{
+    $query = $db->prepare(
+        'SELECT COUNT(*) FROM notifications n
+         LEFT JOIN notification_reads r ON r.notification_id = n.id AND r.user_id = ?
+         WHERE r.user_id IS NULL AND n.created_at >= UTC_TIMESTAMP() - INTERVAL 30 DAY'
+    );
+    $query->execute([$user['id']]);
+    return (int) $query->fetchColumn();
+}
+
+// Quantidade de notificações não lidas (número vermelho no sino da Central).
+route('GET', '/api/notifications/count', static function (PDO $db): void {
+    $user = reobote_user();
+    reobote_require($user, 'notifications', 'dashboard');
+    reobote_sweep_absences($db);
+    reobote_json(['unread' => api_unread_count($db, $user)]);
+});
+
+// Lista as notificações dos últimos 90 dias, com filtros de lidas/não lidas e de tipo.
+route('GET', '/api/notifications', static function (PDO $db): void {
+    $user = reobote_user();
+    reobote_require($user, 'notifications', 'dashboard');
+    reobote_sweep_absences($db);
+    $filter = (string) ($_GET['filter'] ?? 'all');
+    $type = (string) ($_GET['type'] ?? '');
+    $limit = max(1, min(200, (int) ($_GET['limit'] ?? 50)));
+    $sql = 'SELECT n.id, n.type, n.title, n.detail, n.employee_id, n.created_at, r.read_at, e.photo_path
+            FROM notifications n
+            LEFT JOIN notification_reads r ON r.notification_id = n.id AND r.user_id = ?
+            LEFT JOIN employees e ON e.id = n.employee_id
+            WHERE n.created_at >= UTC_TIMESTAMP() - INTERVAL 90 DAY';
+    $params = [$user['id']];
+    if ($filter === 'unread') {
+        $sql .= ' AND r.user_id IS NULL';
+    } elseif ($filter === 'read') {
+        $sql .= ' AND r.user_id IS NOT NULL';
+    }
+    if ($type !== '' && array_key_exists($type, REOBOTE_NOTIFICATION_ICONS)) {
+        $sql .= ' AND n.type = ?';
+        $params[] = $type;
+    }
+    if (($before = api_query_id('before')) !== null) {
+        $sql .= ' AND n.id < ?';
+        $params[] = $before;
+    }
+    $query = $db->prepare($sql . ' ORDER BY n.id DESC LIMIT ' . $limit);
+    $query->execute($params);
+    $items = array_map(static fn ($row) => [
+        'id' => (string) $row['id'],
+        'type' => $row['type'],
+        'icon' => REOBOTE_NOTIFICATION_ICONS[$row['type']] ?? 'fa-bell',
+        'title' => $row['title'],
+        'detail' => $row['detail'],
+        'employeeId' => $row['employee_id'] === null ? null : (string) $row['employee_id'],
+        'hasPhoto' => (bool) $row['photo_path'],
+        'createdAt' => reobote_iso($row['created_at']),
+        'read' => $row['read_at'] !== null,
+    ], $query->fetchAll());
+    reobote_json(['notifications' => $items, 'unread' => api_unread_count($db, $user), 'hasMore' => count($items) === $limit]);
+});
+
+// Marca notificações como lidas (algumas ou todas) para o usuário atual.
+route('POST', '/api/notifications/read', static function (PDO $db): void {
+    $user = reobote_user();
+    reobote_require($user, 'notifications', 'dashboard');
+    $body = reobote_body();
+    if (reobote_bool($body, 'all')) {
+        $db->prepare('INSERT IGNORE INTO notification_reads (user_id, notification_id, read_at)
+                      SELECT ?, n.id, UTC_TIMESTAMP() FROM notifications n WHERE n.created_at >= UTC_TIMESTAMP() - INTERVAL 90 DAY')
+            ->execute([$user['id']]);
+    } else {
+        $ids = array_values(array_filter(array_map('strval', (array) ($body['ids'] ?? [])), 'ctype_digit'));
+        if (!$ids || count($ids) > 200) {
+            reobote_fail('Informe as notificações a marcar como lidas.');
+        }
+        $insert = $db->prepare('INSERT IGNORE INTO notification_reads (user_id, notification_id, read_at)
+                                SELECT ?, id, UTC_TIMESTAMP() FROM notifications WHERE id = ?');
+        foreach ($ids as $id) {
+            $insert->execute([$user['id'], $id]);
+        }
+    }
+    reobote_json(['unread' => api_unread_count($db, $user)]);
+});
+
+// Relatorios ----------------------------------------------------------------------------------
+
+// Resumo por colaborador no periodo: frequencia, faltas, atrasos, horas extras, intervalos e horas trabalhadas.
+route('GET', '/api/reports', static function (PDO $db): void {
+    $user = reobote_user();
+    reobote_require($user, 'reports');
+    [$from, $to] = reobote_date_range(367, 30);
+    $employees = api_active_employees($db, api_query_id('jobId'), api_query_id('unitId'), api_query_id('employeeId'), ($_GET['inactive'] ?? '') === '1');
+    $rows = [];
+    $overall = ['employees' => 0, 'daysWorked' => 0, 'absences' => 0, 'lateDays' => 0, 'lateMinutes' => 0, 'overtimeMinutes' => 0,
+        'workedMinutes' => 0, 'breakMinutes' => 0, 'expectedMinutes' => 0, 'incompleteDays' => 0];
+    foreach ($employees as $row) {
+        $journey = reobote_journey($db, $row, $from, $to);
+        $totals = $journey['totals'];
+        $expectedDays = count(array_filter($journey['days'], static fn ($d) => $d['workday'] && in_array($d['status'], ['worked', 'in_progress', 'absent'], true)));
+        $attendedScheduled = count(array_filter($journey['days'], static fn ($d) => $d['workday'] && in_array($d['status'], ['worked', 'in_progress'], true)));
+        $rows[] = [
+            'employee' => reobote_employee_public($db, $row),
+            'totals' => $totals,
+            'scheduledDays' => $expectedDays,
+            'attendanceRate' => $expectedDays > 0 ? round($attendedScheduled * 100 / $expectedDays, 1) : null,
+        ];
+        $overall['employees']++;
+        foreach ($totals as $key => $value) {
+            $overall[$key] += $value;
+        }
+    }
+    $scheduled = array_sum(array_column($rows, 'scheduledDays'));
+    $overall['attendanceRate'] = $scheduled > 0 ? round(($scheduled - $overall['absences']) * 100 / $scheduled, 1) : null;
+    $settings = reobote_settings();
+    reobote_json(['from' => $from, 'to' => $to, 'rows' => $rows, 'overall' => $overall,
+        'company' => $settings['company_name'], 'generatedAt' => gmdate('Y-m-d\TH:i:s\Z'), 'generatedBy' => $user['name']]);
+});
+
+// Configuracoes e auditoria -------------------------------------------------------------------
+
+route('GET', '/api/settings', static function (PDO $db): void {
+    reobote_require(reobote_user(), 'settings');
+    $settings = reobote_settings(true);
+    reobote_json(['settings' => [
+        'companyName' => $settings['company_name'],
+        'companyEmail' => $settings['company_email'],
+        'companyPhone' => $settings['company_phone'],
+        'emailDomain' => $settings['email_domain'],
+        'requireEmailDomain' => $settings['require_email_domain'] === '1',
+        'timezone' => $settings['timezone'],
+        'offlineMaxDays' => (int) $settings['offline_max_days'],
+        'requestGpsOnCheckin' => $settings['request_gps_on_checkin'] === '1',
+        'shiftGapHours' => (int) $settings['shift_gap_hours'],
+        'apkDownloadUrl' => $settings['apk_download_url'],
+    ]]);
+});
+
+// Salva as configurações enviadas (somente os campos presentes) e registra na auditoria.
+route('PUT', '/api/settings', static function (PDO $db): void {
+    $user = reobote_user();
+    reobote_require($user, 'settings');
+    $body = reobote_body();
+    $values = [];
+    if (array_key_exists('companyName', $body)) {
+        $values['company_name'] = reobote_str($body, 'companyName', 120, true, 'Nome da central');
+    }
+    if (array_key_exists('companyEmail', $body)) {
+        $email = reobote_str($body, 'companyEmail', 190, false, 'E-mail de contato') ?? '';
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            reobote_fail('Informe um e-mail de contato válido.');
+        }
+        $values['company_email'] = $email;
+    }
+    if (array_key_exists('companyPhone', $body)) {
+        $values['company_phone'] = reobote_str($body, 'companyPhone', 32, false, 'Telefone') ?? '';
+    }
+    if (array_key_exists('emailDomain', $body)) {
+        $domain = mb_strtolower(ltrim((string) reobote_str($body, 'emailDomain', 120, false, 'Domínio'), '@'));
+        if ($domain !== '' && !preg_match('/^[a-z0-9-]+(\.[a-z0-9-]+)+$/', $domain)) {
+            reobote_fail('Informe um domínio válido, por exemplo reobote.com.');
+        }
+        $values['email_domain'] = $domain;
+    }
+    if (array_key_exists('requireEmailDomain', $body)) {
+        $values['require_email_domain'] = reobote_bool($body, 'requireEmailDomain') ? '1' : '0';
+    }
+    if (array_key_exists('timezone', $body)) {
+        $timezone = (string) $body['timezone'];
+        if (!in_array($timezone, DateTimeZone::listIdentifiers(DateTimeZone::AMERICA), true)) {
+            reobote_fail('Fuso horário inválido.');
+        }
+        $values['timezone'] = $timezone;
+    }
+    if (array_key_exists('offlineMaxDays', $body)) {
+        $values['offline_max_days'] = (string) reobote_int($body, 'offlineMaxDays', 1, 30, 7, 'Prazo de sincronização');
+    }
+    if (array_key_exists('requestGpsOnCheckin', $body)) {
+        $values['request_gps_on_checkin'] = reobote_bool($body, 'requestGpsOnCheckin') ? '1' : '0';
+    }
+    if (array_key_exists('shiftGapHours', $body)) {
+        $values['shift_gap_hours'] = (string) reobote_int($body, 'shiftGapHours', 4, 24, 16, 'Intervalo entre turnos');
+    }
+    if (array_key_exists('apkDownloadUrl', $body)) {
+        // Aceita apenas um endereço https:// (ex.: Releases do GitHub) ou vazio para usar /downloads/reobote.apk.
+        $apkUrl = reobote_str($body, 'apkDownloadUrl', 500, false, 'Link do APK') ?? '';
+        if ($apkUrl !== '' && !preg_match('#^https://[^\s]+$#i', $apkUrl)) {
+            reobote_fail('O link do APK deve começar com https://.');
+        }
+        $values['apk_download_url'] = $apkUrl;
+    }
+    $query = $db->prepare('INSERT INTO settings (name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)');
+    foreach ($values as $name => $value) {
+        $query->execute([$name, $value]);
+    }
+    reobote_audit($db, $user, 'settings_updated', 'settings', null, $values);
+    reobote_json(['saved' => true]);
+});
+
+const API_AUDIT_LABELS = [
+    'employee_created' => 'Colaborador cadastrado', 'employee_updated' => 'Cadastro alterado', 'employee_deactivated' => 'Cadastro desativado',
+    'employee_reactivated' => 'Cadastro reativado', 'password_reset' => 'Senha temporária gerada', 'password_changed' => 'Senha alterada',
+    'photo_updated' => 'Foto atualizada', 'photo_removed' => 'Foto removida', 'attendance_added' => 'Registro lançado manualmente',
+    'attendance_voided' => 'Registro anulado', 'job_created' => 'Cargo criado', 'job_updated' => 'Cargo alterado', 'job_deleted' => 'Cargo excluído',
+    'schedule_created' => 'Jornada criada', 'schedule_updated' => 'Jornada alterada', 'schedule_deleted' => 'Jornada excluída',
+    'holiday_saved' => 'Feriado salvo', 'holiday_deleted' => 'Feriado excluído', 'unit_created' => 'Unidade criada', 'unit_updated' => 'Unidade alterada',
+    'unit_deleted' => 'Unidade excluída', 'qr_created' => 'QR Code criado', 'qr_updated' => 'QR Code alterado', 'qr_deactivated' => 'QR Code desativado',
+    'qr_regenerated' => 'QR Code substituído', 'settings_updated' => 'Configurações alteradas',
+    'location_consent_given' => 'Localização autorizada', 'location_consent_revoked' => 'Localização revogada',
+];
+
+// Histórico de alterações administrativas (quem fez, o quê e quando).
+route('GET', '/api/audit', static function (PDO $db): void {
+    reobote_require(reobote_user(), 'settings');
+    $limit = max(1, min(300, (int) ($_GET['limit'] ?? 100)));
+    $query = $db->query(
+        'SELECT a.id, a.action, a.entity, a.entity_id, a.details, a.created_at, COALESCE(e.name, u.email) AS author
+         FROM audit_log a LEFT JOIN users u ON u.id = a.user_id LEFT JOIN employees e ON e.id = u.employee_id
+         ORDER BY a.id DESC LIMIT ' . $limit
+    );
+    reobote_json(['entries' => array_map(static fn ($row) => [
+        'id' => (string) $row['id'],
+        'action' => $row['action'],
+        'label' => API_AUDIT_LABELS[$row['action']] ?? $row['action'],
+        'entity' => $row['entity'],
+        'entityId' => $row['entity_id'],
+        'details' => $row['details'] ? json_decode((string) $row['details'], true) : null,
+        'author' => $row['author'] ?? 'Sistema',
+        'createdAt' => reobote_iso($row['created_at']),
+    ], $query->fetchAll())]);
+});

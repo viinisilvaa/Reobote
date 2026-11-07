@@ -1,0 +1,4 @@
+# Gerados automaticamente a cada compilação (não precisam ir para o GitHub).
+node_modules/
+www/
+android/

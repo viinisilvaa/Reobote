@@ -1,0 +1,25 @@
+/* Distribui os formulários de configuração em duas colunas no desktop. */
+[data-page="settings"] .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+
+/* Campos e ações dos formulários de dados e preferências. */
+[data-page="settings"] .settings-form { display: flex; flex-direction: column; gap: 12px; }
+[data-page="settings"] .settings-form .field { gap: 6px; }
+[data-page="settings"] .settings-form .form-actions,
+[data-page="settings"] .preferences-form .form-actions { margin-top: 4px; }
+[data-page="settings"] .preferences-form { display: flex; flex-direction: column; }
+[data-page="settings"] .toggle-row { min-height: 61px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #e7e8f1; cursor: pointer; }
+[data-page="settings"] .toggle-row > span { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+[data-page="settings"] .toggle-row strong { color: #302b45; font-size: 11px; }
+[data-page="settings"] .toggle-row small { color: #5a566b; font-size: 10px; line-height: 1.5; }
+[data-page="settings"] .toggle-row input { position: absolute; opacity: 0; }
+[data-page="settings"] .toggle-row > i { width: 36px; height: 20px; position: relative; flex: 0 0 auto; border-radius: 20px; background: #c8c9d2; transition: background .15s; }
+[data-page="settings"] .toggle-row > i::after { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: white; content: ""; transition: transform .15s; }
+[data-page="settings"] .toggle-row input:checked + i { background: #5725bc; }
+[data-page="settings"] .toggle-row input:checked + i::after { transform: translateX(16px); }
+[data-page="settings"] .toggle-row input:focus-visible + i { outline: 2px solid #8e6bd0; outline-offset: 2px; }
+[data-page="settings"] .panel-description { color: #5a566b; font-size: 10px; line-height: 1.5; }
+
+/* Empilha os formulários em telas menores. */
+@media (max-width: 1050px) {
+  [data-page="settings"] .settings-grid { grid-template-columns: minmax(0, 1fr); }
+}
