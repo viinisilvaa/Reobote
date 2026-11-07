@@ -1,3 +1,4 @@
+// REOBOTE | central/js/login.js — Central: lógica do login
 // Login: envia as credenciais, aceita somente destinos internos e direciona para a Central ou para o aplicativo.
 (function () {
   const loginForm = document.querySelector("#login-form");
