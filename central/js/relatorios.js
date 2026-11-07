@@ -1,3 +1,4 @@
+// REOBOTE | central/js/relatorios.js — Central: relatórios com filtros e exportação CSV/PDF
 // Relatórios: frequência, entradas e saídas, atrasos, faltas, horas extras, intervalos e horas trabalhadas.
 // Exporta em CSV (planilha) e em PDF (pela impressão do navegador, com layout próprio para papel).
 window.ReobotePage = {
