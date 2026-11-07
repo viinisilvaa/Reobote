@@ -1,3 +1,4 @@
+# REOBOTE | .gitignore — Arquivos que não vão para o GitHub (senhas, fotos e APK gerado)
 # Senhas e chaves do servidor: NUNCA enviar para o GitHub.
 server/.env
 # Fotos dos colaboradores (dados pessoais, LGPD) e outros arquivos enviados.
