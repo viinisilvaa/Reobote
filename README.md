@@ -36,16 +36,3 @@ Depois de instalar, entre com o e-mail e a senha temporária entregue pela Centr
 ## Tecnologias
 
 HTML, CSS e JavaScript puros · PHP 8 com MySQL · Capacitor (APK Android) · GitHub Actions
-
-## Como rodar
-
-```bash
-cp .env.example server/.env     # preencha os dados do banco
-php server/setup.php            # cria as tabelas
-php server/create-user.php      # cria o primeiro administrador
-php -S 127.0.0.1:3000 server/router.php
-```
-
-Acesse `http://localhost:3000/central/` (Central) ou `http://localhost:3000/app/` (aplicativo).
-
-📖 Instalação em produção, mapa, geração do APK e regras de jornada: **[Guia completo](docs/GUIA.md)**.
