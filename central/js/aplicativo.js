@@ -1,3 +1,4 @@
+// REOBOTE | central/js/aplicativo.js — Central: apresentação do app, QR Code e instalação
 /**
  * Página "Aplicativo" da Central: apresenta o aplicativo REOBOTE e oferece o download.
  *
