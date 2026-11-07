@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/lib/journey.php — Servidor: motor de jornada (turnos, atrasos, extras e faltas)
 declare(strict_types=1);
 
 // Motor de jornada: agrupa registros em turnos, compara com a escala e calcula atrasos, faltas e horas extras.
