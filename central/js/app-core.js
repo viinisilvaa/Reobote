@@ -1,3 +1,4 @@
+// REOBOTE | central/js/app-core.js — Central: núcleo (sessão, menu por permissões e utilitários)
 // Núcleo da Central REOBOTE: confere a sessão, monta o menu conforme as permissões,
 // oferece utilitários de interface (diálogos, avisos, formatação) e inicia o módulo da página.
 (function () {
