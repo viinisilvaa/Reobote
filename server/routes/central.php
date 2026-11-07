@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/routes/central.php — API: painel, mapa, notificações, relatórios e configurações
 declare(strict_types=1);
 
 // Rotas da Central REOBOTE: painel, mapa, notificacoes, relatorios, configuracoes e auditoria.
