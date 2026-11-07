@@ -1,3 +1,4 @@
+// REOBOTE | aplicativo-android/scripts/configurar-android.mjs — APK: permissões de câmera e GPS, ícone e versão do app
 /**
  * Ajusta o projeto Android gerado pelo Capacitor ("npx cap add android") para o REOBOTE:
  *
