@@ -1,3 +1,4 @@
+// REOBOTE | central/js/notificacoes.js — Central: lista de notificações, filtros e leitura
 // Notificações geradas pelos registros do aplicativo e pelas verificações do sistema (atrasos, ausências, horas extras).
 window.ReobotePage = {
   // Monta a central de notificações dentro de "root"; R são os utilitários da Central (app-core.js).
