@@ -1,3 +1,4 @@
+// REOBOTE | compartilhado/js/theme.js — Compartilhado: alterna e lembra o tema claro/escuro
 // Mantém a escolha do tema entre páginas e visitas ao sistema.
 const themeStorageKey = "reobote-theme";
 const rootElement = document.documentElement;
