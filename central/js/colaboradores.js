@@ -1,3 +1,4 @@
+// REOBOTE | central/js/colaboradores.js — Central: cadastro de colaboradores, foto e senha temporária
 // Colaboradores: cadastro, foto, cargo, unidade, jornada, perfil de acesso e situação do cadastro.
 window.ReobotePage = {
   // Monta a página de colaboradores dentro de "root"; R são os utilitários da Central (app-core.js).
