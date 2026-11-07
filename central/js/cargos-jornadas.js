@@ -1,3 +1,4 @@
+// REOBOTE | central/js/cargos-jornadas.js — Central: cargos e permissões de acesso
 // Cargos e permissões: cada cargo define o que seus colaboradores podem acessar e a jornada padrão.
 window.ReobotePage = {
   // Monta a página de cargos dentro de "root"; R são os utilitários da Central (app-core.js).
