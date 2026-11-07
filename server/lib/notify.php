@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/lib/notify.php — Servidor: notificações e histórico de alterações (auditoria)
 declare(strict_types=1);
 
 // Notificacoes para a Central e historico de alteracoes administrativas (auditoria).
