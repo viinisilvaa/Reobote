@@ -1,3 +1,4 @@
+/* REOBOTE | central/css/colaboradores.css — Central: estilos da página Colaboradores */
 /* Largura mínima das colunas para evitar cortes nos dados e nos botões. */
 [data-page="employees"] .data-table th:first-child { min-width: 205px; }
 [data-page="employees"] .data-table th:last-child { min-width: 115px; }
