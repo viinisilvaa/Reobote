@@ -1,3 +1,4 @@
+<!-- REOBOTE | README.md — Apresentação do projeto, link do APK e como rodar -->
 # REOBOTE — Tecnologia que conecta.
 
 ![PHP](https://img.shields.io/badge/PHP-8.1+-777BB4?logo=php&logoColor=white)
