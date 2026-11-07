@@ -10,25 +10,22 @@ Instalação, configuração do mapa, geração do APK, regras de jornada, segur
 4. Crie o primeiro administrador com `php server/create-user.php`. As demais contas são criadas pela Central, em **Colaboradores**.
 5. Para testar localmente, rode `php -S 127.0.0.1:3000 server/router.php` e acesse `http://localhost:3000/central/` (Central) ou `http://localhost:3000/app/` (aplicativo).
 6. Em produção, use **HTTPS** com Apache e os módulos `mod_rewrite` e `mod_headers` (o `.htaccess` já está pronto). A câmera, o GPS e a instalação do aplicativo só funcionam em HTTPS, com exceção do `localhost`.
-7. O mapa é opcional. Para usá-lo, ative a Maps JavaScript API no Google Cloud, restrinja a chave por referenciador HTTP e coloque-a em `GOOGLE_MAPS_BROWSER_KEY`.
+7. O mapa usa o OpenStreetMap, que é gratuito e **não precisa de chave**.
 
 Faça backup diário do banco (`mysqldump`) e da pasta `server/storage`, que guarda as fotos.
 
-## Mapa em tempo real (Google Maps)
+## Mapa em tempo real
 
-O mapa da Central mostra as unidades e a posição de cada técnico. Ele precisa de uma chave do Google Maps. Sem a chave, a página mostra o aviso "Google Maps aguardando configuração", e o resto da tela (lista da equipe e situação de cada um) continua funcionando.
+O mapa da Central usa o **OpenStreetMap** (biblioteca Leaflet, em `central/js/vendor/leaflet`). É gratuito e não precisa de chave nem de cadastro.
 
-1. Acesse https://console.cloud.google.com, crie um projeto e **ative o faturamento**. O Google exige cartão, mas oferece uma cota mensal gratuita que costuma cobrir o uso de uma equipe pequena.
-2. Em **APIs e serviços > Biblioteca**, ative a **Maps JavaScript API**.
-3. Em **APIs e serviços > Credenciais**, crie uma **chave de API**. Em "Restrições de aplicativos", escolha **Sites** e adicione o endereço da Central, por exemplo `https://seudominio.com.br/*`.
-4. Coloque a chave em `server/.env`: `GOOGLE_MAPS_BROWSER_KEY=sua-chave`.
-5. Para aparecer no mapa, a unidade precisa ter latitude e longitude cadastradas (em **Unidades e QR Codes**), e o técnico precisa ativar **Compartilhar localização** na tela **Conta** do aplicativo (consentimento exigido pela LGPD). A posição é atualizada enquanto o aplicativo está aberto.
+Para aparecer no mapa:
 
-Se a chave estiver errada, sem faturamento ou sem o site liberado, o mapa mostra "Chave do Google Maps recusada" com o que conferir.
+- **Unidades:** cadastre a latitude e a longitude em **Unidades e QR Codes**. A unidade aparece como um quadrado roxo, com o raio de chegada em volta.
+- **Técnicos:** o técnico precisa ativar **Compartilhar localização** na tela **Conta** do aplicativo (consentimento exigido pela LGPD). Ele aparece como um círculo na cor da situação (em atendimento, em deslocamento, em almoço...). A posição é atualizada enquanto o aplicativo está aberto, e o mapa da Central se atualiza a cada 15 segundos.
 
 ## Aplicativo Android (APK)
 
-O APK é gerado automaticamente na nuvem do GitHub, de graça. Não é preciso instalar nada no computador. Ele contém o mesmo aplicativo da pasta `app/`, com câmera para os QR Codes, funcionamento sem internet e login próprio. No primeiro acesso, o celular pede o **endereço do servidor**.
+O APK é gerado automaticamente na nuvem do GitHub, de graça. Não é preciso instalar nada no computador. Ele contém o mesmo aplicativo da pasta `app/`, com câmera para os QR Codes, funcionamento sem internet e login próprio. O endereço do servidor vai **embutido no APK** (veja abaixo), então o colaborador só digita o e-mail e a senha.
 
 ### Gerar o APK (uma vez, e de novo a cada atualização do app)
 
@@ -41,20 +38,25 @@ O APK é gerado automaticamente na nuvem do GitHub, de graça. Não é preciso i
 
 Cada vez que você alterar o aplicativo e enviar pelo GitHub Desktop (**Commit** e depois **Push**), um APK novo é gerado. Ele instala por cima do anterior sem perder os registros guardados no celular.
 
+### Endereço do servidor dentro do APK
+
+Quando o sistema estiver numa hospedagem, informe o endereço ao GitHub para ele ir dentro do APK:
+
+1. No repositório, abra **Settings > Secrets and variables > Actions > Variables** e clique em **New repository variable**.
+2. Nome: `SERVIDOR_APP`. Valor: o endereço da Central, por exemplo `https://reobote.com.br`.
+3. Em **Actions**, rode **Gerar APK do aplicativo** de novo (**Run workflow**).
+
+Sem essa variável, o APK sai sem servidor e mostra "Este aplicativo ainda não tem servidor configurado" ao tentar entrar.
+
 ### Disponibilizar para os colaboradores
 
-Escolha uma das opções:
-
-- **Pelo próprio servidor (recomendado com repositório privado):** baixe o `reobote.apk` em Releases e coloque o arquivo na pasta `downloads/` do servidor.
-- **Pelo link do GitHub (somente repositório público):** em Central > Configurações > **Link de download do APK**, cole `https://github.com/USUARIO/REPOSITORIO/releases/latest/download/reobote.apk`.
-
-Depois disso, a página **Aplicativo** da Central (no menu lateral) mostra o botão de download, um **QR Code para baixar pelo celular**, o endereço do servidor (também em QR Code) e o passo a passo de instalação.
+A página **Aplicativo** da Central (no menu lateral) apresenta o aplicativo e mostra o botão de download, um **QR Code para baixar pelo celular** e o passo a passo de instalação. O link aponta para a versão mais nova publicada nas Releases do GitHub. Para usar outro link (por exemplo, o arquivo `downloads/reobote.apk` no próprio servidor), preencha **Configurações > Link de download do APK**.
 
 ### Testar no celular antes de ter um servidor na internet
 
 1. Inicie o servidor aceitando conexões da rede: `php -S 0.0.0.0:3000 server/router.php`.
 2. Descubra o IP do computador. No Windows, rode `ipconfig` e anote o "Endereço IPv4", por exemplo `192.168.0.10`.
-3. No app, informe o servidor `http://192.168.0.10:3000`. O celular precisa estar no mesmo Wi-Fi. Se não conectar, libere a porta 3000 no Firewall do Windows.
+3. No app, na tela de login, **toque 5 vezes no logotipo REOBOTE**. Abre a tela **Servidor**: informe `http://192.168.0.10:3000` e toque em **Salvar**. O celular precisa estar no mesmo Wi-Fi. Se não conectar, libere a porta 3000 no Firewall do Windows.
 
 Em produção, use um endereço com `https://`.
 

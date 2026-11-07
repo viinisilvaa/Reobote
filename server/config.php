@@ -204,6 +204,9 @@ function reobote_date_range(int $maxDays, ?int $defaultDays = null): array
 }
 
 // Configuracoes institucionais e regras do sistema, guardadas na tabela settings.
+// Link padrão do APK: sempre a versão mais nova publicada nas Releases do GitHub do projeto.
+const REOBOTE_APK_URL_PADRAO = 'https://github.com/viinisilvaa/Reobote/releases/latest/download/reobote.apk';
+
 const REOBOTE_SETTING_DEFAULTS = [
     'company_name' => 'Central REOBOTE',
     'company_email' => 'central@reobote.com',
@@ -214,7 +217,7 @@ const REOBOTE_SETTING_DEFAULTS = [
     'offline_max_days' => '7',
     'request_gps_on_checkin' => '1',
     'shift_gap_hours' => '16',
-    // Link de download do APK (ex.: o link "latest" das Releases do GitHub). Vazio = /downloads/reobote.apk.
+    // Link de download do APK. Vazio = versão mais nova publicada no GitHub (REOBOTE_APK_URL_PADRAO).
     'apk_download_url' => '',
 ];
 

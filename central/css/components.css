@@ -157,7 +157,7 @@ body[data-page="dashboard"] .activity-copy strong i { color: var(--purple); }
 .map-legend i, .dot { width: 10px; height: 10px; display: inline-block; border-radius: 50%; }
 .dot { width: 8px; height: 8px; margin-right: 4px; }
 .legend-unit { border-radius: 2px !important; background: #5423bd; }
-.google-map-info { display: flex; flex-direction: column; gap: 3px; color: #201b36; font-size: 12px; }
+.map-info { display: flex; flex-direction: column; gap: 3px; color: #201b36; font-size: 12px; }
 [data-page="map"] .map-live-canvas { height: 380px; }
 [data-page="map"] .map-team-copy small::before { display: none; }
 [data-page="map"] .map-team-copy small { flex-wrap: wrap; }
@@ -204,6 +204,25 @@ body[data-page="dashboard"] .activity-copy strong i { color: var(--purple); }
 html[data-theme="dark"] .copy-text { background: var(--dark-raised); color: #e4d8ff; }
 html[data-theme="dark"] .install-steps { color: var(--dark-text); }
 html[data-theme="dark"] .warn-text { color: #ffe4a3; }
+html[data-theme="dark"] .download-qr small { color: #555 !important; } /* o QR fica sempre em fundo branco */
+/* Apresentação do aplicativo: logotipo, texto e grade com os recursos. */
+.app-hero { margin-bottom: 16px; padding-top: 22px; display: flex; flex-direction: column; gap: 16px; }
+.app-hero-copy { display: flex; align-items: center; gap: 16px; }
+.app-hero-logo { width: 64px; height: 60px; flex: 0 0 auto; object-fit: contain; }
+.app-hero-copy h2 { margin: 0 0 4px; color: #28164f; font-size: 20px; }
+.app-hero-copy p { margin: 0; color: #5d5873; font-size: 14px; line-height: 1.5; }
+.app-features { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.app-features li { padding: 12px; display: flex; align-items: flex-start; gap: 10px; border-radius: 12px; background: #f6f3ff; }
+.app-features i { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 10px; background: #5423bd; color: #fff; font-size: 15px; }
+.app-features span { display: flex; flex-direction: column; gap: 2px; color: #5d5873; font-size: 12px; line-height: 1.4; }
+.app-features strong { color: #28164f; font-size: 13px; }
+html[data-theme="dark"] .app-hero-copy h2,
+html[data-theme="dark"] .app-features strong { color: var(--dark-text); }
+html[data-theme="dark"] .app-hero-copy p,
+html[data-theme="dark"] .app-features span { color: var(--dark-muted); }
+html[data-theme="dark"] .app-features li { background: var(--dark-raised); }
+@media (max-width: 1000px) { .app-features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .app-features { grid-template-columns: 1fr; } .app-hero-copy { align-items: flex-start; } }
 
 /* Login e criação de senha. */
 .login-card .login-remember { display: flex; align-items: center; gap: 8px; font-weight: 500; }
@@ -237,7 +256,7 @@ html[data-theme="dark"] .state-pill.warning { background: #5b451a; color: #ffe4a
 html[data-theme="dark"] .state-pill.danger { background: #5b2730; color: #ffb5be; }
 html[data-theme="dark"] .state-pill.muted, html[data-theme="dark"] .chip-muted { background: #494355; color: #f0ebfb; }
 html[data-theme="dark"] :is(.info-card, .qr-card, .holiday-list li, .standalone-message) { border-color: var(--dark-border); background: var(--dark-surface); color: var(--dark-text); }
-html[data-theme="dark"] :is(.info-card h3, .situation-copy strong, .checkbox-line, legend, .dialog-message, .plain-list, .qr-card-copy strong, .info-card-meta dd, .google-map-info) { color: var(--dark-text); }
+html[data-theme="dark"] :is(.info-card h3, .situation-copy strong, .checkbox-line, legend, .dialog-message, .plain-list, .qr-card-copy strong, .info-card-meta dd, .map-info) { color: var(--dark-text); }
 html[data-theme="dark"] :is(.muted-text, .cell-note, .cell-stack small, .form-hint, .situation-copy small, .info-card header p, .info-card-meta dt, .qr-card-copy small, .empty-block, .loading-state, .dashboard-updated, .map-legend, .login-info) { color: var(--dark-muted); }
 html[data-theme="dark"] :is(.chip) { background: #3a2b59; color: #e4d8ff; }
 html[data-theme="dark"] .chip-green { background: #1f5035; color: #b8f5cd; }

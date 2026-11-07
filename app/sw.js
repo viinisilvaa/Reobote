@@ -1,11 +1,12 @@
 // Service worker do aplicativo REOBOTE (escopo /app/): mantém a interface disponível sem internet.
 // A API nunca é guardada em cache; os registros offline ficam na fila do próprio aplicativo.
-const CACHE = "reobote-app-v2";
+const CACHE = "reobote-app-v3";
 const SHELL = [
   "/app/",
   "/app/index.html",
   "/app/manifest.webmanifest",
   "/app/css/app.css",
+  "/app/js/config.js",
   "/app/js/app.js",
   "/app/js/vendor/jsQR.min.js",
   "/app/icons/icon-192.png",

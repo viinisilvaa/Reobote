@@ -27,7 +27,7 @@ function api_session_payload(array $user): array
         ],
         // Onde baixar o APK do aplicativo (página "Aplicativo" da Central).
         'downloads' => [
-            'apkUrl' => $settings['apk_download_url'] !== '' ? $settings['apk_download_url'] : '/downloads/reobote.apk',
+            'apkUrl' => $settings['apk_download_url'] !== '' ? $settings['apk_download_url'] : REOBOTE_APK_URL_PADRAO,
             'customApkUrl' => $settings['apk_download_url'] !== '',
         ],
         'rules' => [

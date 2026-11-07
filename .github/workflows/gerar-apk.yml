@@ -50,6 +50,9 @@ jobs:
         run: npm install
 
       - name: Copiar o aplicativo para dentro do projeto Android
+        # SERVIDOR_APP: endereço da Central embutido no APK (variável do repositório; pode ficar vazia).
+        env:
+          SERVIDOR_APP: ${{ vars.SERVIDOR_APP }}
         run: npm run preparar
 
       - name: Criar o projeto Android

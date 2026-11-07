@@ -180,8 +180,8 @@
 [data-page="map"] .map-config-notice > span { max-width: 430px; color: #6a617d; font-size: 10px; line-height: 1.5; }
 [data-page="map"] .map-config-notice.error { color: #b4233d; }
 [data-page="map"] .map-no-locations { background: rgba(245,242,251,.9); }
-[data-page="map"] .google-map-info { display:flex; flex-direction:column; gap:4px; color:#2d1d50; font:12px Inter,"Segoe UI",sans-serif; }
-[data-page="map"] .google-map-info span { color:#625779; font-size:10px; }
+[data-page="map"] .map-info { display:flex; flex-direction:column; gap:4px; color:#2d1d50; font:12px Inter,"Segoe UI",sans-serif; }
+[data-page="map"] .map-info span { color:#625779; font-size:10px; }
 
 [data-page="map"] .map-live-canvas::before,
 [data-page="map"] .map-live-canvas::after { display: none; }
@@ -393,3 +393,10 @@
   [data-page="map"] .map-unit-select select { max-width: 145px; font-size: 9px; }
   [data-page="map"] .map-sync-status { display:none; }
 }
+
+/* Mapa OpenStreetMap (Leaflet): marcador quadrado roxo das unidades e balões no tema escuro. */
+[data-page="map"] .map-unit-marker { border: 2px solid #fff; border-radius: 4px; background: #5423bd; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+[data-page="map"] .map-live-canvas.leaflet-container { z-index: 0; font-family: Inter, "Segoe UI", sans-serif; }
+html[data-theme="dark"] [data-page="map"] .leaflet-popup-content-wrapper,
+html[data-theme="dark"] [data-page="map"] .leaflet-popup-tip { background: #211b2e; color: #f7f4ff; }
+html[data-theme="dark"] [data-page="map"] .map-info span { color: #d0c8df; }

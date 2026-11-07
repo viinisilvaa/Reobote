@@ -1,4 +1,4 @@
-// Mapa em tempo real: unidades de atendimento, situação da equipe e localização autorizada pelos colaboradores.
+// Mapa em tempo real (OpenStreetMap, sem chave): unidades de atendimento, situação da equipe e localização autorizada pelos colaboradores.
 window.ReobotePage = {
   // Monta o mapa dentro de "root"; R são os utilitários da Central (app-core.js).
   async mount(root, R) {
@@ -8,9 +8,7 @@ window.ReobotePage = {
     let selectedId = null;
     let search = "";
     let stateFilter = "";
-    let google = null;
     let map = null;
-    let info = null;
     const employeeMarkers = new Map();
     const unitMarkers = new Map();
 
@@ -89,72 +87,62 @@ window.ReobotePage = {
       status.innerHTML = `<i></i> ${esc(message)}`;
     }
 
-    // Mensagem no lugar do mapa (ex.: chave do Google Maps não configurada).
+    // Mensagem no lugar do mapa (ex.: biblioteca de mapa não carregou).
     function notice(title, text, isError = false) {
       root.querySelector("#map-canvas").innerHTML = `<div class="map-config-notice${isError ? " error" : ""}"><i class="fa-solid ${isError ? "fa-triangle-exclamation" : "fa-map-location-dot"}"></i><strong>${esc(title)}</strong><span>${esc(text)}</span></div>`;
     }
 
-    // Marcador do mapa: círculo colorido pela situação (colaborador) ou quadrado roxo (unidade).
-    function markerIcon(color, unit = false) {
-      return unit
-        ? { path: "M -8 -8 L 8 -8 L 8 8 L -8 8 Z", scale: 1, fillColor: "#5423bd", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 2 }
-        : { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: color, fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 };
+    // Conteúdo do balão que abre ao tocar num marcador.
+    function popup(title, subtitle) {
+      return `<div class="map-info"><strong>${esc(title)}</strong><span>${esc(subtitle)}</span></div>`;
     }
 
-    // Cria/atualiza os marcadores das unidades (com o raio de chegada) e dos colaboradores com localização recente.
+    // Cria/atualiza os marcadores das unidades (quadrado roxo + raio de chegada)
+    // e dos colaboradores com localização recente (círculo na cor da situação).
     function updateMarkers() {
       if (!map) return;
-      const bounds = new google.maps.LatLngBounds();
-      let points = 0;
+      const bounds = [];
       data.units.filter(unit => unit.latitude !== null).forEach(unit => {
-        const position = { lat: unit.latitude, lng: unit.longitude };
-        let marker = unitMarkers.get(unit.id);
-        if (!marker) {
-          marker = new google.maps.Marker({ map, position, title: unit.name, icon: markerIcon(null, true), zIndex: 1 });
-          marker.addListener("click", () => {
-            const content = document.createElement("div");
-            content.className = "google-map-info";
-            content.innerHTML = `<strong>${esc(unit.name)}</strong><span>${esc(unit.kind)}${unit.address ? ` • ${esc(unit.address)}` : ""}</span>`;
-            info.setContent(content);
-            info.open({ map, anchor: marker });
-          });
-          new google.maps.Circle({ map, center: position, radius: unit.radiusM, strokeColor: "#5423bd", strokeOpacity: 0.4, strokeWeight: 1, fillColor: "#5423bd", fillOpacity: 0.06, clickable: false });
+        const position = [unit.latitude, unit.longitude];
+        if (!unitMarkers.has(unit.id)) {
+          // Raio de chegada da unidade (área considerada "no local").
+          L.circle(position, { radius: unit.radiusM, color: "#5423bd", opacity: 0.4, weight: 1, fillColor: "#5423bd", fillOpacity: 0.06, interactive: false }).addTo(map);
+          const icon = L.divIcon({ className: "map-unit-marker", iconSize: [18, 18] });
+          const marker = L.marker(position, { icon, title: unit.name, zIndexOffset: -100 }).addTo(map);
+          marker.bindPopup(popup(unit.name, `${unit.kind}${unit.address ? ` • ${unit.address}` : ""}`));
           unitMarkers.set(unit.id, marker);
         }
-        bounds.extend(position);
-        points++;
+        bounds.push(position);
       });
       const withLocation = new Set();
       data.employees.forEach(person => {
         if (!person.location) return;
         withLocation.add(person.id);
-        const position = { lat: person.location.latitude, lng: person.location.longitude };
+        const position = [person.location.latitude, person.location.longitude];
         let marker = employeeMarkers.get(person.id);
         if (!marker) {
-          marker = new google.maps.Marker({ map, position, zIndex: 2 });
-          marker.addListener("click", () => select(person.id, true));
+          marker = L.circleMarker(position, { radius: 9, weight: 3, color: "#fff", fillOpacity: 1 }).addTo(map);
+          marker.on("click", () => select(person.id, true));
           employeeMarkers.set(person.id, marker);
         }
-        marker.setPosition(position);
-        marker.setTitle(`${person.name} — ${person.stateLabel}`);
-        marker.setIcon(markerIcon(stateColors[person.state]));
-        marker.setVisible(visible(person));
-        bounds.extend(position);
-        points++;
+        marker.setLatLng(position);
+        marker.setStyle({ fillColor: stateColors[person.state] || "#8b8799" });
+        marker.bindPopup(popup(person.name, person.stateLabel));
+        // Respeita a pesquisa e o filtro: esconde o marcador de quem não passa neles.
+        if (visible(person)) marker.addTo(map); else marker.remove();
+        bounds.push(position);
       });
+      // Remove marcadores de quem deixou de compartilhar a localização.
       employeeMarkers.forEach((marker, id) => {
         if (!withLocation.has(id)) {
-          marker.setMap(null);
+          marker.remove();
           employeeMarkers.delete(id);
         }
       });
-      if (!map.reoboteFitted && points) {
-        if (points === 1) {
-          map.setCenter(bounds.getCenter());
-          map.setZoom(14);
-        } else {
-          map.fitBounds(bounds, 40);
-        }
+      // Na primeira vez, enquadra todos os pontos na tela.
+      if (!map.reoboteFitted && bounds.length) {
+        if (bounds.length === 1) map.setView(bounds[0], 15);
+        else map.fitBounds(bounds, { padding: [40, 40] });
         map.reoboteFitted = true;
       }
     }
@@ -164,31 +152,9 @@ window.ReobotePage = {
       selectedId = id;
       renderSide();
       const person = data.employees.find(item => item.id === id);
-      if (map && person?.location && !fromMap) map.panTo({ lat: person.location.latitude, lng: person.location.longitude });
-      if (map && person?.location) {
-        const content = document.createElement("div");
-        content.className = "google-map-info";
-        content.innerHTML = `<strong>${esc(person.name)}</strong><span>${esc(person.stateLabel)}</span>`;
-        info.setContent(content);
-        info.open({ map, anchor: employeeMarkers.get(id) });
-      }
-    }
-
-    // Carrega o Google Maps uma única vez com a chave configurada no servidor.
-    function loadGoogleMaps(key) {
-      // O Google chama esta função quando recusa a chave (inválida, sem faturamento ou site não autorizado).
-      // Trocamos a tela genérica "Ops! Algo deu errado" por instruções em português.
-      window.gm_authFailure = () => notice("Chave do Google Maps recusada",
-        "O Google recusou a chave configurada. Confira no Google Cloud: 1) a Maps JavaScript API está ativada; 2) o faturamento do projeto está ativo; 3) o endereço deste site está liberado nas restrições da chave.", true);
-      if (window.google?.maps) return Promise.resolve(window.google);
-      return new Promise((resolve, reject) => {
-        window.reoboteGoogleMapsReady = () => resolve(window.google);
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=reoboteGoogleMapsReady&loading=async`;
-        script.async = true;
-        script.onerror = () => reject(new Error("O Google Maps não carregou. Verifique a chave, o faturamento e as APIs ativadas."));
-        document.head.append(script);
-      });
+      const marker = employeeMarkers.get(id);
+      if (map && person?.location && !fromMap) map.panTo([person.location.latitude, person.location.longitude]);
+      if (marker) marker.openPopup();
     }
 
     // Busca a situação da equipe no servidor (a cada 15 segundos).
@@ -214,23 +180,22 @@ window.ReobotePage = {
     await refresh();
     setInterval(refresh, 15000);
 
-    const config = await api.get("/api/config").catch(() => ({}));
-    if (!config.googleMapsBrowserKey) {
-      notice("Google Maps aguardando configuração", "Defina GOOGLE_MAPS_BROWSER_KEY em server/.env para exibir unidades e localizações no mapa. A lista da equipe abaixo continua funcionando.");
+    // Mapa OpenStreetMap com a biblioteca Leaflet (js/vendor/leaflet): gratuito e sem chave.
+    if (typeof window.L === "undefined") {
+      notice("Mapa indisponível", "A biblioteca do mapa não carregou. Recarregue a página.", true);
       return;
     }
-    try {
-      google = await loadGoogleMaps(config.googleMapsBrowserKey);
-      const canvas = root.querySelector("#map-canvas");
-      canvas.innerHTML = "";
-      map = new google.maps.Map(canvas, { center: { lat: -22.9068, lng: -43.1729 }, zoom: 11, mapTypeControl: false, streetViewControl: false, fullscreenControl: true });
-      info = new google.maps.InfoWindow();
-      updateMarkers();
-      if (!data.units.some(unit => unit.latitude !== null) && !data.employees.some(person => person.location)) {
-        R.toast("Cadastre a localização das unidades e peça aos colaboradores que autorizem o GPS para ver pontos no mapa.");
-      }
-    } catch (error) {
-      notice("Google Maps indisponível", error.message, true);
+    const canvas = root.querySelector("#map-canvas");
+    canvas.innerHTML = "";
+    // Começa no Rio de Janeiro; depois se ajusta às unidades e técnicos cadastrados.
+    map = L.map(canvas, { zoomControl: true }).setView([-22.9068, -43.1729], 11);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+    }).addTo(map);
+    updateMarkers();
+    if (!data.units.some(unit => unit.latitude !== null) && !data.employees.some(person => person.location)) {
+      R.toast("Cadastre a localização das unidades e peça aos colaboradores que autorizem o GPS para ver pontos no mapa.");
     }
   }
 };

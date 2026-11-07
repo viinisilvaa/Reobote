@@ -107,13 +107,17 @@
 
   // Servidor (somente APK) ------------------------------------------------------------------
 
-  // Lê o endereço do servidor salvo no celular.
+  // Endereço do servidor usado pelo APK, nesta ordem:
+  // 1) o que foi configurado no celular (atalho: tocar 5 vezes no logotipo da tela de login);
+  // 2) o endereço embutido no APK (js/config.js, preenchido pelo GitHub com a variável SERVIDOR_APP).
   function savedServer() {
+    let stored = "";
     try {
-      return localStorage.getItem(SERVER_KEY) || "";
+      stored = localStorage.getItem(SERVER_KEY) || "";
     } catch {
-      return "";
+      stored = "";
     }
+    return stored || normalizeServer(window.REOBOTE_CONFIG?.servidor || "");
   }
 
   // Normaliza o endereço digitado: remove espaços e a barra final e acrescenta "http://" se faltar.
@@ -674,8 +678,11 @@
     document.querySelector(".m-tabs").hidden = true;
   }
 
-  // Tela de login. No APK também pede o endereço do servidor (fica salvo no celular).
+  // Tela de login: só e-mail, senha e "Esqueci minha senha".
+  // O endereço do servidor não aparece aqui (vem embutido no APK); para trocá-lo em testes,
+  // toque 5 vezes no logotipo, o que abre a tela de servidor (showServerSetup).
   function showLogin(message = "", askServer = false) {
+    if (askServer) return showServerSetup();
     stopScanner();
     stopLocationWatch();
     // A fila offline continua salva no celular e volta a ser enviada quando a mesma conta entrar de novo.
@@ -684,15 +691,12 @@
     tab = "login";
     document.querySelector(".m-tabs").hidden = true;
     syncButton.hidden = true;
-    const showServer = isNative && (askServer || !api.baseUrl);
     screen.innerHTML = `<section class="m-card m-auth">
-      <img class="m-auth-logo" src="../compartilhado/assets/reobote-mark.png" alt="">
+      <img class="m-auth-logo" id="login-logo" src="../compartilhado/assets/reobote-mark.png" alt="">
       <h1>Entrar no aplicativo</h1>
       <p>Use o e-mail corporativo e a senha entregues pela Central.</p>
       ${message ? `<p class="m-auth-notice">${esc(message)}</p>` : ""}
       <form id="app-login-form" class="m-form">
-        ${showServer ? `<label>Endereço do servidor<input name="server" type="url" inputmode="url" autocomplete="url" required placeholder="https://reobote.com.br" value="${esc(api.baseUrl || savedServer())}"></label>
-          <p class="m-hint">Peça o endereço à Central. Em testes na rede Wi-Fi, use o IP do computador, por exemplo http://192.168.0.10:3000.</p>` : ""}
         <label>E-mail<input name="email" type="email" autocomplete="username" required maxlength="190"></label>
         <label>Senha<input name="password" type="password" autocomplete="current-password" required maxlength="256"></label>
         <label class="m-check"><input type="checkbox" name="remember" checked> Manter conectado neste celular</label>
@@ -705,9 +709,34 @@
         <button type="submit" class="m-button ghost">Avisar a administração</button>
         <p class="m-hint" role="status" hidden></p>
       </form>
-      ${isNative && !showServer ? `<button type="button" class="m-link" data-action="change-server">Servidor: ${esc(api.baseUrl)} (trocar)</button>` : ""}
     </section>`;
-    screen.querySelector("input").focus();
+    // Atalho escondido para configurar o servidor: 5 toques no logotipo em até 3 segundos.
+    let taps = [];
+    screen.querySelector("#login-logo").addEventListener("click", () => {
+      const now = Date.now();
+      taps = taps.filter(time => now - time < 3000).concat(now);
+      if (taps.length >= 5 && isNative) showServerSetup();
+    });
+  }
+
+  // Tela de configuração do servidor (somente APK). Usada em testes na rede Wi-Fi
+  // ou quando o APK foi gerado sem endereço embutido.
+  function showServerSetup(message = "") {
+    tab = "server";
+    document.querySelector(".m-tabs").hidden = true;
+    syncButton.hidden = true;
+    screen.innerHTML = `<section class="m-card m-auth">
+      <h1>Servidor</h1>
+      <p>Endereço da Central REOBOTE que este aplicativo deve usar.</p>
+      ${message ? `<p class="m-auth-notice">${esc(message)}</p>` : ""}
+      <form id="app-server-form" class="m-form">
+        <label>Endereço do servidor<input name="server" type="url" inputmode="url" autocomplete="url" required placeholder="https://reobote.com.br" value="${esc(api.baseUrl || savedServer())}"></label>
+        <p class="m-hint">Em testes na rede Wi-Fi, use o IP do computador, por exemplo http://192.168.0.10:3000.</p>
+        <p class="m-form-error" role="alert" hidden></p>
+        <button type="submit" class="m-button primary">Salvar</button>
+        ${api.baseUrl ? '<button type="button" class="m-button ghost" data-action="back-to-login">Voltar</button>' : ""}
+      </form>
+    </section>`;
   }
 
   // Criação da senha definitiva (obrigatória após senha temporária) ou troca voluntária.
@@ -792,6 +821,7 @@
       api.post("/api/auth/logout", {}, { handleAuth: false }).catch(() => {}).finally(() => showLogin("", askServer));
       return;
     }
+    if (action === "back-to-login") return showLogin();
     if (action === "change-password") return showPassword(false);
     if (action === "cancel-password") return go("account");
     if (action === "forgot") {
@@ -845,7 +875,7 @@
   // Envio dos formulários de login, "esqueci minha senha" e criação de senha.
   document.addEventListener("submit", async event => {
     const form = event.target;
-    if (!["app-login-form", "app-forgot-form", "app-password-form"].includes(form.id)) return;
+    if (!["app-login-form", "app-forgot-form", "app-password-form", "app-server-form"].includes(form.id)) return;
     event.preventDefault();
     const data = new FormData(form);
     const errorBox = form.querySelector(".m-form-error");
@@ -853,13 +883,18 @@
     if (errorBox) errorBox.hidden = true;
     submit.disabled = true;
     try {
+      if (form.id === "app-server-form") {
+        await useServer(data.get("server")); // testa a conexão antes de salvar
+        toast("Servidor salvo.", "success");
+        return showLogin();
+      }
       if (form.id === "app-login-form") {
-        if (data.has("server")) await useServer(data.get("server"));
+        if (isNative && !api.baseUrl) throw new Error("Este aplicativo ainda não tem servidor configurado. Fale com a administração.");
         const result = await api.post("/api/auth/login", { email: data.get("email"), password: data.get("password"), remember: data.has("remember") }, { handleAuth: false });
         await enter(result);
       }
       if (form.id === "app-forgot-form") {
-        if (isNative && !api.baseUrl) throw new Error("Informe primeiro o endereço do servidor.");
+        if (isNative && !api.baseUrl) throw new Error("Este aplicativo ainda não tem servidor configurado. Fale com a administração.");
         const { message } = await api.post("/api/auth/forgot", { email: data.get("email") }, { handleAuth: false });
         const status = form.querySelector(".m-hint");
         status.textContent = message;
@@ -918,7 +953,7 @@
     }
     if (isNative) {
       api.baseUrl = savedServer();
-      if (!api.baseUrl) return showLogin("", true); // primeiro uso do APK: pede o servidor
+      if (!api.baseUrl) return showLogin(); // APK sem servidor embutido: login avisa ao tentar entrar
     }
     let cachedSession = null;
     try {

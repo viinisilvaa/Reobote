@@ -36,7 +36,7 @@ window.ReobotePage = {
           <label class="field"><span>Prazo para sincronizar registros offline (dias)</span><input class="text-control" type="number" name="offlineMaxDays" min="1" max="30" value="${settings.offlineMaxDays}"></label>
           <label class="field"><span>Turno sem encerramento é fechado após (horas)</span><input class="text-control" type="number" name="shiftGapHours" min="4" max="24" value="${settings.shiftGapHours}"></label>
           <label class="field span-2"><span>Link de download do APK (página “Aplicativo”)</span><input class="text-control" type="url" name="apkDownloadUrl" maxlength="500" value="${esc(settings.apkDownloadUrl || "")}" placeholder="https://github.com/USUARIO/REPOSITORIO/releases/latest/download/reobote.apk"></label>
-          <p class="form-hint span-2">Deixe em branco para usar o arquivo <code>downloads/reobote.apk</code> deste servidor.</p>
+          <p class="form-hint span-2">Deixe em branco para usar a versão mais nova publicada no GitHub do projeto.</p>
           <label class="checkbox-line span-2"><input type="checkbox" name="requireEmailDomain" ${settings.requireEmailDomain ? "checked" : ""}> Exigir o domínio corporativo no cadastro de colaboradores</label>
           <label class="checkbox-line span-2"><input type="checkbox" name="requestGpsOnCheckin" ${settings.requestGpsOnCheckin ? "checked" : ""}> Pedir a localização do aparelho (com permissão do colaborador) ao ler um QR Code, para conferir a distância até a unidade</label>
           <p class="form-hint span-2"><i class="fa-solid fa-circle-info"></i> Horários, tolerâncias, intervalos e regras de horas extras ficam em <a href="jornadas.html">Jornadas e Escalas</a>. Permissões ficam em <a href="cargos.html">Cargos</a>.</p>

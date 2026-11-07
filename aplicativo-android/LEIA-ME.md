@@ -25,3 +25,9 @@ Arquivos JSON não aceitam comentários, então eles estão explicados aqui.
 - `plugins.CapacitorHttp` e `plugins.CapacitorCookies`: as chamadas à API passam pelo Android nativo. Assim o servidor não precisa de configuração de CORS, e o cookie de sessão funciona.
 
 As pastas `node_modules/`, `www/` e `android/` são geradas automaticamente e não vão para o GitHub (`.gitignore`).
+
+## Endereço do servidor (app/js/config.js)
+
+O APK já sai com o endereço da Central embutido, então o colaborador só digita o e-mail e a senha. Na geração, o script `preparar-www.mjs` grava em `www/app/js/config.js` o valor da variável **`SERVIDOR_APP`** do repositório no GitHub (Settings > Secrets and variables > Actions > Variables).
+
+Para testes, dá para trocar o endereço no próprio celular: na tela de login, toque 5 vezes no logotipo REOBOTE.

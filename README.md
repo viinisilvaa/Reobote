@@ -11,7 +11,7 @@ Sistema de **controle de jornada por QR Code** para equipes técnicas em campo. 
 
 **[⬇️ Baixar o APK para Android](https://github.com/viinisilvaa/Reobote/releases/latest/download/reobote.apk)**
 
-Depois de instalar, informe o endereço do servidor, o e-mail e a senha temporária entregue pela Central.
+Depois de instalar, entre com o e-mail e a senha temporária entregue pela Central.
 
 ## Telas
 
@@ -28,7 +28,7 @@ Depois de instalar, informe o endereço do servidor, o e-mail e a senha temporá
 
 **Central (painel administrativo)**
 - Painel com ativos, atrasados, ausentes e horas extras
-- Mapa em tempo real com a localização dos técnicos (Google Maps)
+- Mapa em tempo real com a localização dos técnicos (OpenStreetMap, sem custo)
 - Colaboradores com foto, cargos com permissões, jornadas e escalas (tolerância, 12x36, feriados)
 - Notificações, relatórios em PDF/CSV e geração de QR Codes
 
@@ -47,4 +47,4 @@ php -S 127.0.0.1:3000 server/router.php
 
 Acesse `http://localhost:3000/central/` (Central) ou `http://localhost:3000/app/` (aplicativo).
 
-📖 Instalação em produção, configuração do Google Maps, geração do APK e regras de jornada: **[Guia completo](docs/GUIA.md)**.
+📖 Instalação em produção, mapa, geração do APK e regras de jornada: **[Guia completo](docs/GUIA.md)**.

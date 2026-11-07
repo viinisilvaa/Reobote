@@ -34,6 +34,19 @@ for (const folder of ["app", "compartilhado"]) {
   });
 }
 
+// Endereço do servidor embutido no APK. Vem da variável de ambiente SERVIDOR_APP
+// (no GitHub: Settings > Secrets and variables > Actions > Variables > SERVIDOR_APP).
+// Sem a variável, o APK sai sem servidor e ele pode ser configurado no celular
+// (5 toques no logotipo da tela de login).
+const servidor = (process.env.SERVIDOR_APP || "").trim().replace(/\/+$/, "");
+if (servidor && !/^https?:\/\/[^\s"'\\]+$/i.test(servidor)) {
+  throw new Error(`SERVIDOR_APP inválido: "${servidor}". Use algo como https://reobote.com.br`);
+}
+writeFileSync(join(www, "app", "js", "config.js"), `// Gerado automaticamente por preparar-www.mjs (veja app/js/config.js para a explicação).
+window.REOBOTE_CONFIG = { servidor: ${JSON.stringify(servidor)} };
+`);
+console.log(servidor ? `Servidor embutido no APK: ${servidor}` : "APK sem servidor embutido (configure SERVIDOR_APP no GitHub).");
+
 // Página inicial do APK: abre direto o aplicativo.
 writeFileSync(join(www, "index.html"), `<!DOCTYPE html>
 <html lang="pt-BR">

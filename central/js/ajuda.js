@@ -13,7 +13,7 @@ window.ReobotePage = {
       ["O sistema impede registros duplicados?", "Sim. Leituras repetidas em poucos minutos são ignoradas, e registros fora da sequência são recusados com explicação (por exemplo, encerrar a jornada sem ter retornado do almoço)."],
       ["Como corrijo um registro errado?", "No perfil do colaborador, gestores podem lançar um registro manual ou anular um registro, sempre com justificativa. Nada é apagado: as correções ficam no histórico de alterações."],
       ["Como exporto relatórios em PDF?", "Em Relatórios, gere o período desejado e use o botão PDF. Na janela de impressão, escolha Salvar como PDF. Também é possível exportar em CSV para planilhas."],
-      ["Como instalar o aplicativo no celular?", "Abra a página Aplicativo no menu da Central. No Android, aponte a câmera do celular para o QR Code de download, instale o reobote.apk e informe o endereço do servidor mostrado na mesma página. No iPhone, use o aplicativo pelo navegador e adicione-o à tela inicial."]
+      ["Como instalar o aplicativo no celular?", "Abra a página Aplicativo no menu da Central. No Android, aponte a câmera do celular para o QR Code de download, instale o reobote.apk e entre com o e-mail e a senha temporária. No iPhone, use o aplicativo pelo navegador e adicione-o à tela inicial."]
     ];
     const company = R.session.company;
 

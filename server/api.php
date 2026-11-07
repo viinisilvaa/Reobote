@@ -54,9 +54,9 @@ try {
     $path = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/');
     api_require_same_origin($method);
 
-    // Chave publica do Google Maps (restrita por referenciador no Google Cloud); nao depende do banco.
+    // Identifica o servidor REOBOTE (o aplicativo usa para testar o endereço configurado); nao depende do banco.
     if ($path === '/api/config' && $method === 'GET') {
-        reobote_json(['googleMapsBrowserKey' => reobote_env('GOOGLE_MAPS_BROWSER_KEY') ?: null]);
+        reobote_json(['app' => 'REOBOTE']);
     }
     reobote_start_session();
 

@@ -68,7 +68,7 @@
 
 .partner-divider { height: 1px; margin: 10px 0; background: rgba(255,255,255,.2); }
 
-/* Alterna superfícies, textos e controles sem mudar as cores semânticas de status. */
+/* Tema escuro: muda SOMENTE cores (fundos, textos, bordas). Tamanho e formato das letras ficam iguais ao tema claro. */
 html[data-theme="dark"] {
   color-scheme: dark;
   background: #171321;
@@ -85,7 +85,6 @@ html[data-theme="dark"] body,
 html[data-theme="dark"] body[data-page="dashboard"] {
   background: radial-gradient(ellipse at 68% 46%, rgba(80, 57, 123, .16), transparent 58%), var(--dark-page);
   color: var(--dark-text);
-  font-size: 14px;
 }
 
 html[data-theme="dark"] .app,
@@ -145,7 +144,7 @@ html[data-theme="dark"] body[data-page="dashboard"] :is(.dashboard-period select
   color: #e4d8ff;
 }
 
-html[data-theme="dark"] .app-dashboard :is(.panel-heading, .activity-panel > h2, .map-panel > h2, .map-section-heading, .jobs-panel .panel-heading) {
+html[data-theme="dark"] .app-dashboard :is(.panel-heading, .content-panel-heading, .activity-panel > h2, .map-panel > h2, .map-section-heading, .jobs-panel .panel-heading) {
   border-color: var(--dark-border);
   background: var(--dark-raised);
   color: var(--dark-text);
@@ -406,7 +405,7 @@ html[data-theme="dark"] .login-card > p { color: var(--dark-muted); }
 html[data-theme="dark"] .login-card input { border-color: var(--dark-border); background: #1b1626; color: var(--dark-text); }
 
 /* Textos secundários mantêm contraste e tamanho legível em qualquer página. */
-body .app-dashboard :is(p, label, th, td, small, time, .field, .permissions, .job-row, .activity-name, .activity-info, .notification-copy, .read-label, .updated, .map-metric-copy > span, .map-sync-status, .map-place, .map-config-notice > span, .google-map-info, .toggle-row, .panel-description, .profile-label, .stat-label, .empty-state, .helper-text, .toolbar) {
+body .app-dashboard :is(p, label, th, td, small, time, .field, .permissions, .job-row, .activity-name, .activity-info, .notification-copy, .read-label, .updated, .map-metric-copy > span, .map-sync-status, .map-place, .map-config-notice > span, .map-info, .toggle-row, .panel-description, .profile-label, .stat-label, .empty-state, .helper-text, .toolbar) {
   font-size: max(12px, 1em);
   line-height: 1.45;
 }
@@ -420,19 +419,8 @@ body .app-dashboard :is(button, input:not([type="checkbox"]):not([type="radio"])
   font-size: max(13px, 1em);
 }
 
-html[data-theme="dark"] .navigation .nav-link {
-  font-size: 11px;
-}
 
-html[data-theme="dark"] .brand small,
-html[data-theme="dark"] .partner-entry small {
-  font-size: 10px;
-}
 
-html[data-theme="dark"] body.login-page .login-card :is(p, label, input) {
-  font-size: max(13px, 1em);
-  line-height: 1.45;
-}
 
 /* Botão de tema na tela de login. */
 .login-theme-toggle,
