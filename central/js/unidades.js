@@ -1,3 +1,4 @@
+// REOBOTE | central/js/unidades.js — Central: unidades e impressão das etiquetas de QR Code
 // Unidades de atendimento e QR Codes de veículos e unidades usados pelo aplicativo para registrar chegadas.
 window.ReobotePage = {
   // Monta a página de unidades e QR Codes dentro de "root"; R são os utilitários da Central (app-core.js).
