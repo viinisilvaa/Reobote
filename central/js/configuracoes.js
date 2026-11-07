@@ -1,3 +1,4 @@
+// REOBOTE | central/js/configuracoes.js — Central: dados da empresa, regras, senha e auditoria
 // Configurações: dados institucionais, regras do sistema, conta do usuário e histórico de alterações (auditoria).
 window.ReobotePage = {
   // Monta a página de configurações; partes administrativas só aparecem com a permissão "settings".
