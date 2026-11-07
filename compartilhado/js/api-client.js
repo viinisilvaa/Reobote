@@ -1,3 +1,4 @@
+// REOBOTE | compartilhado/js/api-client.js — Compartilhado: comunicação com a API (Central e aplicativo)
 /**
  * Cliente HTTP da API REOBOTE — usado pela Central e pelo aplicativo.
  *
