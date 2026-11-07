@@ -44,6 +44,7 @@
 
   // Chaves usadas no armazenamento do celular (localStorage).
   const SERVER_KEY = "reobote-app:server";   // endereço do servidor (somente APK)
+  const DISCOVERED_KEY = "reobote-app:server-auto"; // endereço lido do servidor.json no GitHub (somente APK)
   const SESSION_KEY = "reobote-app:session"; // última sessão, para abrir o app sem internet
 
   let session = null;          // conta autenticada: { user, company, rules }
@@ -111,14 +112,36 @@
   // Endereço do servidor usado pelo APK, nesta ordem:
   // 1) o que foi configurado no celular (atalho: tocar 5 vezes no logotipo da tela de login);
   // 2) o endereço embutido no APK (js/config.js, preenchido pelo GitHub com a variável SERVIDOR_APP).
+  // Ordem de prioridade: 0) endereço automático publicado no GitHub (servidor.json, ver discoverServer);
+  // depois 1) e 2) acima.
   function savedServer() {
+    let discovered = "";
     let stored = "";
     try {
+      discovered = localStorage.getItem(DISCOVERED_KEY) || "";
       stored = localStorage.getItem(SERVER_KEY) || "";
     } catch {
       stored = "";
     }
-    return stored || normalizeServer(window.REOBOTE_CONFIG?.servidor || "");
+    return discovered || stored || normalizeServer(window.REOBOTE_CONFIG?.servidor || "");
+  }
+
+  // Busca o endereço atual do servidor no arquivo servidor.json do GitHub (REOBOTE_CONFIG.descoberta).
+  // Serve para o túnel de testes, cujo endereço muda a cada vez que é ligado: basta atualizar o arquivo
+  // no GitHub, sem gerar outro APK. Sem internet, continua usando o último endereço encontrado.
+  async function discoverServer() {
+    const url = window.REOBOTE_CONFIG?.descoberta;
+    if (!url) return;
+    try {
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("tempo esgotado")), 6000));
+      const response = await Promise.race([fetch(`${url}?t=${Date.now()}`, { cache: "no-store" }), timeout]);
+      if (!response.ok) return;
+      const address = normalizeServer((await response.json())?.servidor || "");
+      if (/^https?:\/\/[^\s/]+/i.test(address)) localStorage.setItem(DISCOVERED_KEY, address);
+      else localStorage.removeItem(DISCOVERED_KEY); // arquivo vazio: volta ao endereço configurado/embutido
+    } catch {
+      /* sem internet ou GitHub fora do ar: mantém o último endereço conhecido */
+    }
   }
 
   // Normaliza o endereço digitado: remove espaços e a barra final e acrescenta "http://" se faltar.
@@ -138,7 +161,10 @@
     } catch {
       throw new Error("Não foi possível conectar a este servidor. Confira o endereço e a internet do celular.");
     }
-    try { localStorage.setItem(SERVER_KEY, normalized); } catch { /* sem armazenamento */ }
+    try {
+      localStorage.setItem(SERVER_KEY, normalized);
+      localStorage.removeItem(DISCOVERED_KEY); // a escolha manual vale até o app buscar o servidor.json de novo
+    } catch { /* sem armazenamento */ }
   }
 
   // Endereço completo de uma página da Central (no APK, abre no navegador do celular).
@@ -967,6 +993,7 @@
       navigator.serviceWorker.register("/app/sw.js", { scope: "/app/" }).catch(() => {});
     }
     if (isNative) {
+      await discoverServer(); // endereço atual publicado no GitHub (túnel de testes ou hospedagem)
       api.baseUrl = savedServer();
       if (!api.baseUrl) return showLogin(); // APK sem servidor embutido: login avisa ao tentar entrar
     }
