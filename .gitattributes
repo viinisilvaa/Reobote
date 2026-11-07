@@ -1,3 +1,4 @@
+# REOBOTE | .gitattributes — Padroniza o fim de linha e marca imagens e fontes como binárias
 # Padroniza o fim de linha (LF) e marca imagens/fontes como binários.
 * text=auto eol=lf
 *.png binary
