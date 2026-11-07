@@ -1,3 +1,4 @@
+// REOBOTE | app/js/app.js — Aplicativo: login, QR Code, almoço, encerramento e fila offline
 /**
  * Aplicativo REOBOTE do colaborador.
  *
