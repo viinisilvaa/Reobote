@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/routes/employees.php — API: colaboradores, fotos e correções de ponto
 declare(strict_types=1);
 
 // Gerenciamento de colaboradores e acessos, foto de identificacao, perfil e ajustes de registros pela Central.
