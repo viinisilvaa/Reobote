@@ -823,6 +823,7 @@
       return;
     }
     if (action === "back-to-login") return showLogin();
+    if (action === "open-server-setup") return showServerSetup();
     if (action === "change-password") return showPassword(false);
     if (action === "cancel-password") return go("account");
     if (action === "forgot") {
@@ -909,7 +910,20 @@
       }
     } catch (error) {
       if (errorBox) {
-        errorBox.textContent = error.offline ? "Sem internet. Conecte-se para continuar." : error.message;
+        // No APK, "sem conexão" quase sempre é servidor desligado, endereço errado ou outra rede Wi-Fi.
+        const serverProblem = isNative && form.id !== "app-server-form" && (error.offline || !api.baseUrl);
+        errorBox.textContent = serverProblem && api.baseUrl
+          ? `Não foi possível conectar ao servidor ${api.baseUrl}. Confira se o servidor está ligado e se o celular está na mesma rede Wi-Fi.`
+          : error.offline ? "Sem internet. Conecte-se para continuar." : error.message;
+        // Em vez de um beco sem saída, oferece o botão para configurar o endereço do servidor.
+        if (serverProblem) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "m-button ghost small";
+          button.dataset.action = "open-server-setup";
+          button.textContent = "Configurar servidor";
+          errorBox.append(document.createElement("br"), button);
+        }
         errorBox.hidden = false;
       } else {
         toast(error.message, "error");
