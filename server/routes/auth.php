@@ -1,4 +1,5 @@
 <?php
+// REOBOTE | server/routes/auth.php — API: login, sessão, troca e recuperação de senha
 declare(strict_types=1);
 
 // Autenticacao: login, sessao atual, troca de senha, pedido de recuperacao de acesso e configuracao publica.
