@@ -1,3 +1,4 @@
+// REOBOTE | central/js/perfil-colaborador.js — Central: histórico e correções de ponto do colaborador
 // Perfil do colaborador: dados, situação atual, histórico de cargos e jornada calculada pelo servidor.
 // Gestores podem lançar registros esquecidos e anular registros incorretos, sempre com justificativa auditada.
 window.ReobotePage = {
