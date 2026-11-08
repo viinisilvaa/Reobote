@@ -1,7 +1,7 @@
 // REOBOTE | app/sw.js — Aplicativo: guarda as telas para funcionar sem internet
 // Service worker do aplicativo REOBOTE (escopo /app/): mantém a interface disponível sem internet.
 // A API nunca é guardada em cache; os registros offline ficam na fila do próprio aplicativo.
-const CACHE = "reobote-app-v3";
+const CACHE = "reobote-app-v4";
 const SHELL = [
   "/app/",
   "/app/index.html",
@@ -14,7 +14,9 @@ const SHELL = [
   "/app/icons/icon-512.png",
   "/compartilhado/js/theme.js",
   "/compartilhado/js/api-client.js",
-  "/compartilhado/assets/reobote-mark.png"
+  "/compartilhado/assets/reobote-mark.png",
+  "/compartilhado/assets/intelbras-logo.png",
+  "/compartilhado/assets/rede-americas-logo.png"
 ];
 
 self.addEventListener("install", event => {
