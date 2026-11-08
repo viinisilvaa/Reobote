@@ -312,13 +312,15 @@
     window.updateThemeButtons?.(document.documentElement.dataset.theme);
   }
 
-  // Atualiza o número de notificações não lidas no sino e no menu (a cada minuto).
+  // Atualiza o número de notificações não lidas no sino e no menu (a cada 10 segundos)
+  // e mostra na hora, estilo WhatsApp, as notificações que acabaram de chegar.
   async function refreshBadge() {
     const badge = document.querySelector(".notification-button span");
     const navCount = document.querySelector(".nav-count");
     if (!badge && !navCount) return;
     try {
-      const { unread } = await api.get("/api/notifications/count");
+      const { unread, latestId } = await api.get("/api/notifications/count");
+      checkNewNotifications(Number(latestId || 0));
       const label = unread > 99 ? "99+" : String(unread);
       [badge, navCount].forEach(element => {
         if (!element) return;
@@ -330,6 +332,96 @@
       // Falhas no contador não interrompem a página.
     }
   }
+
+  // Avisos em tempo real (estilo WhatsApp) ---------------------------------------------------------
+
+  // Última notificação já mostrada. Fica guardada na aba do navegador para não repetir avisos
+  // ao trocar de página nem perder os que chegaram durante a troca.
+  const LAST_ALERT_KEY = "reobote-last-alert";
+  let lastAlertId = null;
+  try { lastAlertId = sessionStorage.getItem(LAST_ALERT_KEY) ? Number(sessionStorage.getItem(LAST_ALERT_KEY)) : null; } catch { lastAlertId = null; }
+
+  // Compara o número da notificação mais recente com o último mostrado e busca só as novas.
+  async function checkNewNotifications(latestId) {
+    if (lastAlertId === null || latestId < lastAlertId) {
+      // Primeira consulta nesta aba: não mostra o que já existia, só o que chegar daqui em diante.
+      rememberAlert(latestId);
+      return;
+    }
+    if (latestId === lastAlertId) return;
+    const after = lastAlertId;
+    rememberAlert(latestId);
+    try {
+      const { notifications } = await api.get(`/api/notifications?after=${after}&limit=5`);
+      notifications.slice().reverse().forEach(showLiveAlert); // do mais antigo para o mais novo
+    } catch {
+      // Sem conexão: os avisos continuam disponíveis na página Notificações.
+    }
+  }
+
+  function rememberAlert(id) {
+    lastAlertId = id;
+    try { sessionStorage.setItem(LAST_ALERT_KEY, String(id)); } catch { /* sem armazenamento */ }
+  }
+
+  // Cartão no canto da tela, como uma mensagem do WhatsApp: foto/iniciais, nome em destaque e texto.
+  // Some sozinho depois de 10 segundos; tocar nele abre o perfil do colaborador.
+  function showLiveAlert(item) {
+    let stack = document.querySelector("#live-alerts");
+    if (!stack) {
+      stack = document.createElement("div");
+      stack.id = "live-alerts";
+      stack.className = "live-alerts";
+      stack.setAttribute("aria-live", "polite");
+      document.body.append(stack);
+    }
+    const name = item.title.split(/ (chegou|iniciou|retornou|encerrou|registrou|ainda|saiu)/)[0];
+    const link = item.employeeId ? `perfil-colaborador.html?id=${encodeURIComponent(item.employeeId)}` : "notificacoes.html";
+    const card = document.createElement("a");
+    card.className = `live-alert type-${item.type}`;
+    card.href = link;
+    card.innerHTML = `<span class="live-alert-head"><img src="../compartilhado/assets/reobote-mark.png" alt=""> REOBOTE <time>agora</time></span>
+      <span class="live-alert-body">${avatar({ employeeId: item.employeeId, hasPhoto: item.hasPhoto, name }, "live-alert-avatar")}
+        <span><strong>${esc(item.title)}</strong><small>${esc(item.detail || "")}</small></span></span>
+      <button type="button" class="live-alert-close" aria-label="Fechar aviso"><i class="fa-solid fa-xmark"></i></button>`;
+    card.querySelector(".live-alert-close").addEventListener("click", event => { event.preventDefault(); card.remove(); });
+    stack.prepend(card);
+    while (stack.children.length > 3) stack.lastElementChild.remove();
+    setTimeout(() => card.remove(), 10000);
+    playAlertSound();
+    // Com a aba da Central em segundo plano, avisa também pela notificação do computador.
+    if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+      try { new Notification(item.title, { body: item.detail || "", icon: "../compartilhado/assets/reobote-mark.png", tag: `reobote-${item.id}` }); } catch { /* navegador sem suporte */ }
+    }
+  }
+
+  // Som curto de aviso (dois tons), gerado pelo navegador, sem arquivo de áudio.
+  let audioContext = null;
+  function playAlertSound() {
+    try {
+      audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+      [[880, 0], [1320, 0.13]].forEach(([frequency, delay]) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const start = audioContext.currentTime + delay;
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.18, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+        oscillator.connect(gain).connect(audioContext.destination);
+        oscillator.start(start);
+        oscillator.stop(start + 0.25);
+      });
+    } catch {
+      // Navegador bloqueou o som (ele libera depois do primeiro clique na página).
+    }
+  }
+
+  // No primeiro clique na Central, pede permissão para as notificações do computador (uma vez).
+  document.addEventListener("click", () => {
+    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {});
+    if (audioContext?.state === "suspended") audioContext.resume().catch(() => {});
+  }, { once: true });
 
   // Imagens de perfil que falham voltam para as iniciais.
   document.addEventListener("error", event => {
@@ -399,7 +491,7 @@
       root.innerHTML = heading(activePage) + `<section class="panel content-panel">${emptyState("fa-triangle-exclamation", "Não foi possível carregar esta página", error.message, '<button type="button" class="button-primary" data-action="reload">Tentar novamente</button>')}</section>`;
     }
     refreshBadge();
-    setInterval(refreshBadge, 60000);
+    setInterval(refreshBadge, 10000); // a cada 10 segundos: contador e avisos em tempo real
   }
 
   start();
