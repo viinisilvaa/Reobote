@@ -10,10 +10,35 @@ window.ReobotePage = {
       root.innerHTML = R.heading("profile") + `<section class="panel content-panel">${R.emptyState("fa-user-slash", "Colaborador não informado", "Abra o perfil a partir da lista de colaboradores.")}</section>`;
       return;
     }
-    let range = 30;
+    // Período do histórico: "d:30" = últimos 30 dias; "m:2026-11" = um mês inteiro. Até 1 ano.
+    let range = "d:30";
     let data;
     let units = [];
     if (R.has("employees")) units = (await api.get("/api/units").catch(() => ({ units: [] }))).units;
+
+    // Opções do período: últimos dias (até 1 ano) e cada um dos últimos 12 meses.
+    function rangeOptions() {
+      const option = (value, label) => `<option value="${value}" ${value === range ? "selected" : ""}>${label}</option>`;
+      const recent = [["d:7", "Últimos 7 dias"], ["d:30", "Últimos 30 dias"], ["d:90", "Últimos 90 dias"], ["d:182", "Últimos 6 meses"], ["d:365", "Último ano"]];
+      return recent.map(([value, label]) => option(value, label)).join("")
+        + `<optgroup label="Por mês">${lastMonths().map(month => option(`m:${month}`, monthName(month))).join("")}</optgroup>`;
+    }
+
+    // Os últimos 12 meses (AAAA-MM), do atual para o mais antigo.
+    function lastMonths() {
+      const [year, month] = R.localDate().split("-").map(Number);
+      return Array.from({ length: 12 }, (_, index) => {
+        const date = new Date(Date.UTC(year, month - 1 - index, 1));
+        return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+      });
+    }
+
+    // "2026-11" -> "Novembro de 2026".
+    function monthName(value) {
+      const [year, month] = value.split("-").map(Number);
+      const name = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", month: "long" }).format(new Date(Date.UTC(year, month - 1, 1)));
+      return `${name.charAt(0).toUpperCase()}${name.slice(1)} de ${year}`;
+    }
 
     // Desenha dados, indicadores do período, histórico de jornada, cargos e localizações.
     function render() {
@@ -35,7 +60,7 @@ window.ReobotePage = {
         </header>
 
         <div class="profile-toolbar">
-          <label class="select-control"><span>Período</span><select id="profile-range">${[7, 30, 60, 90].map(value => `<option value="${value}" ${value === range ? "selected" : ""}>Últimos ${value} dias</option>`).join("")}</select></label>
+          <label class="select-control"><span>Período</span><select id="profile-range">${rangeOptions()}</select></label>
           ${data.canManage ? '<button type="button" class="button-primary" data-action="add-record"><i class="fa-solid fa-plus"></i> Lançar registro</button>' : ""}
           ${R.has("reports") ? `<a class="button-secondary" href="relatorios.html"><i class="fa-solid fa-file-pdf"></i> Relatórios</a>` : ""}
         </div>
@@ -50,7 +75,7 @@ window.ReobotePage = {
         </div>
 
         <section class="profile-card profile-section"><h2><i class="fa-solid fa-clock-rotate-left"></i> Histórico de jornada</h2>
-          <div class="profile-history">${days.map(day => `<article class="profile-day">
+          <div class="profile-history">${days.map((day, index) => `${index === 0 || day.date.slice(0, 7) !== days[index - 1].date.slice(0, 7) ? `<h3 class="profile-month">${monthName(day.date.slice(0, 7))}</h3>` : ""}<article class="profile-day">
             <h3>${fmt.day(day.date)} ${R.dayPill(day.status)}${day.holiday ? ` <small>${esc(day.holiday)}</small>` : ""}</h3>
             <div class="profile-day-summary">
               ${day.events.length ? `<span>Trabalhadas: ${fmt.duration(day.workedMinutes)}</span><span>Almoço: ${fmt.duration(day.breakMinutes)}</span>` : ""}
@@ -80,8 +105,16 @@ window.ReobotePage = {
 
     // Busca o perfil e a jornada do período escolhido.
     async function load() {
-      const to = R.localDate();
-      const from = R.localDate(-(range - 1));
+      let to = R.localDate();
+      let from = R.localDate(-(Number(range.slice(2)) - 1));
+      if (range.startsWith("m:")) {
+        // Mês inteiro: do dia 1 ao último dia (ou até hoje, no mês atual).
+        const month = range.slice(2);
+        const [year, number] = month.split("-").map(Number);
+        const last = `${month}-${String(new Date(Date.UTC(year, number, 0)).getUTCDate()).padStart(2, "0")}`;
+        from = `${month}-01`;
+        to = last < to ? last : to;
+      }
       data = await api.get(`/api/employees/${id}/profile?from=${from}&to=${to}`);
       document.title = `REOBOTE | ${data.employee.name}`;
       render();
@@ -126,7 +159,7 @@ window.ReobotePage = {
     });
     root.addEventListener("change", event => {
       if (event.target.id === "profile-range") {
-        range = Number(event.target.value);
+        range = event.target.value;
         load().catch(error => R.toast(error.message, "error"));
       }
     });
