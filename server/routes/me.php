@@ -138,6 +138,17 @@ route('POST', '/api/me/attendance', static function (PDO $db): void {
     // Processa na ordem cronologica original para validar a sequencia corretamente.
     usort($prepared, static fn ($a, $b) => $a['at'] <=> $b['at']);
     foreach ($prepared as $item) {
+        // GPS falso: registro com posicao impossivel em relacao a anterior ("teletransporte") e recusado.
+        if ($item['lat'] !== null && $item['lng'] !== null) {
+            $jump = reobote_location_jump($db, (string) $employee['id'], (float) $item['lat'], (float) $item['lng'], $item['at']);
+            if ($jump !== null) {
+                reobote_notify($db, 'fake_gps', $employee['name'] . ' está usando GPS falso', 'Registro de ponto recusado: ' . $jump, (string) $employee['id'], null,
+                    'fake_gps:' . $employee['id'] . ':' . intdiv(time(), 600));
+                $results[$item['index']] = ['clientId' => $item['clientId'], 'eventType' => $item['type'], 'status' => 'rejected',
+                    'error' => 'GPS falso detectado (' . $jump . '). Desative o app de localização falsa.'];
+                continue;
+            }
+        }
         $outcome = reobote_record_event($db, $employee, $item['type'], $item['at'], [
             'clientId' => $item['clientId'], 'qr' => $item['qr'], 'latitude' => $item['lat'], 'longitude' => $item['lng'],
             'accuracy' => $item['accuracy'], 'source' => 'mobile', 'notes' => $item['notes'], 'userId' => $user['id'],
@@ -187,6 +198,13 @@ route('POST', '/api/me/locations', static function (PDO $db): void {
     if (!in_array($state['state'], ['in_transit', 'working', 'on_break'], true)) {
         reobote_fail('Fora da jornada a localização não é registrada.', 409, 'outside_shift');
     }
+    // GPS falso: posicao impossivel em relacao a anterior ("teletransporte") e recusada e a Central e avisada.
+    $jump = reobote_location_jump($db, (string) $employee['id'], (float) $latitude, (float) $longitude, new DateTimeImmutable('now', new DateTimeZone('UTC')));
+    if ($jump !== null) {
+        reobote_notify($db, 'fake_gps', $employee['name'] . ' está usando GPS falso', 'Localização impossível recusada: ' . $jump, (string) $employee['id'], null,
+            'fake_gps:' . $employee['id'] . ':' . intdiv(time(), 600));
+        reobote_fail('Localização recusada (' . $jump . '). Desative o GPS falso.', 422, 'fake_gps');
+    }
     $db->prepare('INSERT INTO employee_locations (employee_id, latitude, longitude, accuracy_m, recorded_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())')
         ->execute([$employee['id'], $latitude, $longitude, $accuracy]);
     // Mantem somente 30 dias de localizacoes (minimizacao de dados pessoais).
@@ -219,7 +237,10 @@ route('POST', '/api/me/mock-location', static function (PDO $db): void {
     $latitude = filter_var($body['latitude'] ?? null, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE);
     $longitude = filter_var($body['longitude'] ?? null, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE);
     $where = ($latitude !== null && $longitude !== null) ? sprintf(' • posição falsa informada: %.5f, %.5f', $latitude, $longitude) : '';
-    $detail = ($context === 'checkin' ? 'Registro de ponto bloqueado no aplicativo' : 'Localização da jornada bloqueada no aplicativo') . $where;
+    // Nomes dos apps de GPS falso ativados no celular (informados pelo detector nativo do APK).
+    $apps = array_slice(array_values(array_filter(array_map(static fn ($app) => mb_substr(trim((string) $app), 0, 60), (array) ($body['apps'] ?? [])))), 0, 5);
+    $detail = ($context === 'checkin' ? 'Registro de ponto bloqueado no aplicativo' : 'Localização da jornada bloqueada no aplicativo')
+        . ($apps ? ' • app de GPS falso: ' . implode(', ', $apps) : '') . $where;
     reobote_notify($db, 'fake_gps', $employee['name'] . ' está usando GPS falso', $detail, (string) $employee['id'], null,
         'fake_gps:' . $employee['id'] . ':' . intdiv(time(), 600));
     reobote_audit($db, $user, 'fake_gps_detected', 'employee', (string) $employee['id'], ['context' => $context]);
