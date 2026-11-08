@@ -156,7 +156,8 @@ route('GET', '/api/map', static function (PDO $db): void {
     foreach ($employees as $row) {
         $id = (string) $row['id'];
         $item = reobote_employee_public($db, $row, $states[$id]);
-        $location = $row['tracking_enabled'] ? ($locations[$id] ?? null) : null;
+        // A localizacao e enviada automaticamente pelo aplicativo durante a jornada.
+        $location = $locations[$id] ?? null;
         $item['location'] = $location ? [
             'latitude' => (float) $location['latitude'], 'longitude' => (float) $location['longitude'],
             'accuracyM' => $location['accuracy_m'] === null ? null : (float) $location['accuracy_m'],
@@ -192,7 +193,9 @@ route('GET', '/api/notifications/count', static function (PDO $db): void {
     $user = reobote_user();
     reobote_require($user, 'notifications', 'dashboard');
     reobote_sweep_absences($db);
-    reobote_json(['unread' => api_unread_count($db, $user)]);
+    // latestId: numero da notificacao mais recente; a Central usa para mostrar avisos novos na hora (estilo WhatsApp).
+    $latest = (string) ($db->query('SELECT COALESCE(MAX(id), 0) FROM notifications')->fetchColumn());
+    reobote_json(['unread' => api_unread_count($db, $user), 'latestId' => $latest]);
 });
 
 // Lista as notificações dos últimos 90 dias, com filtros de lidas/não lidas e de tipo.
@@ -217,6 +220,11 @@ route('GET', '/api/notifications', static function (PDO $db): void {
     if ($type !== '' && array_key_exists($type, REOBOTE_NOTIFICATION_ICONS)) {
         $sql .= ' AND n.type = ?';
         $params[] = $type;
+    }
+    // after: somente notificacoes mais novas que este numero (avisos em tempo real).
+    if (($after = api_query_id('after')) !== null) {
+        $sql .= ' AND n.id > ?';
+        $params[] = $after;
     }
     if (($before = api_query_id('before')) !== null) {
         $sql .= ' AND n.id < ?';
@@ -258,7 +266,9 @@ route('POST', '/api/notifications/read', static function (PDO $db): void {
             $insert->execute([$user['id'], $id]);
         }
     }
-    reobote_json(['unread' => api_unread_count($db, $user)]);
+    // latestId: numero da notificacao mais recente; a Central usa para mostrar avisos novos na hora (estilo WhatsApp).
+    $latest = (string) ($db->query('SELECT COALESCE(MAX(id), 0) FROM notifications')->fetchColumn());
+    reobote_json(['unread' => api_unread_count($db, $user), 'latestId' => $latest]);
 });
 
 // Relatorios ----------------------------------------------------------------------------------
