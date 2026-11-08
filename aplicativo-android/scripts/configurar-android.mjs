@@ -11,6 +11,8 @@
  *      Em produção, prefira um servidor com https://.
  * 2. Ícone do aplicativo: usa app/icons/icon-512.png em todas as densidades de tela.
  * 3. Textos da notificação fixa de localização (strings.xml), em português.
+ * 3b. Código nativo próprio (pasta ../nativo): detector de GPS falso (MockLocationPlugin) e a
+ *     MainActivity que o registra.
  * 4. Versão do APK: usa a variável VERSAO_APP (o GitHub passa o número da execução),
  *    para que cada APK novo instale por cima do anterior.
  *
@@ -35,6 +37,8 @@ const permissions = [
   '<uses-permission android:name="android.permission.CAMERA" />',
   '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
   '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+  // Ver a lista de apps instalados (Android 11+): usado para detectar o app de GPS falso ativado.
+  '<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />',
   '<uses-feature android:name="android.hardware.camera" android:required="false" />'
 ];
 for (const line of permissions) {
@@ -75,6 +79,28 @@ if (existsSync(stringsPath)) {
 </resources>`);
   }
   writeFileSync(stringsPath, strings);
+}
+
+// 3b. Código nativo próprio do REOBOTE (detector de GPS falso) -----------------------------------
+// Copia os arquivos Java de ../nativo para a pasta onde o Capacitor criou a MainActivity
+// (android/app/src/main/java/br/com/reobote/app), substituindo a MainActivity padrão.
+const javaRoot = join(androidApp, "src", "main", "java");
+const findMainActivity = folder => {
+  for (const entry of readdirSync(folder, { withFileTypes: true })) {
+    const path = join(folder, entry.name);
+    if (entry.isDirectory()) {
+      const found = findMainActivity(path);
+      if (found) return found;
+    } else if (entry.name === "MainActivity.java") {
+      return path;
+    }
+  }
+  return null;
+};
+const mainActivity = findMainActivity(javaRoot);
+if (!mainActivity) throw new Error("MainActivity.java não encontrada no projeto Android.");
+for (const name of ["MainActivity.java", "MockLocationPlugin.java"]) {
+  copyFileSync(join(project, "nativo", name), join(dirname(mainActivity), name));
 }
 
 // 4. Versão -----------------------------------------------------------------------------------
