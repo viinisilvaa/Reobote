@@ -303,7 +303,16 @@
       return null;
     }
     const occurredAt = nowIso();
-    const position = extra.qr ? await currentPosition() : null;
+    let position = null;
+    if (extra.qr) {
+      // No APK, a posição vem do plugin nativo, que informa se ela é FALSA (app de GPS falso).
+      const fix = await nativeFix();
+      if (fix?.simulated) {
+        blockFakeGps(fix, "checkin");
+        return null; // registro bloqueado: não entra na fila nem vai para a Central
+      }
+      position = fix ? { latitude: fix.latitude, longitude: fix.longitude, accuracy: fix.accuracy } : await currentPosition();
+    }
     const item = { clientId: uuid(), type, occurredAt, ...extra, ...(position || {}) };
     store.queue.push(item);
     saveStore();
@@ -871,6 +880,7 @@
   // Envia uma posição à Central: no máximo uma a cada 15 segundos, ou antes disso se andar mais de 20 metros.
   // force = true envia na hora (ex.: posição da leitura do QR Code).
   function sendLocation(latitude, longitude, accuracy, force = false) {
+    if (Date.now() - fakeGpsAt < 120000) return; // GPS falso detectado há menos de 2 minutos: nada é enviado
     const moved = lastLocationSent.lat === null || Math.hypot((latitude - lastLocationSent.lat) * 111000, (longitude - lastLocationSent.lng) * 111000 * Math.cos(latitude * Math.PI / 180)) > 20;
     if (!force && !moved && Date.now() - lastLocationSent.at < 15000) return;
     if (!navigator.onLine) return setGps("error", "GPS ok, mas sem internet para enviar à Central");
@@ -943,6 +953,61 @@
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   }
 
+  // Bloqueio de GPS falso ---------------------------------------------------------------------------
+  // O Android marca as posições que vêm de apps de "GPS falso" (localização simulada). O plugin nativo
+  // repassa essa marca no campo "simulated". Com ela, o app bloqueia o registro de ponto, não envia a
+  // posição ao mapa e avisa a Central na hora. (No navegador essa marca não existe.)
+  let fakeGpsAt = 0;          // quando foi detectada a última posição falsa
+  let lastNativeFix = null;   // última posição recebida do plugin: { location, at }
+  let fakeSheetOpen = false;
+
+  // Pede uma posição ao plugin nativo (APK). Resolve com a posição (inclui "simulated"), null se não
+  // houver sinal em 12 s, ou undefined quando o plugin não existe (navegador ou APK antigo).
+  function nativeFix(timeoutMs = 12000) {
+    if (!BackgroundGeolocation || backgroundUnavailable) return Promise.resolve(undefined);
+    if (lastNativeFix && Date.now() - lastNativeFix.at < 20000) return Promise.resolve(lastNativeFix.location);
+    return new Promise(resolve => {
+      let watcherId = null;
+      let done = false;
+      const finish = value => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        if (watcherId) BackgroundGeolocation.removeWatcher({ id: watcherId }).catch(() => {});
+        resolve(value);
+      };
+      const timer = setTimeout(() => finish(null), timeoutMs);
+      // Sem "backgroundMessage": acompanhamento só com o app aberto, encerrado na primeira posição.
+      BackgroundGeolocation.addWatcher({ requestPermissions: true, stale: false }, (location, error) => {
+        if (error) return finish(null);
+        if (location) {
+          lastNativeFix = { location, at: Date.now() };
+          finish(location);
+        }
+      }).then(id => {
+        watcherId = id;
+        if (done) BackgroundGeolocation.removeWatcher({ id }).catch(() => {});
+      }).catch(() => finish(undefined));
+    });
+  }
+
+  // GPS falso detectado: bloqueia, explica ao técnico e avisa a Central (no máximo 1 aviso a cada 10 min).
+  function blockFakeGps(location, context) {
+    const first = Date.now() - fakeGpsAt > 600000;
+    fakeGpsAt = Date.now();
+    if (first || context === "checkin") {
+      api.post("/api/me/mock-location", { context, latitude: location.latitude, longitude: location.longitude }, { handleAuth: false }).catch(() => {});
+    }
+    if (fakeSheetOpen) return;
+    fakeSheetOpen = true;
+    confirmSheet({
+      title: "GPS falso detectado",
+      message: "Este celular está usando um aplicativo de localização falsa (GPS falso). " + (context === "checkin" ? "O registro de ponto foi bloqueado. " : "Sua localização não está sendo enviada. ") + "Desinstale ou desative o app de GPS falso e desligue a \"localização simulada\" nas opções do desenvolvedor do Android. A Central foi avisada.",
+      confirmLabel: "Entendi",
+      danger: true
+    }).finally(() => { fakeSheetOpen = false; });
+  }
+
   // APK: acompanhamento em segundo plano com o plugin @capacitor-community/background-geolocation.
   function startBackgroundTracking() {
     if (backgroundWatcher) return;
@@ -951,14 +1016,18 @@
       backgroundMessage: "Sua localização é enviada à Central até o encerramento da jornada.",
       requestPermissions: true,  // pede a permissão de localização na primeira vez
       stale: false,              // ignora posições antigas
-      distanceFilter: 10         // nova posição a cada 10 metros percorridos
+      distanceFilter: 0          // posições contínuas (também parado); o envio é limitado em sendLocation
     }, (location, error) => {
       if (error) {
         if (error.code === "NOT_AUTHORIZED") { stopBackgroundTracking(); warnLocationDenied(); }
         else setGps("error", `GPS em segundo plano com problema: ${error.message || error.code}`);
         return;
       }
-      if (location) sendLocation(location.latitude, location.longitude, location.accuracy);
+      if (!location) return;
+      lastNativeFix = { location, at: Date.now() };
+      if (location.simulated) return blockFakeGps(location, "tracking"); // posição falsa: não vai para o mapa
+      fakeGpsAt = 0; // posição verdadeira de novo
+      sendLocation(location.latitude, location.longitude, location.accuracy);
     }).catch(() => {
       // APK gerado antes do plugin: volta ao acompanhamento comum (só com o app aberto).
       backgroundWatcher = null;
@@ -980,6 +1049,9 @@
     if (locationWatch !== null || !navigator.geolocation) return;
     if (gpsStatus.tone !== "ok") setGps("waiting", "Procurando sinal de GPS...");
     locationWatch = navigator.geolocation.watchPosition(position => {
+      // No APK, quando o plugin nativo já está entregando posições, só elas contam: o navegador interno
+      // não informa se a posição é falsa (GPS falso), e o plugin informa.
+      if (isNative && lastNativeFix) return;
       const { latitude, longitude, accuracy } = position.coords;
       sendLocation(latitude, longitude, accuracy);
     }, error => {
