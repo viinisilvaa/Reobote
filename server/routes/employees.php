@@ -273,7 +273,7 @@ route('GET', '/api/employees/(\d+)/profile', static function (PDO $db, string $i
         reobote_fail('Você só pode consultar o seu próprio perfil.', 403);
     }
     $row = reobote_require_employee($db, $id);
-    [$from, $to] = reobote_date_range(93, 30);
+    [$from, $to] = reobote_date_range(367, 30);
     $states = reobote_current_states($db, [$id]);
     $query = $db->prepare(
         'SELECT ja.id, ja.title, ja.assigned_at, ja.ended_at, ja.schedule_start, ja.schedule_end, s.name AS schedule_name
