@@ -1,5 +1,5 @@
 // REOBOTE | central/js/mapa-tempo-real.js — Central: mapa em tempo real com OpenStreetMap
-// Mapa em tempo real (OpenStreetMap, sem chave): unidades de atendimento, situação da equipe e localização autorizada pelos colaboradores.
+// Mapa em tempo real (OpenStreetMap, sem chave): unidades de atendimento, situação da equipe e localização enviada pelo aplicativo durante a jornada.
 window.ReobotePage = {
   // Monta o mapa dentro de "root"; R são os utilitários da Central (app-core.js).
   async mount(root, R) {
@@ -196,7 +196,7 @@ window.ReobotePage = {
     }).addTo(map);
     updateMarkers();
     if (!data.units.some(unit => unit.latitude !== null) && !data.employees.some(person => person.location)) {
-      R.toast("Cadastre a localização das unidades e peça aos colaboradores que autorizem o GPS para ver pontos no mapa.");
+      R.toast("Cadastre a localização das unidades. Os técnicos aparecem no mapa durante a jornada, com o aplicativo aberto e o GPS do celular permitido.");
     }
   }
 };
