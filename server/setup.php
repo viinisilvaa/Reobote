@@ -376,6 +376,12 @@ $migrations[4] = static function (PDO $pdo): void {
     }
 };
 
+// 5) Matricula do colaborador: numero ja usado pela empresa (funcionarios antigos), opcional e unico.
+$migrations[5] = static function (PDO $pdo): void {
+    add_column($pdo, 'employees', 'registration', 'VARCHAR(30) NULL AFTER `name`');
+    add_index($pdo, 'employees', 'uq_employees_registration', 'UNIQUE INDEX `uq_employees_registration` (`registration`)');
+};
+
 $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
   version INT UNSIGNED NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
