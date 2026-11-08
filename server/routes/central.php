@@ -143,7 +143,7 @@ route('GET', '/api/map', static function (PDO $db): void {
     $query = $db->query(
         'SELECT l.employee_id, l.latitude, l.longitude, l.accuracy_m, l.recorded_at FROM employee_locations l
          JOIN (SELECT employee_id, MAX(recorded_at) AS recorded_at FROM employee_locations
-               WHERE recorded_at >= UTC_TIMESTAMP() - INTERVAL 2 MINUTE GROUP BY employee_id) latest
+               WHERE recorded_at >= UTC_TIMESTAMP() - INTERVAL 10 MINUTE GROUP BY employee_id) latest
            ON latest.employee_id = l.employee_id AND latest.recorded_at = l.recorded_at'
     );
     foreach ($query->fetchAll() as $row) {
