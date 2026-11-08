@@ -51,6 +51,7 @@
   // Chaves usadas no armazenamento do celular (localStorage).
   const DISCOVERED_KEY = "reobote-app:server-auto"; // endereço lido do servidor.json no GitHub (somente APK)
   const SESSION_KEY = "reobote-app:session";        // última sessão, para abrir o app sem internet
+  const LOGGED_OUT_KEY = "reobote-app:logged-out";  // o colaborador tocou em Sair: não entra sozinho de novo
 
   let session = null;          // conta autenticada: { user, company, rules }
   let store = null;            // dados locais da conta: fila, recusados, último "hoje", histórico, foto, ajuste de relógio
@@ -59,7 +60,8 @@
   let scanMode = "registro";   // leitor: "registro" (início/chegada) ou "encerrar" (fim da jornada)
   let syncing = false;         // evita dois envios simultâneos da fila
   let scanner = null;          // câmera aberta pelo leitor de QR Code
-  let historyRange = 7;        // período do histórico: 7, 30 ou "custom"
+  let historyRange = 7;        // período do histórico: 7 (dias), "month" (um mês), 365 (1 ano) ou "custom"
+  let historyMonth = null;     // mês escolhido no período "month" (AAAA-MM)
   let customRange = { from: null, to: null };
   let openDay = null;          // dia aberto (detalhes) no histórico
   let photoInMemory = null;    // foto grande demais para guardar no celular
@@ -152,6 +154,24 @@
     } catch {
       /* sem internet ou GitHub fora do ar: mantém o último endereço conhecido */
     }
+  }
+
+  // Testa os endereços conhecidos (o publicado no GitHub e o embutido no APK) e fica com o primeiro
+  // que responder. Assim, se o túnel da internet estiver desligado, o app ainda funciona no Wi-Fi do PC.
+  async function chooseServer() {
+    const candidates = [...new Set([savedServer(), normalizeServer(window.REOBOTE_CONFIG?.servidor || "")].filter(Boolean))];
+    for (const address of candidates) {
+      api.baseUrl = address;
+      try {
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("tempo esgotado")), 6000));
+        await Promise.race([api.get("/api/config", { handleAuth: false }), timeout]);
+        return true;
+      } catch {
+        /* não respondeu: tenta o próximo */
+      }
+    }
+    api.baseUrl = candidates[0] || "";
+    return false;
   }
 
   // Remove espaços e a barra final do endereço e acrescenta "http://" se faltar.
@@ -498,15 +518,20 @@
     const t = history?.totals;
     // Do dia mais recente para o mais antigo, como no modelo aprovado.
     const days = (history?.days || []).filter(day => day.status !== "off" || day.events.length).slice().sort((a, b) => b.date.localeCompare(a.date));
-    const rangeText = historyRange === "custom" ? `${customRange.from ? dayLabel(customRange.from).slice(0, 5) : ""} a ${customRange.to ? dayLabel(customRange.to).slice(0, 5) : ""}` : `Últimos ${historyRange} dias`;
+    const rangeText = historyRange === "custom" ? `${customRange.from ? dayLabel(customRange.from).slice(0, 5) : ""} a ${customRange.to ? dayLabel(customRange.to).slice(0, 5) : ""}`
+      : historyRange === "month" ? monthName(historyMonth) : historyRange === 365 ? "Último ano" : `Últimos ${historyRange} dias`;
+    let lastMonth = null; // para separar a lista por mês nos períodos longos
     const list = !history
       ? `<p class="m-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando histórico...</p>`
       : days.map(day => {
         const [tone, icon, label] = dayBadge(day);
+        const month = day.date.slice(0, 7);
+        const monthHeader = historyRange !== 7 && historyRange !== "month" && month !== lastMonth ? `<h2 class="m-month-title">${monthName(month)}</h2>` : "";
+        lastMonth = month;
         const first = day.events[0];
         const end = [...day.events].reverse().find(event => event.eventType === "departure");
         const open = openDay === day.date;
-        return `<article class="m-day ${open ? "open" : ""}">
+        return `${monthHeader}<article class="m-day ${open ? "open" : ""}">
           <button type="button" class="m-day-row" data-day="${esc(day.date)}">
             <span class="m-day-copy"><strong>${dayLabel(day.date)}</strong><small>${first ? `${time(first.occurredAt)} → ${end ? time(end.occurredAt) : "—"}` : "—"}</small></span>
             <i class="fa-solid ${icon} m-day-icon ${tone}"></i><span class="m-pill ${tone}">${label}</span><i class="fa-solid fa-chevron-right m-chevron"></i>
@@ -527,8 +552,12 @@
         <button type="button" class="m-round" data-range="custom" aria-label="Escolher período"><i class="fa-solid fa-calendar-days"></i></button>
       </header>
       <div class="m-segment" role="tablist">
-        ${[[7, "7 dias"], [30, "30 dias"], ["custom", "Personalizado"]].map(([value, label]) => `<button type="button" data-range="${value}" class="${historyRange === value ? "active" : ""}">${label}</button>`).join("")}
+        ${[[7, "7 dias"], ["month", "Mês"], [365, "1 ano"], ["custom", "Personalizado"]].map(([value, label]) => `<button type="button" data-range="${value}" class="${historyRange === value ? "active" : ""}">${label}</button>`).join("")}
       </div>
+      ${historyRange === "month" ? `<div class="m-month-nav">
+        <button type="button" class="m-round" data-month-step="-1" ${historyMonth <= monthOffset(-11) ? "disabled" : ""} aria-label="Mês anterior"><i class="fa-solid fa-chevron-left"></i></button>
+        <strong>${monthName(historyMonth)}</strong>
+        <button type="button" class="m-round" data-month-step="1" ${historyMonth >= monthOffset(0) ? "disabled" : ""} aria-label="Próximo mês"><i class="fa-solid fa-chevron-right"></i></button></div>` : ""}
       ${historyRange === "custom" ? `<form class="m-custom-range" id="custom-range">
         <label>De<input type="date" name="from" required value="${esc(customRange.from || localDate(-6))}" max="${localDate(0)}"></label>
         <label>Até<input type="date" name="to" required value="${esc(customRange.to || localDate(0))}" max="${localDate(0)}"></label>
@@ -629,8 +658,16 @@
   // Baixa o histórico do período escolhido e guarda uma cópia para consultar sem internet.
   async function loadHistory() {
     if (!navigator.onLine || !store || !session) return;
-    const from = historyRange === "custom" ? customRange.from : localDate(-(historyRange - 1));
-    const to = historyRange === "custom" ? customRange.to : localDate(0);
+    // Datas do período: últimos N dias (7 ou 365), personalizado ou um mês inteiro.
+    let from = typeof historyRange === "number" ? localDate(-(historyRange - 1)) : customRange.from;
+    let to = typeof historyRange === "number" ? localDate(0) : customRange.to;
+    if (historyRange === "month") {
+      // Do dia 1 ao último dia do mês (ou até hoje, no mês atual).
+      const [year, month] = historyMonth.split("-").map(Number);
+      from = `${historyMonth}-01`;
+      const last = `${historyMonth}-${String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, "0")}`;
+      to = last < localDate(0) ? last : localDate(0);
+    }
     if (!from || !to) return;
     try {
       const history = await api.get(`/api/me/history?from=${from}&to=${to}`, { handleAuth: false });
@@ -640,6 +677,20 @@
     } catch (error) {
       if (tab === "history") toast(error.message, "error");
     }
+  }
+
+  // Mês atual deslocado (0 = este mês, -11 = onze meses atrás), no formato AAAA-MM.
+  function monthOffset(offset) {
+    const [year, month] = localDate(0).split("-").map(Number);
+    const moved = new Date(Date.UTC(year, month - 1 + offset, 1));
+    return `${moved.getUTCFullYear()}-${String(moved.getUTCMonth() + 1).padStart(2, "0")}`;
+  }
+
+  // "2026-11" -> "Novembro de 2026".
+  function monthName(value) {
+    const [year, month] = String(value || monthOffset(0)).split("-").map(Number);
+    const name = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", month: "long" }).format(new Date(Date.UTC(year, month - 1, 1)));
+    return `${name.charAt(0).toUpperCase()}${name.slice(1)} de ${year}`;
   }
 
   // Data local (AAAA-MM-DD) no fuso da empresa, deslocada em dias (0 = hoje, -6 = seis dias atrás).
@@ -771,35 +822,89 @@
     }
   }
 
+  // Localização durante a jornada ----------------------------------------------------------------
+  // No APK, usa o plugin de localização em SEGUNDO PLANO: o técnico é acompanhado mesmo com a tela
+  // apagada ou com outro app aberto (ex.: dirigindo o carro). O Android mostra uma notificação fixa
+  // "REOBOTE: jornada em andamento" enquanto isso acontece. No navegador, só com o app aberto na tela.
+  const BackgroundGeolocation = isNative ? window.Capacitor?.registerPlugin?.("BackgroundGeolocation") : null;
+  let backgroundWatcher = null;       // promessa com o identificador do acompanhamento em segundo plano
+  let backgroundUnavailable = false;  // plugin ausente (APK antigo): usa o acompanhamento comum
+
   // Liga o envio de localização durante a jornada e desliga fora dela.
   function autoLocation() {
     if (!store || !session) return;
     const active = ["in_transit", "working", "on_break"].includes(predicted().state);
-    if (active && !locationDenied) startLocationWatch();
-    else stopLocationWatch();
+    if (!active || locationDenied) {
+      stopLocationWatch();
+      stopBackgroundTracking();
+      return;
+    }
+    if (BackgroundGeolocation && !backgroundUnavailable) startBackgroundTracking();
+    else startLocationWatch();
   }
 
-  // Envia a localização durante a jornada, enquanto o aplicativo está aberto:
-  // no máximo uma posição a cada 15 segundos, ou antes disso se andar mais de 20 metros.
+  // Envia uma posição à Central: no máximo uma a cada 15 segundos, ou antes disso se andar mais de 20 metros.
+  function sendLocation(latitude, longitude, accuracy) {
+    const moved = lastLocationSent.lat === null || Math.hypot((latitude - lastLocationSent.lat) * 111000, (longitude - lastLocationSent.lng) * 111000 * Math.cos(latitude * Math.PI / 180)) > 20;
+    if ((!moved && Date.now() - lastLocationSent.at < 15000) || !navigator.onLine) return;
+    lastLocationSent = { at: Date.now(), lat: latitude, lng: longitude };
+    api.post("/api/me/locations", { latitude, longitude, accuracyM: accuracy ?? 0 }, { handleAuth: false })
+      .catch(error => {
+        if (error.status === 409) { stopLocationWatch(); stopBackgroundTracking(); } // 409 = fora da jornada
+      });
+  }
+
+  // Avisa uma única vez quando o celular não deixa o REOBOTE usar a localização.
+  function warnLocationDenied() {
+    if (locationDenied) return;
+    locationDenied = true;
+    toast("Permita a localização do REOBOTE (\"Permitir o tempo todo\" ou \"Durante o uso\") nas configurações do celular para a Central acompanhar a jornada.", "error");
+  }
+
+  // APK: acompanhamento em segundo plano com o plugin @capacitor-community/background-geolocation.
+  function startBackgroundTracking() {
+    if (backgroundWatcher) return;
+    backgroundWatcher = BackgroundGeolocation.addWatcher({
+      backgroundTitle: "REOBOTE: jornada em andamento",
+      backgroundMessage: "Sua localização é enviada à Central até o encerramento da jornada.",
+      requestPermissions: true,  // pede a permissão de localização na primeira vez
+      stale: false,              // ignora posições antigas
+      distanceFilter: 10         // nova posição a cada 10 metros percorridos
+    }, (location, error) => {
+      if (error) {
+        if (error.code === "NOT_AUTHORIZED") { stopBackgroundTracking(); warnLocationDenied(); }
+        return;
+      }
+      if (location) sendLocation(location.latitude, location.longitude, location.accuracy);
+    }).catch(() => {
+      // APK gerado antes do plugin: volta ao acompanhamento comum (só com o app aberto).
+      backgroundWatcher = null;
+      backgroundUnavailable = true;
+      startLocationWatch();
+    });
+  }
+
+  // Encerra o acompanhamento em segundo plano (fim da jornada ou saída da conta) e a notificação fixa.
+  function stopBackgroundTracking() {
+    if (!backgroundWatcher) return;
+    const pending = backgroundWatcher;
+    backgroundWatcher = null;
+    pending.then(id => id && BackgroundGeolocation.removeWatcher({ id })).catch(() => {});
+  }
+
+  // Navegador (ou APK sem o plugin): acompanhamento enquanto o aplicativo está aberto na tela.
   function startLocationWatch() {
     if (locationWatch !== null || !navigator.geolocation) return;
     locationWatch = navigator.geolocation.watchPosition(position => {
       const { latitude, longitude, accuracy } = position.coords;
-      const moved = lastLocationSent.lat === null || Math.hypot((latitude - lastLocationSent.lat) * 111000, (longitude - lastLocationSent.lng) * 111000 * Math.cos(latitude * Math.PI / 180)) > 20;
-      if ((!moved && Date.now() - lastLocationSent.at < 15000) || !navigator.onLine) return;
-      lastLocationSent = { at: Date.now(), lat: latitude, lng: longitude };
-      api.post("/api/me/locations", { latitude, longitude, accuracyM: accuracy }, { handleAuth: false })
-        .catch(error => { if (error.status === 409) stopLocationWatch(); }); // 409 = fora da jornada
+      sendLocation(latitude, longitude, accuracy);
     }, error => {
       stopLocationWatch();
-      if (error.code === 1 && !locationDenied) {
-        locationDenied = true;
-        toast("Permita a localização do REOBOTE nas configurações do celular para a Central acompanhar a jornada.", "error");
-      }
+      if (error.code === 1) warnLocationDenied();
     }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
   }
 
-  // Para de acompanhar e enviar a localização.
+  // Para o acompanhamento comum (navegador).
   function stopLocationWatch() {
     if (locationWatch !== null) navigator.geolocation.clearWatch(locationWatch);
     locationWatch = null;
@@ -870,9 +975,24 @@
     </section>`;
   }
 
+  // Sair: vale mesmo sem internet. Apaga a sessão guardada no celular, o cookie de login (APK) e marca
+  // que o colaborador saiu, para o app não entrar sozinho na conta ao ser aberto de novo.
+  function logout() {
+    stopLocationWatch();
+    stopBackgroundTracking();
+    try {
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.setItem(LOGGED_OUT_KEY, "1");
+    } catch { /* sem armazenamento */ }
+    api.post("/api/auth/logout", {}, { handleAuth: false }).catch(() => {}); // avisa o servidor, se houver conexão
+    window.Capacitor?.Plugins?.CapacitorCookies?.clearAllCookies?.().catch?.(() => {});
+    showLogin();
+  }
+
   // Abre o aplicativo para a conta autenticada (depois do login ou ao reabrir com a sessão ativa).
   async function enter(newSession) {
     session = newSession;
+    try { localStorage.removeItem(LOGGED_OUT_KEY); } catch { /* sem armazenamento */ }
     try { localStorage.setItem(SESSION_KEY, JSON.stringify({ user: session.user, company: session.company, rules: session.rules })); } catch { /* sem armazenamento */ }
     if (session.user.mustChangePassword) return showPassword(true);
     timezone = session.rules.timezone || timezone;
@@ -915,10 +1035,23 @@
     // Histórico: troca de período e abertura dos detalhes de um dia.
     const range = event.target.closest("[data-range]");
     if (range) {
-      historyRange = range.dataset.range === "custom" ? "custom" : Number(range.dataset.range);
+      historyRange = ["custom", "month"].includes(range.dataset.range) ? range.dataset.range : Number(range.dataset.range);
+      if (historyRange === "month" && !historyMonth) historyMonth = monthOffset(0);
       if (historyRange === "custom") {
         customRange = { from: customRange.from || localDate(-6), to: customRange.to || localDate(0) };
       }
+      store.history = null;
+      openDay = null;
+      render();
+      loadHistory();
+      return;
+    }
+    // Setas do período "Mês": volta ou avança um mês (até 12 meses atrás).
+    const monthStep = event.target.closest("[data-month-step]");
+    if (monthStep) {
+      const [year, month] = historyMonth.split("-").map(Number);
+      const moved = new Date(Date.UTC(year, month - 1 + Number(monthStep.dataset.monthStep), 1));
+      historyMonth = `${moved.getUTCFullYear()}-${String(moved.getUTCMonth() + 1).padStart(2, "0")}`;
       store.history = null;
       openDay = null;
       render();
@@ -952,10 +1085,7 @@
     if (action === "logout") {
       // Antes de sair, avisa se ainda há registros guardados que não chegaram à Central.
       if (store?.queue.length && !(await confirmSheet({ title: "Há registros não enviados", message: `${store.queue.length} registro(s) ainda não chegaram à Central. Eles continuam guardados neste celular e serão enviados quando você entrar de novo.`, confirmLabel: "Sair mesmo assim", danger: true }))) return;
-      stopLocationWatch();
-      if (!session) return showLogin();
-      api.post("/api/auth/logout", {}, { handleAuth: false }).catch(() => {}).finally(() => showLogin());
-      return;
+      return logout();
     }
     if (action === "change-password") return showPassword(false);
     if (action === "cancel-password") return go("more");
@@ -988,6 +1118,7 @@
       const from = String(data.get("from"));
       const to = String(data.get("to"));
       if (from > to) return toast("A data inicial deve ser antes da final.", "error");
+      if ((new Date(to) - new Date(from)) / 86400000 > 366) return toast("Escolha um período de no máximo 1 ano.", "error");
       customRange = { from, to };
       store.history = null;
       render();
@@ -1063,9 +1194,13 @@
     }
     if (isNative) {
       await discoverServer(); // endereço atual publicado no GitHub
-      api.baseUrl = savedServer();
+      await chooseServer();   // usa o primeiro endereço que responder (GitHub ou o embutido no APK)
       if (!api.baseUrl) return showLogin();
     }
+    // Depois de tocar em Sair, o app sempre abre na tela de login.
+    let loggedOut = false;
+    try { loggedOut = localStorage.getItem(LOGGED_OUT_KEY) === "1"; } catch { loggedOut = false; }
+    if (loggedOut) return showLogin();
     let cachedSession = null;
     try {
       cachedSession = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
