@@ -67,6 +67,7 @@
   let photoInMemory = null;    // foto grande demais para guardar no celular
   let locationWatch = null;    // acompanhamento de GPS durante a jornada
   let locationDenied = false;  // o colaborador negou a permissão de localização no aparelho
+  let gpsStatus = { tone: "idle", text: "GPS desligado fora da jornada" }; // situação do GPS mostrada na tela
   let lastLocationSent = { at: 0, lat: null, lng: null };
   let timezone = "America/Sao_Paulo";
   let deferredInstall = null;  // convite de instalação do PWA (somente navegador)
@@ -272,15 +273,20 @@
 
   // Localização no momento da leitura do QR Code (quando a Central pede, em Configurações).
   // Serve para a Central conferir a distância até a unidade. Espera no máximo 8 segundos.
-  function currentPosition() {
-    if (!session.rules.requestGpsOnCheckin || !navigator.geolocation) return Promise.resolve(null);
-    return new Promise(resolve => {
-      navigator.geolocation.getCurrentPosition(
-        position => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy }),
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-      );
-    });
+  // Usa a última posição enviada (até 2 minutos); senão pede ao GPS com alta precisão (até 10 s) e,
+  // se falhar (ex.: dentro de prédio), com precisão normal (até 6 s).
+  async function currentPosition() {
+    if (!session.rules.requestGpsOnCheckin || !navigator.geolocation) return null;
+    if (lastLocationSent.lat !== null && Date.now() - lastLocationSent.at < 120000) {
+      return { latitude: lastLocationSent.lat, longitude: lastLocationSent.lng, accuracy: lastLocationSent.accuracy };
+    }
+    const ask = options => new Promise(resolve => navigator.geolocation.getCurrentPosition(
+      position => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy }),
+      error => { if (error.code === 1) warnLocationDenied(); resolve(null); },
+      options
+    ));
+    return (await ask({ enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }))
+      || ask({ enableHighAccuracy: false, timeout: 6000, maximumAge: 120000 });
   }
 
   /**
@@ -302,6 +308,8 @@
     saveStore();
     render();
     const result = await sync();
+    // A posição da leitura também vai para o mapa na hora (o alfinete com a foto usa o GPS do celular).
+    if (position) sendLocation(position.latitude, position.longitude, position.accuracy, true);
     return { item, result: result?.find(entry => entry.clientId === item.clientId) || null };
   }
 
@@ -442,6 +450,7 @@
       </section>
       <div class="m-last"><span>${last ? `Último registro: <strong>${esc(last.label || EVENT_LABELS[last.eventType])}</strong> às ${time(last.occurredAt)}${last.pending ? " (aguardando envio)" : ""}` : "Nenhum registro hoje."}</span>
         <button type="button" class="m-sync ${sync.tone}" id="sync-status"><i class="fa-solid fa-circle"></i><span>${sync.text}</span></button></div>
+      <p class="m-gps ${gpsStatus.tone}"><i class="fa-solid fa-location-dot"></i><span>${esc(gpsStatus.text)}</span></p>
 
       <button type="button" class="m-scan-hero" data-action="scan" ${canScan ? "" : "disabled"}>
         <i class="fa-solid fa-qrcode"></i>
@@ -591,6 +600,10 @@
         ${statusPill(predicted().state)}
       </section>
       <section class="m-card m-list">${rows.map(([icon, label, value]) => `<div><i class="fa-solid ${icon}"></i><span><small>${label}</small><strong>${esc(value)}</strong></span></div>`).join("")}</section>
+      <p class="m-gps ${gpsStatus.tone}"><i class="fa-solid fa-location-dot"></i><span>${esc(gpsStatus.text)}</span></p>
+      <button type="button" class="m-wide-button light" data-action="test-gps">
+        <i class="fa-solid fa-satellite-dish"></i><span><strong>Testar GPS</strong><small>Confere se o celular está enviando a localização</small></span><i class="fa-solid fa-chevron-right"></i>
+      </button>
       <p class="m-info"><i class="fa-solid fa-location-dot"></i><span><strong>Localização durante a jornada</strong>Do início ao encerramento da jornada, sua localização é enviada automaticamente à Central. Fora da jornada, nada é enviado.</span></p>
       <button type="button" class="m-wide-button light" data-action="change-password" ${navigator.onLine ? "" : "disabled"}>
         <i class="fa-solid fa-key"></i><span><strong>Alterar senha</strong><small>Troque a sua senha de acesso</small></span><i class="fa-solid fa-chevron-right"></i>
@@ -830,35 +843,77 @@
   let backgroundWatcher = null;       // promessa com o identificador do acompanhamento em segundo plano
   let backgroundUnavailable = false;  // plugin ausente (APK antigo): usa o acompanhamento comum
 
+  // Mostra a situação do GPS na tela (linha embaixo do último registro e na tela Perfil).
+  // tone: "ok" (enviado), "waiting" (procurando sinal), "denied" (sem permissão), "error" ou "idle".
+  function setGps(tone, text) {
+    gpsStatus = { tone, text };
+    document.querySelectorAll(".m-gps").forEach(element => {
+      element.className = `m-gps ${tone}`;
+      element.querySelector("span").textContent = text;
+    });
+  }
+
   // Liga o envio de localização durante a jornada e desliga fora dela.
+  // Com o app aberto, usa o GPS do navegador interno (o mesmo que já funcionava); no APK, o serviço em
+  // segundo plano funciona junto, como reforço para quando a tela apaga. Posições repetidas são filtradas.
   function autoLocation() {
     if (!store || !session) return;
     const active = ["in_transit", "working", "on_break"].includes(predicted().state);
     if (!active || locationDenied) {
       stopLocationWatch();
       stopBackgroundTracking();
+      if (!active && gpsStatus.tone !== "idle") setGps("idle", "GPS desligado fora da jornada");
       return;
     }
+    startLocationWatch();
     if (BackgroundGeolocation && !backgroundUnavailable) startBackgroundTracking();
-    else startLocationWatch();
   }
 
   // Envia uma posição à Central: no máximo uma a cada 15 segundos, ou antes disso se andar mais de 20 metros.
-  function sendLocation(latitude, longitude, accuracy) {
+  // force = true envia na hora (ex.: posição da leitura do QR Code).
+  function sendLocation(latitude, longitude, accuracy, force = false) {
     const moved = lastLocationSent.lat === null || Math.hypot((latitude - lastLocationSent.lat) * 111000, (longitude - lastLocationSent.lng) * 111000 * Math.cos(latitude * Math.PI / 180)) > 20;
-    if ((!moved && Date.now() - lastLocationSent.at < 15000) || !navigator.onLine) return;
-    lastLocationSent = { at: Date.now(), lat: latitude, lng: longitude };
+    if (!force && !moved && Date.now() - lastLocationSent.at < 15000) return;
+    if (!navigator.onLine) return setGps("error", "GPS ok, mas sem internet para enviar à Central");
+    lastLocationSent = { at: Date.now(), lat: latitude, lng: longitude, accuracy: accuracy ?? null };
     api.post("/api/me/locations", { latitude, longitude, accuracyM: accuracy ?? 0 }, { handleAuth: false })
+      .then(() => setGps("ok", `GPS enviado à Central às ${time(new Date())}${accuracy ? ` (precisão de ${Math.round(accuracy)} m)` : ""}`))
       .catch(error => {
-        if (error.status === 409) { stopLocationWatch(); stopBackgroundTracking(); } // 409 = fora da jornada
+        if (error.status === 409) { // 409 = fora da jornada
+          stopLocationWatch();
+          stopBackgroundTracking();
+          setGps("idle", "GPS desligado fora da jornada");
+        } else {
+          setGps("error", `GPS não enviado: ${error.offline ? "sem conexão com o servidor" : error.message}`);
+        }
       });
   }
 
   // Avisa uma única vez quando o celular não deixa o REOBOTE usar a localização.
   function warnLocationDenied() {
+    setGps("denied", "GPS sem permissão: libere a localização do REOBOTE nas configurações do celular");
     if (locationDenied) return;
     locationDenied = true;
     toast("Permita a localização do REOBOTE (\"Permitir o tempo todo\" ou \"Durante o uso\") nas configurações do celular para a Central acompanhar a jornada.", "error");
+  }
+
+  // Botão "Testar GPS" (tela Perfil): pede uma posição agora e mostra o resultado, para conferir o celular.
+  function testGps() {
+    if (!navigator.geolocation) return toast("Este aparelho não tem GPS disponível para o aplicativo.", "error");
+    locationDenied = false;
+    setGps("waiting", "Testando o GPS...");
+    navigator.geolocation.getCurrentPosition(position => {
+      const { latitude, longitude, accuracy } = position.coords;
+      toast(`GPS funcionando: ${latitude.toFixed(5)}, ${longitude.toFixed(5)} (precisão de ${Math.round(accuracy)} m).`, "success");
+      if (["in_transit", "working", "on_break"].includes(predicted().state)) sendLocation(latitude, longitude, accuracy, true);
+      else setGps("idle", "GPS funcionando. Ele é enviado à Central só durante a jornada");
+      autoLocation();
+    }, error => {
+      const reasons = { 1: "sem permissão de localização", 2: "sinal de GPS indisponível (ligue a localização do celular)", 3: "o GPS demorou para responder (tente perto de uma janela)" };
+      if (error.code === 1) warnLocationDenied();
+      else setGps("error", `GPS com problema: ${reasons[error.code] || error.message}`);
+      toast(`GPS com problema: ${reasons[error.code] || error.message}`, "error");
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   }
 
   // APK: acompanhamento em segundo plano com o plugin @capacitor-community/background-geolocation.
@@ -873,6 +928,7 @@
     }, (location, error) => {
       if (error) {
         if (error.code === "NOT_AUTHORIZED") { stopBackgroundTracking(); warnLocationDenied(); }
+        else setGps("error", `GPS em segundo plano com problema: ${error.message || error.code}`);
         return;
       }
       if (location) sendLocation(location.latitude, location.longitude, location.accuracy);
@@ -895,12 +951,14 @@
   // Navegador (ou APK sem o plugin): acompanhamento enquanto o aplicativo está aberto na tela.
   function startLocationWatch() {
     if (locationWatch !== null || !navigator.geolocation) return;
+    if (gpsStatus.tone !== "ok") setGps("waiting", "Procurando sinal de GPS...");
     locationWatch = navigator.geolocation.watchPosition(position => {
       const { latitude, longitude, accuracy } = position.coords;
       sendLocation(latitude, longitude, accuracy);
     }, error => {
       stopLocationWatch();
       if (error.code === 1) warnLocationDenied();
+      else setGps("error", error.code === 3 ? "GPS demorando para responder, tentando de novo..." : "Sinal de GPS indisponível: confira se a localização do celular está ligada");
     }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
   }
 
@@ -1088,6 +1146,7 @@
       return logout();
     }
     if (action === "change-password") return showPassword(false);
+    if (action === "test-gps") return testGps();
     if (action === "cancel-password") return go("more");
     if (action === "forgot") {
       const form = document.querySelector("#app-forgot-form");
