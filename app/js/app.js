@@ -305,7 +305,13 @@
     const occurredAt = nowIso();
     let position = null;
     if (extra.qr) {
-      // No APK, a posição vem do plugin nativo, que informa se ela é FALSA (app de GPS falso).
+      // 1º: algum app de GPS falso está ativado no celular? Então o registro é bloqueado.
+      const mock = await checkMockApps();
+      if (mock?.mock) {
+        blockFakeGps(null, "checkin", mock.mockApps);
+        return null;
+      }
+      // 2º: no APK, a posição vem do plugin nativo, que informa se ela é FALSA (app de GPS falso).
       const fix = await nativeFix();
       if (fix?.simulated) {
         blockFakeGps(fix, "checkin");
@@ -961,6 +967,28 @@
   let lastNativeFix = null;   // última posição recebida do plugin: { location, at }
   let fakeSheetOpen = false;
 
+  // Detector nativo próprio do REOBOTE (aplicativo-android/nativo/MockLocationPlugin.java): pergunta ao
+  // Android se há um app de GPS falso ativado ("app de local fictício" nas opções do desenvolvedor).
+  const MockLocation = isNative ? window.Capacitor?.registerPlugin?.("MockLocation") : null;
+
+  // Resolve com { mock, mockApps, lastLocationMock }, ou null (navegador, APK antigo ou erro).
+  async function checkMockApps() {
+    if (!MockLocation) return null;
+    try {
+      return await MockLocation.check();
+    } catch {
+      return null;
+    }
+  }
+
+  // Verificação periódica (ao abrir, ao voltar para o app e a cada minuto): com GPS falso ativado,
+  // nada é enviado ao mapa e o técnico vê o aviso.
+  async function guardAgainstMock() {
+    if (!session || !store) return;
+    const mock = await checkMockApps();
+    if (mock?.mock) blockFakeGps(null, "tracking", mock.mockApps);
+  }
+
   // Pede uma posição ao plugin nativo (APK). Resolve com a posição (inclui "simulated"), null se não
   // houver sinal em 12 s, ou undefined quando o plugin não existe (navegador ou APK antigo).
   function nativeFix(timeoutMs = 12000) {
@@ -992,17 +1020,17 @@
   }
 
   // GPS falso detectado: bloqueia, explica ao técnico e avisa a Central (no máximo 1 aviso a cada 10 min).
-  function blockFakeGps(location, context) {
+  function blockFakeGps(location, context, apps = []) {
     const first = Date.now() - fakeGpsAt > 600000;
     fakeGpsAt = Date.now();
     if (first || context === "checkin") {
-      api.post("/api/me/mock-location", { context, latitude: location.latitude, longitude: location.longitude }, { handleAuth: false }).catch(() => {});
+      api.post("/api/me/mock-location", { context, latitude: location?.latitude ?? null, longitude: location?.longitude ?? null, apps }, { handleAuth: false }).catch(() => {});
     }
     if (fakeSheetOpen) return;
     fakeSheetOpen = true;
     confirmSheet({
       title: "GPS falso detectado",
-      message: "Este celular está usando um aplicativo de localização falsa (GPS falso). " + (context === "checkin" ? "O registro de ponto foi bloqueado. " : "Sua localização não está sendo enviada. ") + "Desinstale ou desative o app de GPS falso e desligue a \"localização simulada\" nas opções do desenvolvedor do Android. A Central foi avisada.",
+      message: "Este celular está usando um aplicativo de localização falsa (GPS falso)" + (apps.length ? `: ${apps.join(", ")}. ` : ". ") + (context === "checkin" ? "O registro de ponto foi bloqueado. " : "Sua localização não está sendo enviada. ") + "Desinstale ou desative o app de GPS falso e desligue a \"localização simulada\" nas opções do desenvolvedor do Android. A Central foi avisada.",
       confirmLabel: "Entendi",
       danger: true
     }).finally(() => { fakeSheetOpen = false; });
@@ -1161,6 +1189,7 @@
     chrome(true);
     loadStore(session.user.id);
     ensureGpsPermission(); // pede a localização logo ao entrar
+    guardAgainstMock();    // confere se há app de GPS falso ativado
     tab = "home";
     render();
     await sync();          // envia o que ficou guardado
@@ -1168,7 +1197,7 @@
     if (!timersStarted) {
       // A cada minuto: envia registros pendentes e atualiza a situação.
       timersStarted = true;
-      setInterval(() => { if (session && store && !["login", "password"].includes(tab)) { sync(); refreshToday(); } }, 60000);
+      setInterval(() => { if (session && store && !["login", "password"].includes(tab)) { sync(); refreshToday(); guardAgainstMock(); } }, 60000);
     }
   }
 
@@ -1334,6 +1363,7 @@
     } else {
       sync().then(refreshToday);
       ensureGpsPermission(); // ex.: o técnico desligou e religou o GPS: pede a permissão de novo
+      guardAgainstMock();
     }
   });
 
