@@ -16,6 +16,7 @@ const REOBOTE_NOTIFICATION_ICONS = [
     'overtime' => 'fa-business-time',
     'access_request' => 'fa-key',
     'out_of_range' => 'fa-location-crosshairs',
+    'fake_gps' => 'fa-user-secret', // localizacao falsa (app de GPS falso) detectada no celular
     'system' => 'fa-bell',
 ];
 
