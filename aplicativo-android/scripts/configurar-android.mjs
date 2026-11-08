@@ -4,11 +4,14 @@
  *
  * 1. Permissões no AndroidManifest.xml:
  *    - CAMERA: leitura dos QR Codes de veículos e unidades;
- *    - ACCESS_FINE_LOCATION / ACCESS_COARSE_LOCATION: localização opcional, sempre com consentimento;
+ *    - ACCESS_FINE_LOCATION / ACCESS_COARSE_LOCATION: localização durante a jornada;
+ *      (o plugin de localização em segundo plano acrescenta sozinho o serviço FOREGROUND_SERVICE_LOCATION
+ *      e a permissão de notificação, usados para acompanhar o técnico com a tela apagada);
  *    - usesCleartextTraffic: permite servidor em http:// (útil em testes na rede Wi-Fi).
  *      Em produção, prefira um servidor com https://.
  * 2. Ícone do aplicativo: usa app/icons/icon-512.png em todas as densidades de tela.
- * 3. Versão do APK: usa a variável VERSAO_APP (o GitHub passa o número da execução),
+ * 3. Textos da notificação fixa de localização (strings.xml), em português.
+ * 4. Versão do APK: usa a variável VERSAO_APP (o GitHub passa o número da execução),
  *    para que cada APK novo instale por cima do anterior.
  *
  * Uso: npm run android:configurar  (depois de "npx cap add android")
@@ -58,7 +61,23 @@ for (const folder of readdirSync(res).filter(name => name.startsWith("mipmap-"))
   }
 }
 
-// 3. Versão -----------------------------------------------------------------------------------
+// 3. Notificação de localização em segundo plano (plugin @capacitor-community/background-geolocation) --
+// Nome do canal de notificação mostrado nas configurações do Android e cor do aviso.
+const stringsPath = join(androidApp, "src", "main", "res", "values", "strings.xml");
+if (existsSync(stringsPath)) {
+  let strings = readFileSync(stringsPath, "utf8");
+  const extras = {
+    capacitor_background_geolocation_notification_channel_name: "Localização da jornada",
+    capacitor_background_geolocation_notification_color: "#5423BD"
+  };
+  for (const [name, value] of Object.entries(extras)) {
+    if (!strings.includes(`name="${name}"`)) strings = strings.replace("</resources>", `    <string name="${name}">${value}</string>
+</resources>`);
+  }
+  writeFileSync(stringsPath, strings);
+}
+
+// 4. Versão -----------------------------------------------------------------------------------
 const gradlePath = join(androidApp, "build.gradle");
 const version = Number.parseInt(process.env.VERSAO_APP || "1", 10) || 1;
 let gradle = readFileSync(gradlePath, "utf8");
