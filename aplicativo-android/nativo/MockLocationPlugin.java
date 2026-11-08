@@ -3,6 +3,7 @@ package br.com.reobote.app;
 
 import android.app.AppOpsManager;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -18,16 +19,19 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.util.List;
 
 /**
- * Plugin nativo do REOBOTE que responde à pergunta: "este celular está com GPS falso?".
+ * Plugin nativo do REOBOTE que responde à pergunta: "este celular tem GPS falso?".
  *
- * Apps de GPS falso (sem root) só funcionam se forem escolhidos como "app de local fictício" nas
- * opções do desenvolvedor do Android. Este plugin confere duas coisas:
- *  1. se algum app instalado está AUTORIZADO a simular localização (permissão ACCESS_MOCK_LOCATION
- *     liberada pelo Android em AppOpsManager) — é o app escolhido nas opções do desenvolvedor;
- *  2. se a última posição conhecida do GPS, da rede ou do provedor combinado veio marcada como simulada.
+ * Regra (a mesma usada por jogos como Pokémon GO e por apps de ponto rígidos):
+ *  1. APP DE GPS FALSO INSTALADO: todo app que simula localização precisa declarar ao Android a permissão
+ *     ACCESS_MOCK_LOCATION (é assim que ele aparece em "app de local fictício" nas opções do desenvolvedor).
+ *     Se algum app instalado pelo usuário (não do sistema) declara essa permissão, o celular é bloqueado
+ *     para registrar ponto até o app ser desinstalado.
+ *  2. ATIVADO: quando o Android permite conferir, informa também se esse app está escolhido como
+ *     "app de local fictício" (em Androids novos essa consulta é proibida; o erro é ignorado por app).
+ *  3. POSIÇÃO SIMULADA: a última posição conhecida (GPS, rede e provedor combinado) veio marcada como falsa.
  *
  * No JavaScript: window.Capacitor.registerPlugin("MockLocation").check()
- *   -> { mock: true/false, mockApps: ["Nome do app", ...], lastLocationMock: true/false }
+ *   -> { mock, mockApps: ["Simulador GPS (com.exemplo.app)"], enabledApps: [...], lastLocationMock, errors: [...] }
  *
  * Copiado para o projeto Android e registrado no MainActivity pelo script scripts/configurar-android.mjs.
  */
@@ -37,17 +41,31 @@ public class MockLocationPlugin extends Plugin {
     @PluginMethod
     public void check(PluginCall call) {
         Context context = getContext();
-        JSArray mockApps = new JSArray();
+        JSArray mockApps = new JSArray();     // apps de GPS falso instalados
+        JSArray enabledApps = new JSArray();  // desses, os escolhidos como "app de local fictício"
+        JSArray errors = new JSArray();       // problemas encontrados (enviados no diagnóstico)
         boolean lastLocationMock = false;
+        PackageManager packageManager = context.getPackageManager();
 
-        // 1. Apps autorizados a simular localização.
+        // 1 e 2. Apps instalados que declaram a permissão de simular localização.
+        List<PackageInfo> packages = null;
         try {
-            PackageManager packageManager = context.getPackageManager();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                AppOpsManager appOps = (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
-                List<PackageInfo> packages = packageManager.getInstalledPackages(PackageManager.GET_PERMISSIONS);
-                for (PackageInfo info : packages) {
+            packages = packageManager.getInstalledPackages(PackageManager.GET_PERMISSIONS);
+        } catch (Exception error) {
+            errors.put("lista de apps: " + error.getClass().getSimpleName() + " " + error.getMessage());
+        }
+        AppOpsManager appOps = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            appOps = (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
+        }
+        if (packages != null) {
+            for (PackageInfo info : packages) {
+                try {
                     if (info.requestedPermissions == null || info.applicationInfo == null || context.getPackageName().equals(info.packageName)) {
+                        continue;
+                    }
+                    // Apps do sistema (do fabricante) ficam de fora, para não bloquear celulares sem motivo.
+                    if ((info.applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0) {
                         continue;
                     }
                     boolean wantsMock = false;
@@ -60,20 +78,34 @@ public class MockLocationPlugin extends Plugin {
                     if (!wantsMock) {
                         continue;
                     }
-                    int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_MOCK_LOCATION, info.applicationInfo.uid, info.packageName);
-                    if (mode == AppOpsManager.MODE_ALLOWED) {
-                        mockApps.put(packageManager.getApplicationLabel(info.applicationInfo).toString());
+                    String name = packageManager.getApplicationLabel(info.applicationInfo).toString() + " (" + info.packageName + ")";
+                    mockApps.put(name);
+                    if (appOps != null) {
+                        try {
+                            int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_MOCK_LOCATION, info.applicationInfo.uid, info.packageName);
+                            if (mode == AppOpsManager.MODE_ALLOWED) {
+                                enabledApps.put(name);
+                            }
+                        } catch (Exception ignored) {
+                            // Android novo não deixa consultar outros apps: basta saber que está instalado.
+                        }
                     }
+                } catch (Exception error) {
+                    errors.put(info.packageName + ": " + error.getClass().getSimpleName());
                 }
-            } else if (!"0".equals(Settings.Secure.getString(context.getContentResolver(), "mock_location"))) {
+            }
+        }
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M
+                && !"0".equals(Settings.Secure.getString(context.getContentResolver(), "mock_location"))) {
                 // Android 5 (antigo): uma única chave "permitir locais fictícios".
-                mockApps.put("Locais fictícios permitidos");
+                enabledApps.put("Locais fictícios permitidos");
             }
         } catch (Exception ignored) {
-            // Sem acesso à lista de apps: segue só com a checagem da última posição.
+            // Configuração indisponível.
         }
 
-        // 2. Última posição conhecida marcada como simulada.
+        // 3. Última posição conhecida marcada como simulada.
         try {
             LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
             for (String provider : new String[] { LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, "fused" }) {
@@ -86,14 +118,17 @@ public class MockLocationPlugin extends Plugin {
                     // Provedor inexistente neste aparelho ou permissão de localização ainda não concedida.
                 }
             }
-        } catch (Exception ignored) {
-            // Sem serviço de localização.
+        } catch (Exception error) {
+            errors.put("localização: " + error.getClass().getSimpleName());
         }
 
         JSObject result = new JSObject();
-        result.put("mock", mockApps.length() > 0 || lastLocationMock);
+        result.put("mock", mockApps.length() > 0 || enabledApps.length() > 0 || lastLocationMock);
         result.put("mockApps", mockApps);
+        result.put("enabledApps", enabledApps);
         result.put("lastLocationMock", lastLocationMock);
+        result.put("checkedApps", packages == null ? 0 : packages.size());
+        result.put("errors", errors);
         call.resolve(result);
     }
 
