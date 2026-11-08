@@ -780,13 +780,13 @@
   }
 
   // Envia a localização durante a jornada, enquanto o aplicativo está aberto:
-  // no máximo uma posição por minuto, ou antes disso se o colaborador andar mais de 50 metros.
+  // no máximo uma posição a cada 15 segundos, ou antes disso se andar mais de 20 metros.
   function startLocationWatch() {
     if (locationWatch !== null || !navigator.geolocation) return;
     locationWatch = navigator.geolocation.watchPosition(position => {
       const { latitude, longitude, accuracy } = position.coords;
-      const moved = lastLocationSent.lat === null || Math.hypot((latitude - lastLocationSent.lat) * 111000, (longitude - lastLocationSent.lng) * 111000 * Math.cos(latitude * Math.PI / 180)) > 50;
-      if ((!moved && Date.now() - lastLocationSent.at < 60000) || !navigator.onLine) return;
+      const moved = lastLocationSent.lat === null || Math.hypot((latitude - lastLocationSent.lat) * 111000, (longitude - lastLocationSent.lng) * 111000 * Math.cos(latitude * Math.PI / 180)) > 20;
+      if ((!moved && Date.now() - lastLocationSent.at < 15000) || !navigator.onLine) return;
       lastLocationSent = { at: Date.now(), lat: latitude, lng: longitude };
       api.post("/api/me/locations", { latitude, longitude, accuracyM: accuracy }, { handleAuth: false })
         .catch(error => { if (error.status === 409) stopLocationWatch(); }); // 409 = fora da jornada
@@ -796,7 +796,7 @@
         locationDenied = true;
         toast("Permita a localização do REOBOTE nas configurações do celular para a Central acompanhar a jornada.", "error");
       }
-    }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 });
+    }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
   }
 
   // Para de acompanhar e enviar a localização.
