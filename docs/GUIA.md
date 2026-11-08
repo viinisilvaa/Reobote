@@ -22,7 +22,7 @@ O mapa da Central usa o **OpenStreetMap** (biblioteca Leaflet, em `central/js/ve
 Para aparecer no mapa:
 
 - **Unidades:** cadastre a latitude e a longitude em **Unidades e QR Codes**. A unidade aparece como um quadrado roxo, com o raio de chegada em volta.
-- **Técnicos:** o técnico precisa ativar **Compartilhar localização** na tela **Conta** do aplicativo (consentimento exigido pela LGPD). Ele aparece como um círculo na cor da situação (em atendimento, em deslocamento, em almoço...). A posição é atualizada enquanto o aplicativo está aberto, e o mapa da Central se atualiza a cada 15 segundos.
+- **Técnicos:** durante a jornada (do primeiro QR Code até o encerramento), o aplicativo envia a localização automaticamente, enquanto estiver aberto e com o GPS do celular permitido. Fora da jornada, nada é enviado. Ele aparece como um círculo na cor da situação (em atendimento, em deslocamento, em almoço...). A posição é atualizada enquanto o aplicativo está aberto, e o mapa da Central se atualiza a cada 15 segundos.
 
 ## Aplicativo Android (APK)
 
@@ -71,8 +71,8 @@ Com Node.js 20, Java 17 e Android Studio instalados, rode dentro de `aplicativo-
 2. Em **Jornadas e Escalas**, configure os horários: entrada, saída, intervalo de almoço, dias da semana ou escala em ciclo (12x36), tolerância de atraso (15 min por padrão) e se o trabalho em folgas e feriados conta como hora extra.
 3. Em **Cargos e Permissões**, defina o que cada cargo pode acessar e qual é a jornada padrão dele.
 4. Em **Colaboradores**, cadastre a pessoa com foto, e-mail corporativo, cargo, unidade e, se for o caso, uma jornada individual. O sistema mostra uma **senha temporária** uma única vez. No primeiro acesso, o colaborador é obrigado a criar a própria senha.
-5. O colaborador abre o aplicativo, toca em **Registrar presença** e lê o QR Code do veículo e depois o da unidade. Ao longo do dia, usa **Iniciar almoço**, **Retornar do almoço** e **Encerrar jornada**.
-6. A Central recebe os registros: o painel, o mapa, as notificações e os relatórios se atualizam sozinhos.
+5. O colaborador abre o aplicativo, toca em **Escanear QR Code** e lê o QR Code do veículo (início do expediente) e depois o da unidade (chegada). O almoço é registrado com **Horário de Almoço** e **Retorno do Almoço**. Para **Encerrar Jornada**, ele escaneia de novo um QR Code (veículo ou unidade): sem a leitura, o encerramento não é aceito.
+6. A Central recebe os registros: a cada registro aparece um aviso no canto da tela, estilo WhatsApp (ex.: "Fulano chegou à unidade Hospital Central"), com som. O painel, o mapa, as notificações e os relatórios se atualizam sozinhos.
 
 ### Regras de jornada (calculadas no servidor, em `server/lib/journey.php`)
 
@@ -91,7 +91,7 @@ O aplicativo guarda cada registro no celular com o **horário original**, já co
 - A sessão usa cookie `HttpOnly`, e as senhas são guardadas com hash. As operações de escrita exigem a mesma origem e o cabeçalho `X-Reobote`. O login tem limite de tentativas.
 - As permissões são verificadas no servidor a cada requisição, conforme o perfil da conta (Administrador, Gestor ou Colaborador) e as permissões do cargo. Desativar um cadastro bloqueia o acesso na hora.
 - As fotos ficam fora da pasta pública (`server/storage/photos`) e só são entregues a quem pode ver o colaborador.
-- A localização contínua só é coletada com o consentimento do próprio colaborador, que pode revogá-lo, e fica guardada por 30 dias.
+- A localização é coletada somente durante a jornada (do início ao encerramento), com aviso ao colaborador na tela **Perfil** do aplicativo, e fica guardada por 30 dias.
 - Registros de ponto nunca são apagados. Uma correção é feita por **lançamento manual** ou por **anulação**, sempre com justificativa, e fica no **histórico de alterações** (Configurações).
 - Recuperação de acesso: pela opção "Esqueci minha senha", a administração recebe um aviso e gera uma nova senha temporária.
 
