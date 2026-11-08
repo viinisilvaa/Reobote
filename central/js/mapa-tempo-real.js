@@ -77,9 +77,9 @@ window.ReobotePage = {
           <div><i class="fa-solid fa-briefcase"></i><span><small>Cargo</small><strong>${esc(person.job || "—")}</strong></span></div>
           <div><i class="fa-solid fa-clock"></i><span><small>Último registro</small><strong>${person.lastEvent ? `${esc(person.lastEvent.label)}${person.lastEvent.place ? ` • ${esc(person.lastEvent.place)}` : ""} às ${fmt.time(person.lastEvent.occurredAt)}` : "Nenhum registro recente"}</strong></span></div>
           <div><i class="fa-solid fa-calendar-days"></i><span><small>Jornada</small><strong>${esc(person.schedule?.description || "Sem jornada")}</strong></span></div>
-          <div><i class="fa-solid fa-location-crosshairs"></i><span><small>Localização</small><strong>${person.attendanceUnitId ? `Presente em ${esc(data.units.find(unit => unit.id === person.attendanceUnitId)?.name || "unidade")} (QR Code)${person.location ? ` • GPS atualizado ${fmt.relative(person.location.recordedAt)}` : ""}` : person.location ? `Atualizada ${fmt.relative(person.location.recordedAt)}${person.distanceToUnitM !== null ? ` • ${person.distanceToUnitM < 1000 ? person.distanceToUnitM + " m" : (person.distanceToUnitM / 1000).toFixed(1) + " km"} de ${esc(person.referenceUnit)}` : ""}` : "Não compartilhada no momento"}</strong></span></div>
+          <div><i class="fa-solid fa-location-crosshairs"></i><span><small>Localização</small><strong>${person.location ? `GPS do celular atualizado ${fmt.relative(person.location.recordedAt)}${person.distanceToUnitM !== null ? ` • a ${person.distanceToUnitM < 1000 ? person.distanceToUnitM + " m" : (person.distanceToUnitM / 1000).toFixed(1) + " km"} de ${esc(person.referenceUnit)}` : ""}` : "Sem GPS do celular nos últimos 10 minutos"}${person.attendanceUnitId ? ` • QR Code lido em ${esc(data.units.find(unit => unit.id === person.attendanceUnitId)?.name || "unidade")}` : ""}</strong></span></div>
         </div>
-        <div class="map-detail-actions"><button type="button" class="map-follow-toggle" data-follow="${esc(person.id)}" aria-pressed="${followEmployeeId === person.id}" ${person.location || data.units.some(unit => unit.id === person.attendanceUnitId && unit.latitude !== null) ? "" : "disabled"}><i class="fa-solid ${followEmployeeId === person.id ? "fa-location-crosshairs" : "fa-crosshairs"}"></i> ${followEmployeeId === person.id ? "Seguindo" : "Seguir técnico"}</button><a href="perfil-colaborador.html?id=${encodeURIComponent(person.id)}"><i class="fa-solid fa-id-card"></i> Ver perfil</a>${person.phone ? `<a href="tel:${esc(person.phone.replace(/[^\d+]/g, ""))}"><i class="fa-solid fa-phone"></i> ${esc(person.phone)}</a>` : ""}</div>`
+        <div class="map-detail-actions"><button type="button" class="map-follow-toggle" data-follow="${esc(person.id)}" aria-pressed="${followEmployeeId === person.id}" ${person.location ? "" : "disabled"}><i class="fa-solid ${followEmployeeId === person.id ? "fa-location-crosshairs" : "fa-crosshairs"}"></i> ${followEmployeeId === person.id ? "Seguindo" : "Seguir técnico"}</button><a href="perfil-colaborador.html?id=${encodeURIComponent(person.id)}"><i class="fa-solid fa-id-card"></i> Ver perfil</a>${person.phone ? `<a href="tel:${esc(person.phone.replace(/[^\d+]/g, ""))}"><i class="fa-solid fa-phone"></i> ${esc(person.phone)}</a>` : ""}</div>`
         : '<p class="map-no-selection">Selecione um colaborador na lista ou no mapa.</p>';
     }
 
@@ -100,19 +100,18 @@ window.ReobotePage = {
       return `<div class="map-info"><strong>${esc(title)}</strong><span>${esc(subtitle)}</span></div>`;
     }
 
-    // Ícone da unidade: hospital roxo com até 3 fotos dos técnicos presentes (aro na cor da situação)
-    // e o número total de técnicos no canto.
+    // Ícone da unidade: hospital roxo com o número de técnicos que leram o QR Code dela.
+    // As FOTOS ficam só nos alfinetes de GPS, para o mapa mostrar onde cada celular realmente está.
     function unitIcon(technicians) {
-      const avatars = technicians.slice(0, 3).map(person => `<span style="--avatar-status:${stateColors[person.state] || "#8b8799"}">${R.avatar(person, "map-unit-avatar")}</span>`).join("");
       return L.divIcon({
         className: "map-unit-marker",
-        html: `<span class="map-unit-pin">${avatars ? `<span class="map-unit-avatars">${avatars}</span>` : ""}<i class="fa-solid fa-hospital"></i>${technicians.length ? `<b>${technicians.length}</b>` : ""}</span>`,
-        iconSize: [84, 42],
-        iconAnchor: [42, 21]
+        html: `<span class="map-unit-pin"><i class="fa-solid fa-hospital"></i>${technicians.length ? `<b>${technicians.length}</b>` : ""}</span>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
       });
     }
 
-    // Etiqueta fixa embaixo da unidade com os nomes de quem está lá (ex.: "Carlos, Juliana +2").
+    // Etiqueta fixa embaixo da unidade com os nomes de quem leu o QR Code dela (ex.: "QR: Carlos, Juliana +2").
     // Sem ninguém presente, a etiqueta some. Não há limite de técnicos por unidade.
     function unitLabel(marker, technicians) {
       marker.unbindTooltip();
@@ -120,7 +119,7 @@ window.ReobotePage = {
       const names = technicians.length === 1
         ? technicians[0].name
         : technicians.slice(0, 2).map(person => person.name.split(" ")[0]).join(", ") + (technicians.length > 2 ? ` +${technicians.length - 2}` : "");
-      marker.bindTooltip(esc(names), { permanent: true, direction: "bottom", offset: [0, 18], className: "map-unit-label" });
+      marker.bindTooltip(`<i class="fa-solid fa-qrcode"></i> ${esc(names)}`, { permanent: true, direction: "bottom", offset: [0, 18], className: "map-unit-label" });
     }
 
     // Balão da unidade: endereço e lista completa dos técnicos presentes.
@@ -151,23 +150,19 @@ window.ReobotePage = {
       return `<div class="map-info"><strong>${esc(person.name)}</strong><span>${esc(person.stateLabel)} • ${esc(updated)}</span></div>`;
     }
 
-    // Posição do técnico no mapa: o GPS do celular ou, sem ele, a unidade onde leu o QR Code.
+    // Posição do técnico no mapa: SOMENTE o GPS do celular (nunca a posição do QR Code).
     function personPosition(person) {
-      if (person.location) return [person.location.latitude, person.location.longitude];
-      const unit = data.units.find(item => item.id === person.attendanceUnitId && item.latitude !== null);
-      return unit ? [unit.latitude, unit.longitude] : null;
+      return person.location ? [person.location.latitude, person.location.longitude] : null;
     }
 
     // Cria/atualiza unidades (ícone com a quantidade presente + raio) e localização recente da equipe.
     function updateMarkers() {
       if (!map) return;
       const bounds = [];
-      const atUnits = new Set();
       data.units.filter(unit => unit.latitude !== null && unit.longitude !== null).forEach(unit => {
         const position = [unit.latitude, unit.longitude];
         const technicians = data.employees.filter(person => person.attendanceUnitId === unit.id);
         const attendeeKey = technicians.map(person => `${person.id}:${person.state}:${person.photoVersion || ""}`).join("|");
-        technicians.forEach(person => atUnits.add(person.id));
         if (!unitMarkers.has(unit.id)) {
           // Raio de chegada da unidade (área considerada "no local").
           L.circle(position, { radius: unit.radiusM, color: "#5423bd", opacity: 0.4, weight: 1, fillColor: "#5423bd", fillOpacity: 0.06, interactive: false }).addTo(map);
@@ -206,7 +201,8 @@ window.ReobotePage = {
         if (marker.getPopup()) marker.setPopupContent(technicianPopup(person));
         else marker.bindPopup(technicianPopup(person));
         // Respeita a pesquisa e o filtro: esconde o marcador de quem não passa neles.
-        if (visible(person) && !atUnits.has(person.id)) marker.addTo(map); else marker.remove();
+        // O alfinete com a foto fica sempre no GPS do celular, mesmo se o técnico leu o QR Code de uma unidade.
+        if (visible(person)) marker.addTo(map); else marker.remove();
         bounds.push(position);
       });
       // Remove marcadores de quem deixou de compartilhar a localização.
