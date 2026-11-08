@@ -7,9 +7,9 @@ window.ReobotePage = {
     const types = {
       "": "Todos os tipos", vehicle_checkin: "Chegada ao veículo", unit_checkin: "Chegada à unidade", break_start: "Início do almoço",
       break_end: "Retorno do almoço", departure: "Encerramento", late: "Atrasos", absence: "Ausências", overtime: "Horas extras",
-      out_of_range: "Fora do raio da unidade", access_request: "Pedidos de acesso"
+      out_of_range: "Fora do raio da unidade", fake_gps: "GPS falso", access_request: "Pedidos de acesso"
     };
-    const alertTypes = ["late", "absence", "out_of_range", "access_request"];
+    const alertTypes = ["late", "absence", "out_of_range", "fake_gps", "access_request"];
     let filter = "all";
     let type = "";
     let items = [];
