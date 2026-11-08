@@ -421,7 +421,7 @@ const API_AUDIT_LABELS = [
     'holiday_saved' => 'Feriado salvo', 'holiday_deleted' => 'Feriado excluído', 'unit_created' => 'Unidade criada', 'unit_updated' => 'Unidade alterada',
     'unit_deleted' => 'Unidade excluída', 'qr_created' => 'QR Code criado', 'qr_updated' => 'QR Code alterado', 'qr_deactivated' => 'QR Code desativado',
     'qr_regenerated' => 'QR Code substituído', 'settings_updated' => 'Configurações alteradas',
-    'location_consent_given' => 'Localização autorizada', 'fake_gps_detected' => 'GPS falso detectado', 'location_consent_revoked' => 'Localização revogada',
+    'location_consent_given' => 'Localização autorizada', 'fake_gps_detected' => 'GPS falso detectado', 'app_diagnostic' => 'Diagnóstico do aplicativo', 'location_consent_revoked' => 'Localização revogada',
 ];
 
 // Histórico de alterações administrativas (quem fez, o quê e quando).
