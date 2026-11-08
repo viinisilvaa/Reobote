@@ -10,7 +10,7 @@
  *
  * Uso: npm run preparar  (executado automaticamente pelo GitHub antes de gerar o APK)
  */
-import { cpSync, mkdirSync, rmSync, writeFileSync, existsSync, copyFileSync, readFileSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, writeFileSync, existsSync, copyFileSync, readFileSync, appendFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -53,6 +53,12 @@ window.REOBOTE_CONFIG = { servidor: ${JSON.stringify(servidor)} };
   // Sem a variável, o APK usa o endereço que está em app/js/config.js (já copiado acima).
   console.log("Servidor embutido no APK: o endereço de app/js/config.js.");
 }
+
+// Versão do APK (o GitHub passa VERSAO_APP = número da execução): aparece na tela Mais e no diagnóstico,
+// para conferir qual APK está instalado no celular.
+const versao = `1.0.${Number.parseInt(process.env.VERSAO_APP || "0", 10) || 0}`;
+appendFileSync(join(www, "app", "js", "config.js"), `window.REOBOTE_VERSAO = ${JSON.stringify(versao)};
+`);
 
 // Ponte JavaScript do Capacitor (@capacitor/core): sem ela, o app não enxerga os plugins nativos
 // (detector de GPS falso e localização em segundo plano). O arquivo vai para www/app/js/vendor e é
