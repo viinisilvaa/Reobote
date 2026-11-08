@@ -332,7 +332,7 @@
 [data-page="map"] .map-detail-fields strong { overflow: hidden; color: #35265b; font-size: 10px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 [data-page="map"] .map-detail-actions { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 [data-page="map"] .map-detail-actions a { min-height: 31px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #ded5f5; border-radius: 9px; color: #5121ad; font-size: 9px; font-weight: 700; text-decoration: none; }
-[data-page="map"] .map-detail-actions a:first-child { border-color: #6222c5; background: #6222c5; color: #fff; }
+[data-page="map"] .map-detail-actions a:first-of-type { border-color: #6222c5; background: #6222c5; color: #fff; }
 [data-page="map"] .map-detail-actions a:hover { filter: brightness(.96); }
 
 [data-page="map"] .map-summary-card { padding: 9px 13px 10px; background: linear-gradient(115deg,#f9f7ff,#e9e0ff); }
@@ -395,9 +395,42 @@
   [data-page="map"] .map-sync-status { display:none; }
 }
 
-/* Mapa OpenStreetMap (Leaflet): marcador quadrado roxo das unidades e balões no tema escuro. */
-[data-page="map"] .map-unit-marker { border: 2px solid #fff; border-radius: 4px; background: #5423bd; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+/* Marcadores OpenStreetMap: unidade com fotos da equipe e técnico acompanhado pelo GPS. */
+[data-page="map"] .map-unit-marker { border: 0; background: transparent; }
+[data-page="map"] .map-unit-pin { position: relative; width: max-content; min-width: 36px; height: 36px; padding: 0 7px; display: flex; align-items: center; justify-content: center; gap: 4px; border: 2px solid #fff; border-radius: 20px; background: #5423bd; color: #fff; box-shadow: 0 1px 5px rgba(0,0,0,.4); font-size: 13px; }
+[data-page="map"] .map-unit-avatars { display: flex; align-items: center; }
+[data-page="map"] .map-unit-avatars > span { position: relative; width: 24px; height: 24px; display: block; flex: 0 0 auto; border: 2px solid var(--avatar-status); border-radius: 50%; background: #eee8ff; }
+[data-page="map"] .map-unit-avatars > span + span { margin-left: -8px; }
+[data-page="map"] .map-unit-avatar { width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: #eee8ff; color: #5125a9; font-size: 8px; font-weight: 800; }
+[data-page="map"] .map-unit-avatar img { width: 100%; height: 100%; object-fit: cover; }
+[data-page="map"] .map-unit-pin b { position: absolute; top: -8px; right: -9px; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 10px; background: #17a765; color: #fff; font: 700 10px/1 Inter, "Segoe UI", sans-serif; }
+[data-page="map"] .map-unit-info { min-width: 190px; }
+[data-page="map"] .map-unit-attendees { margin-top: 8px; color: #35265b; font-size: 11px; }
+[data-page="map"] .map-unit-attendees ul { max-height: 180px; margin: 5px 0 0; padding: 0; overflow-y: auto; list-style: none; }
+[data-page="map"] .map-unit-attendees li { padding: 5px 0; display: flex; align-items: flex-start; gap: 7px; border-top: 1px solid #eeeaf5; }
+[data-page="map"] .map-attendee-avatar { width: 26px; height: 26px; display: grid; flex: 0 0 auto; place-items: center; overflow: hidden; border-radius: 50%; background: #eee8ff; color: #5125a9; font-size: 8px; font-weight: 800; }
+[data-page="map"] .map-attendee-avatar img { width: 100%; height: 100%; object-fit: cover; }
+[data-page="map"] .map-unit-attendees li span { display: flex; flex-direction: column; gap: 2px; color: #35265b; font-size: 10px; }
+[data-page="map"] .map-unit-attendees li small { color: #766b92; font-size: 9px; }
+[data-page="map"] .map-technician-marker { border: 0; background: transparent; }
+[data-page="map"] .map-technician-pin { position: relative; width: 38px; height: 44px; display: grid; justify-items: center; }
+[data-page="map"] .map-technician-avatar { position: relative; width: 34px; height: 34px; display: grid; place-items: center; overflow: hidden; border: 3px solid #fff; border-radius: 50%; background: #eee8ff; color: #5125a9; box-shadow: 0 1px 5px rgba(0,0,0,.45); font-size: 10px; font-weight: 800; }
+[data-page="map"] .map-technician-avatar img { width: 100%; height: 100%; object-fit: cover; }
+[data-page="map"] .map-technician-pin > i { position: absolute; right: 0; bottom: 0; color: var(--marker-color); font-size: 14px; text-shadow: -1px -1px #fff, 1px 1px #fff; }
+[data-page="map"] .map-detail-actions { grid-template-columns: repeat(auto-fit,minmax(94px,1fr)); }
+[data-page="map"] .map-detail-actions .map-follow-toggle { min-height: 31px; padding: 0 5px; display: flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid #ded5f5; border-radius: 9px; background: #f5f0ff; color: #5121ad; font: inherit; font-size: 9px; font-weight: 700; cursor: pointer; }
+[data-page="map"] .map-detail-actions .map-follow-toggle[aria-pressed="true"] { border-color: #168b52; background: #e6f8ee; color: #126a3d; }
+[data-page="map"] .map-detail-actions .map-follow-toggle:disabled { opacity: .5; cursor: not-allowed; }
 [data-page="map"] .map-live-canvas.leaflet-container { z-index: 0; font-family: Inter, "Segoe UI", sans-serif; }
 html[data-theme="dark"] [data-page="map"] .leaflet-popup-content-wrapper,
 html[data-theme="dark"] [data-page="map"] .leaflet-popup-tip { background: #211b2e; color: #f7f4ff; }
 html[data-theme="dark"] [data-page="map"] .map-info span { color: #d0c8df; }
+html[data-theme="dark"] [data-page="map"] .map-unit-attendees,
+html[data-theme="dark"] [data-page="map"] .map-unit-attendees li span { color: #f7f4ff; }
+html[data-theme="dark"] [data-page="map"] .map-unit-attendees li { border-color: #3a3347; }
+html[data-theme="dark"] [data-page="map"] .map-unit-attendees li small { color: #d0c8df; }
+html[data-theme="dark"] [data-page="map"] .map-detail-actions .map-follow-toggle { border-color: #4a3c65; background: #302541; color: #ddccff; }
+html[data-theme="dark"] [data-page="map"] .map-detail-actions .map-follow-toggle[aria-pressed="true"] { border-color: #258257; background: #193827; color: #a9e7c2; }
+/* Etiqueta fixa com os nomes dos técnicos presentes na unidade. */
+[data-page="map"] .leaflet-tooltip.map-unit-label { padding: 3px 8px; border: 0; border-radius: 10px; background: #2a0f5c; color: #fff; font: 700 11px/1.3 Inter, "Segoe UI", sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+[data-page="map"] .leaflet-tooltip.map-unit-label::before { border-bottom-color: #2a0f5c; }
