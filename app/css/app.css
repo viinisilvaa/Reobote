@@ -313,3 +313,12 @@ html[data-theme="dark"] .m-link { color: #d9c4ff; }
 /* Telas internas (Histórico, Notificações, Mais): o título fica abaixo da curva do cabeçalho. */
 .m-main > .m-page-header:first-child, .m-history > .m-page-header:first-child { margin-top: 30px; }
 .m-last > span { min-width: 0; }
+
+/* Meu Histórico: navegação mês a mês e títulos de mês na lista (períodos longos). */
+.m-month-nav { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; text-align: center; }
+.m-month-nav strong { font-size: 16px; }
+.m-month-nav .m-round:disabled { opacity: .35; cursor: not-allowed; }
+.m-month-title { margin: 0; padding: 10px 14px 6px; color: var(--m-purple); font-size: 13px; text-transform: uppercase; letter-spacing: .4px; background: var(--m-raised); }
+html[data-theme="dark"] .m-month-title { color: #c9a8ff; }
+.m-segment { grid-template-columns: repeat(4, 1fr); }
+.m-segment button { font-size: 13px; }
