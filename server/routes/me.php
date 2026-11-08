@@ -148,11 +148,11 @@ route('POST', '/api/me/attendance', static function (PDO $db): void {
     reobote_json(['results' => array_values($results), 'today' => api_me_today_payload($db, $employee)]);
 });
 
-// Histórico de jornada do próprio colaborador (até 93 dias).
+// Histórico de jornada do próprio colaborador (até 1 ano por consulta; os registros nunca são apagados).
 route('GET', '/api/me/history', static function (PDO $db): void {
     $user = reobote_user();
     $employee = api_me_employee($db, $user);
-    [$from, $to] = reobote_date_range(93, 30);
+    [$from, $to] = reobote_date_range(367, 30);
     reobote_json(reobote_journey($db, $employee, $from, $to) + ['from' => $from, 'to' => $to]);
 });
 
