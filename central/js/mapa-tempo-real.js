@@ -1,5 +1,5 @@
 // REOBOTE | central/js/mapa-tempo-real.js — Central: mapa em tempo real com OpenStreetMap
-// Mapa em tempo real (OpenStreetMap, sem chave): unidades de atendimento, situação da equipe e localização enviada pelo aplicativo durante a jornada.
+// Mapa em tempo real: unidades de atendimento, presença registrada por QR Code e localização autorizada da equipe.
 window.ReobotePage = {
   // Monta o mapa dentro de "root"; R são os utilitários da Central (app-core.js).
   async mount(root, R) {
@@ -7,6 +7,8 @@ window.ReobotePage = {
     const stateColors = { working: "#17b653", in_transit: "#2f7de1", on_break: "#f3b51f", finished: "#8b8799", waiting: "#ef354e" };
     let data = { employees: [], units: [] };
     let selectedId = null;
+    let followEmployeeId = null;
+    let refreshing = false;
     let search = "";
     let stateFilter = "";
     let map = null;
@@ -22,7 +24,7 @@ window.ReobotePage = {
             <span class="map-sync-status" id="map-sync-status"><i></i> Carregando...</span>
           </header>
           <div class="map map-large map-live-canvas" id="map-canvas"></div>
-          <div class="map-legend">${Object.entries({ working: "Em atendimento", in_transit: "Em deslocamento", on_break: "Em almoço", finished: "Finalizada", waiting: "Aguardando" }).map(([state, label]) => `<span><i style="background:${stateColors[state]}"></i>${label}</span>`).join("")}<span><i class="legend-unit"></i>Unidade</span></div>
+          <div class="map-legend">${Object.entries({ working: "Em atendimento", in_transit: "Em deslocamento", on_break: "Em almoço", finished: "Finalizada", waiting: "Aguardando" }).map(([state, label]) => `<span><i style="background:${stateColors[state]}"></i>${label}</span>`).join("")}<span><i class="legend-unit"></i>Unidade (nº de técnicos)</span></div>
         </section>
         <div class="map-side-column">
           <section class="map-surface-card map-detail-card"><header class="map-side-heading">Detalhes do colaborador</header><div class="map-detail-content" id="map-detail"></div></section>
@@ -59,12 +61,12 @@ window.ReobotePage = {
 
       root.querySelector("#map-team").innerHTML = data.employees.filter(visible).map(person => `<button class="map-team-person ${person.id === selectedId ? "selected" : ""}" type="button" data-select="${esc(person.id)}">
         ${R.avatar(person, "map-team-avatar")}
-        <span class="map-team-copy"><strong>${esc(person.name)}</strong><small><i class="dot" style="background:${stateColors[person.state]}"></i>${esc(person.stateLabel)}${person.location ? ' <i class="fa-solid fa-location-dot" title="Localização compartilhada"></i>' : ""}</small></span>
+        <span class="map-team-copy"><strong>${esc(person.name)}</strong><small><i class="dot" style="background:${stateColors[person.state]}"></i>${esc(person.stateLabel)}${person.attendanceUnitId ? ' <i class="fa-solid fa-hospital" title="Presença registrada pelo QR Code da unidade"></i>' : person.location ? ' <i class="fa-solid fa-location-dot" title="Localização compartilhada"></i>' : ""}</small></span>
         <i class="fa-solid fa-chevron-right"></i></button>`).join("") || '<p class="map-no-selection">Nenhum colaborador encontrado.</p>';
 
       root.querySelector("#map-units").innerHTML = data.units.map(unit => {
-        const here = data.employees.filter(p => p.lastEvent?.unitId === unit.id && p.state === "working").length;
-        return `<div><i class="online" style="background:#5423bd"></i><span>${esc(unit.name)}</span><strong title="Colaboradores em atendimento nesta unidade">${here}</strong></div>`;
+        const here = data.employees.filter(p => p.attendanceUnitId === unit.id).length;
+        return `<div><i class="online" style="background:#5423bd"></i><span>${esc(unit.name)}</span><strong title="Técnicos presentes nesta unidade">${here}</strong></div>`;
       }).join("") || '<p class="map-no-selection">Nenhuma unidade cadastrada.</p>';
 
       const person = data.employees.find(item => item.id === selectedId);
@@ -75,9 +77,9 @@ window.ReobotePage = {
           <div><i class="fa-solid fa-briefcase"></i><span><small>Cargo</small><strong>${esc(person.job || "—")}</strong></span></div>
           <div><i class="fa-solid fa-clock"></i><span><small>Último registro</small><strong>${person.lastEvent ? `${esc(person.lastEvent.label)}${person.lastEvent.place ? ` • ${esc(person.lastEvent.place)}` : ""} às ${fmt.time(person.lastEvent.occurredAt)}` : "Nenhum registro recente"}</strong></span></div>
           <div><i class="fa-solid fa-calendar-days"></i><span><small>Jornada</small><strong>${esc(person.schedule?.description || "Sem jornada")}</strong></span></div>
-          <div><i class="fa-solid fa-location-crosshairs"></i><span><small>Localização</small><strong>${person.location ? `Atualizada ${fmt.relative(person.location.recordedAt)}${person.distanceToUnitM !== null ? ` • ${person.distanceToUnitM < 1000 ? person.distanceToUnitM + " m" : (person.distanceToUnitM / 1000).toFixed(1) + " km"} de ${esc(person.referenceUnit)}` : ""}` : "Não compartilhada no momento"}</strong></span></div>
+          <div><i class="fa-solid fa-location-crosshairs"></i><span><small>Localização</small><strong>${person.attendanceUnitId ? `Presente em ${esc(data.units.find(unit => unit.id === person.attendanceUnitId)?.name || "unidade")} (QR Code)${person.location ? ` • GPS atualizado ${fmt.relative(person.location.recordedAt)}` : ""}` : person.location ? `Atualizada ${fmt.relative(person.location.recordedAt)}${person.distanceToUnitM !== null ? ` • ${person.distanceToUnitM < 1000 ? person.distanceToUnitM + " m" : (person.distanceToUnitM / 1000).toFixed(1) + " km"} de ${esc(person.referenceUnit)}` : ""}` : "Não compartilhada no momento"}</strong></span></div>
         </div>
-        <div class="map-detail-actions"><a href="perfil-colaborador.html?id=${encodeURIComponent(person.id)}"><i class="fa-solid fa-id-card"></i> Ver perfil</a>${person.phone ? `<a href="tel:${esc(person.phone.replace(/[^\d+]/g, ""))}"><i class="fa-solid fa-phone"></i> ${esc(person.phone)}</a>` : ""}</div>`
+        <div class="map-detail-actions"><button type="button" class="map-follow-toggle" data-follow="${esc(person.id)}" aria-pressed="${followEmployeeId === person.id}" ${person.location || data.units.some(unit => unit.id === person.attendanceUnitId && unit.latitude !== null) ? "" : "disabled"}><i class="fa-solid ${followEmployeeId === person.id ? "fa-location-crosshairs" : "fa-crosshairs"}"></i> ${followEmployeeId === person.id ? "Seguindo" : "Seguir técnico"}</button><a href="perfil-colaborador.html?id=${encodeURIComponent(person.id)}"><i class="fa-solid fa-id-card"></i> Ver perfil</a>${person.phone ? `<a href="tel:${esc(person.phone.replace(/[^\d+]/g, ""))}"><i class="fa-solid fa-phone"></i> ${esc(person.phone)}</a>` : ""}</div>`
         : '<p class="map-no-selection">Selecione um colaborador na lista ou no mapa.</p>';
     }
 
@@ -98,20 +100,89 @@ window.ReobotePage = {
       return `<div class="map-info"><strong>${esc(title)}</strong><span>${esc(subtitle)}</span></div>`;
     }
 
-    // Cria/atualiza os marcadores das unidades (quadrado roxo + raio de chegada)
-    // e dos colaboradores com localização recente (círculo na cor da situação).
+    // Ícone da unidade: hospital roxo com até 3 fotos dos técnicos presentes (aro na cor da situação)
+    // e o número total de técnicos no canto.
+    function unitIcon(technicians) {
+      const avatars = technicians.slice(0, 3).map(person => `<span style="--avatar-status:${stateColors[person.state] || "#8b8799"}">${R.avatar(person, "map-unit-avatar")}</span>`).join("");
+      return L.divIcon({
+        className: "map-unit-marker",
+        html: `<span class="map-unit-pin">${avatars ? `<span class="map-unit-avatars">${avatars}</span>` : ""}<i class="fa-solid fa-hospital"></i>${technicians.length ? `<b>${technicians.length}</b>` : ""}</span>`,
+        iconSize: [84, 42],
+        iconAnchor: [42, 21]
+      });
+    }
+
+    // Etiqueta fixa embaixo da unidade com os nomes de quem está lá (ex.: "Carlos, Juliana +2").
+    // Sem ninguém presente, a etiqueta some. Não há limite de técnicos por unidade.
+    function unitLabel(marker, technicians) {
+      marker.unbindTooltip();
+      if (!technicians.length) return;
+      const names = technicians.length === 1
+        ? technicians[0].name
+        : technicians.slice(0, 2).map(person => person.name.split(" ")[0]).join(", ") + (technicians.length > 2 ? ` +${technicians.length - 2}` : "");
+      marker.bindTooltip(esc(names), { permanent: true, direction: "bottom", offset: [0, 18], className: "map-unit-label" });
+    }
+
+    // Balão da unidade: endereço e lista completa dos técnicos presentes.
+    function unitPopup(unit, technicians) {
+      const location = `${unit.kind}${unit.address ? ` • ${unit.address}` : ""}`;
+      const list = technicians.length
+        ? `<div class="map-unit-attendees"><strong>${technicians.length} técnico${technicians.length === 1 ? "" : "s"} presente${technicians.length === 1 ? "" : "s"}</strong><ul>${technicians.map(person => `<li>${R.avatar(person, "map-attendee-avatar")}<span>${esc(person.name)}<small>${esc(person.stateLabel)}</small></span></li>`).join("")}</ul></div>`
+        : '<span>Nenhum técnico com presença registrada agora.</span>';
+      return `<div class="map-info map-unit-info"><strong>${esc(unit.name)}</strong><span>${esc(location)}</span>${list}</div>`;
+    }
+
+    // Ícone do técnico fora da unidade (em deslocamento): foto com o alfinete na cor da situação.
+    function technicianIcon(person) {
+      const color = stateColors[person.state] || "#8b8799";
+      return L.divIcon({
+        className: "map-technician-marker",
+        html: `<span class="map-technician-pin" style="--marker-color:${color}">${R.avatar(person, "map-technician-avatar")}<i class="fa-solid fa-location-dot"></i></span>`,
+        iconSize: [42, 48],
+        iconAnchor: [21, 24]
+      });
+    }
+
+    // Balão do técnico: nome, situação e quando o GPS foi atualizado.
+    function technicianPopup(person) {
+      const updated = person.location ? `GPS atualizado ${fmt.relative(person.location.recordedAt)}` : "GPS indisponível";
+      return `<div class="map-info"><strong>${esc(person.name)}</strong><span>${esc(person.stateLabel)} • ${esc(updated)}</span></div>`;
+    }
+
+    // Posição do técnico no mapa: o GPS do celular ou, sem ele, a unidade onde leu o QR Code.
+    function personPosition(person) {
+      if (person.location) return [person.location.latitude, person.location.longitude];
+      const unit = data.units.find(item => item.id === person.attendanceUnitId && item.latitude !== null);
+      return unit ? [unit.latitude, unit.longitude] : null;
+    }
+
+    // Cria/atualiza unidades (ícone com a quantidade presente + raio) e localização recente da equipe.
     function updateMarkers() {
       if (!map) return;
       const bounds = [];
-      data.units.filter(unit => unit.latitude !== null).forEach(unit => {
+      const atUnits = new Set();
+      data.units.filter(unit => unit.latitude !== null && unit.longitude !== null).forEach(unit => {
         const position = [unit.latitude, unit.longitude];
+        const technicians = data.employees.filter(person => person.attendanceUnitId === unit.id);
+        const attendeeKey = technicians.map(person => `${person.id}:${person.state}:${person.photoVersion || ""}`).join("|");
+        technicians.forEach(person => atUnits.add(person.id));
         if (!unitMarkers.has(unit.id)) {
           // Raio de chegada da unidade (área considerada "no local").
           L.circle(position, { radius: unit.radiusM, color: "#5423bd", opacity: 0.4, weight: 1, fillColor: "#5423bd", fillOpacity: 0.06, interactive: false }).addTo(map);
-          const icon = L.divIcon({ className: "map-unit-marker", iconSize: [18, 18] });
-          const marker = L.marker(position, { icon, title: unit.name, zIndexOffset: -100 }).addTo(map);
-          marker.bindPopup(popup(unit.name, `${unit.kind}${unit.address ? ` • ${unit.address}` : ""}`));
+          const marker = L.marker(position, { icon: unitIcon(technicians), title: unit.name, zIndexOffset: 200 }).addTo(map);
+          marker.bindPopup(unitPopup(unit, technicians));
+          unitLabel(marker, technicians);
+          marker.attendeeKey = attendeeKey;
           unitMarkers.set(unit.id, marker);
+        } else {
+          const marker = unitMarkers.get(unit.id);
+          marker.setLatLng(position);
+          if (marker.attendeeKey !== attendeeKey) {
+            marker.setIcon(unitIcon(technicians));
+            marker.setPopupContent(unitPopup(unit, technicians));
+            unitLabel(marker, technicians);
+            marker.attendeeKey = attendeeKey;
+          }
         }
         bounds.push(position);
       });
@@ -122,15 +193,18 @@ window.ReobotePage = {
         const position = [person.location.latitude, person.location.longitude];
         let marker = employeeMarkers.get(person.id);
         if (!marker) {
-          marker = L.circleMarker(position, { radius: 9, weight: 3, color: "#fff", fillOpacity: 1 }).addTo(map);
+          marker = L.marker(position, { icon: technicianIcon(person), title: person.name, zIndexOffset: 500 }).addTo(map);
           marker.on("click", () => select(person.id, true));
           employeeMarkers.set(person.id, marker);
+        } else if (marker.personStyleKey !== `${person.state}:${person.photoVersion || ""}`) {
+          marker.setIcon(technicianIcon(person));
         }
+        marker.personStyleKey = `${person.state}:${person.photoVersion || ""}`;
         marker.setLatLng(position);
-        marker.setStyle({ fillColor: stateColors[person.state] || "#8b8799" });
-        marker.bindPopup(popup(person.name, person.stateLabel));
+        if (marker.getPopup()) marker.setPopupContent(technicianPopup(person));
+        else marker.bindPopup(technicianPopup(person));
         // Respeita a pesquisa e o filtro: esconde o marcador de quem não passa neles.
-        if (visible(person)) marker.addTo(map); else marker.remove();
+        if (visible(person) && !atUnits.has(person.id)) marker.addTo(map); else marker.remove();
         bounds.push(position);
       });
       // Remove marcadores de quem deixou de compartilhar a localização.
@@ -146,6 +220,13 @@ window.ReobotePage = {
         else map.fitBounds(bounds, { padding: [40, 40] });
         map.reoboteFitted = true;
       }
+      if (followEmployeeId) {
+        const followed = data.employees.find(person => person.id === followEmployeeId);
+        const position = followed ? personPosition(followed) : null;
+        if (position && map.distance(map.getCenter(), position) > 15) {
+          map.panTo(position, { animate: true, duration: 1 });
+        }
+      }
     }
 
     // Seleciona um colaborador: mostra os detalhes e centraliza o mapa nele.
@@ -158,8 +239,10 @@ window.ReobotePage = {
       if (marker) marker.openPopup();
     }
 
-    // Busca a situação da equipe no servidor (a cada 15 segundos).
+    // Busca a situação da equipe no servidor (a cada 5 segundos).
     async function refresh() {
+      if (refreshing) return;
+      refreshing = true;
       try {
         data = await api.get("/api/map");
         if (!selectedId || !data.employees.some(person => person.id === selectedId)) selectedId = data.employees[0]?.id || null;
@@ -168,10 +251,21 @@ window.ReobotePage = {
         setStatus(`Atualizado às ${fmt.time(data.serverTime)}`);
       } catch (error) {
         setStatus("Sem conexão; exibindo a última atualização", true);
+      } finally {
+        refreshing = false;
       }
     }
 
     root.addEventListener("click", event => {
+      const followButton = event.target.closest("[data-follow]");
+      if (followButton) {
+        followEmployeeId = followEmployeeId === followButton.dataset.follow ? null : followButton.dataset.follow;
+        renderSide();
+        const person = data.employees.find(item => item.id === followEmployeeId);
+        const position = person ? personPosition(person) : null;
+        if (position && map) map.panTo(position);
+        return;
+      }
       const button = event.target.closest("[data-select]");
       if (button) select(button.dataset.select);
     });
@@ -179,7 +273,7 @@ window.ReobotePage = {
     root.querySelector("#map-status-filter").addEventListener("change", event => { stateFilter = event.target.value; renderSide(); updateMarkers(); });
 
     await refresh();
-    setInterval(refresh, 15000);
+    setInterval(refresh, 5000);
 
     // Mapa OpenStreetMap com a biblioteca Leaflet (js/vendor/leaflet): gratuito e sem chave.
     if (typeof window.L === "undefined") {
