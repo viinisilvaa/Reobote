@@ -71,7 +71,7 @@ window.ReobotePage = {
         </section>
 
         <section class="profile-card profile-section"><h2><i class="fa-solid fa-location-dot"></i> Localizações compartilhadas recentes</h2>
-          <p class="panel-description">${person.trackingEnabled ? "O colaborador autorizou o compartilhamento de localização." : "O colaborador não está compartilhando a localização."}</p>
+          <p class="panel-description">A localização é enviada automaticamente pelo aplicativo durante a jornada (do início ao encerramento) e guardada por 30 dias.</p>
           <div class="profile-history">${data.locations.map(location => `<span class="profile-event"><i class="fa-solid fa-location-dot"></i>${fmt.dateTime(location.recordedAt)} •
             <a href="https://www.google.com/maps?q=${location.latitude},${location.longitude}" target="_blank" rel="noopener noreferrer">${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}</a> • precisão ${Math.round(location.accuracyM || 0)} m</span>`).join("") || '<p class="profile-empty">Nenhuma localização registrada.</p>'}</div>
         </section>
