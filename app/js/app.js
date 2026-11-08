@@ -971,14 +971,30 @@
   // Android se há um app de GPS falso ativado ("app de local fictício" nas opções do desenvolvedor).
   const MockLocation = isNative ? window.Capacitor?.registerPlugin?.("MockLocation") : null;
 
-  // Resolve com { mock, mockApps, lastLocationMock }, ou null (navegador, APK antigo ou erro).
+  // Resolve com { mock, mockApps, enabledApps, lastLocationMock, checkedApps, errors }, ou null
+  // (navegador, APK antigo ou erro). O erro fica guardado para o diagnóstico.
+  let mockCheckError = null;
   async function checkMockApps() {
     if (!MockLocation) return null;
     try {
+      mockCheckError = null;
       return await MockLocation.check();
-    } catch {
+    } catch (error) {
+      mockCheckError = String(error?.message || error);
       return null;
     }
+  }
+
+  // Diagnóstico (uma vez ao abrir o app): envia ao servidor o resultado do detector de GPS falso, para a
+  // administração conferir no histórico de alterações se a proteção está funcionando neste celular.
+  let diagnosticSent = false;
+  async function sendDiagnostic(result) {
+    if (diagnosticSent || !isNative) return;
+    diagnosticSent = true;
+    api.post("/api/me/diagnostic", {
+      detector: Boolean(MockLocation), backgroundPlugin: Boolean(BackgroundGeolocation) && !backgroundUnavailable,
+      result: result || null, error: mockCheckError, userAgent: navigator.userAgent
+    }, { handleAuth: false }).catch(() => {});
   }
 
   // Verificação periódica (ao abrir, ao voltar para o app e a cada minuto): com GPS falso ativado,
@@ -986,6 +1002,7 @@
   async function guardAgainstMock() {
     if (!session || !store) return;
     const mock = await checkMockApps();
+    sendDiagnostic(mock);
     if (mock?.mock) blockFakeGps(null, "tracking", mock.mockApps);
   }
 
@@ -1030,7 +1047,7 @@
     fakeSheetOpen = true;
     confirmSheet({
       title: "GPS falso detectado",
-      message: "Este celular está usando um aplicativo de localização falsa (GPS falso)" + (apps.length ? `: ${apps.join(", ")}. ` : ". ") + (context === "checkin" ? "O registro de ponto foi bloqueado. " : "Sua localização não está sendo enviada. ") + "Desinstale ou desative o app de GPS falso e desligue a \"localização simulada\" nas opções do desenvolvedor do Android. A Central foi avisada.",
+      message: (apps.length ? `Este celular tem um aplicativo de GPS falso instalado: ${apps.map(app => app.replace(/ \(.*\)$/, "")).join(", ")}. Desinstale-o para registrar o ponto. ` : "Este celular está usando localização falsa (GPS falso). ") + (context === "checkin" ? "O registro de ponto foi bloqueado. " : "Sua localização não está sendo enviada. ") + "Desinstale ou desative o app de GPS falso e desligue a \"localização simulada\" nas opções do desenvolvedor do Android. A Central foi avisada.",
       confirmLabel: "Entendi",
       danger: true
     }).finally(() => { fakeSheetOpen = false; });
