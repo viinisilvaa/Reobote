@@ -49,7 +49,7 @@ window.ReobotePage = {
         <a class="profile-back" href="${R.has("employees") ? "colaboradores.html" : "painel-principal.html"}"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
         <header class="profile-card profile-hero">
           <span class="profile-photo">${person.hasPhoto ? `<img src="/api/employees/${encodeURIComponent(person.id)}/photo?v=${esc(person.photoVersion)}" alt="Foto de ${esc(person.name)}" data-fallback="${esc(R.initials(person.name))}">` : esc(R.initials(person.name))}</span>
-          <div class="profile-heading"><h1>${esc(person.name)}</h1><p>${esc(person.email)}</p>${person.active ? R.statePill(person.state, person.stateLabel) : '<span class="state-pill muted">Cadastro desativado</span>'}</div>
+          <div class="profile-heading"><h1>${esc(person.name)}</h1><p>${person.registration ? `Mat. ${esc(person.registration)} • ` : ""}${esc(person.email)}</p>${person.active ? R.statePill(person.state, person.stateLabel) : '<span class="state-pill muted">Cadastro desativado</span>'}</div>
           <div class="profile-contact">
             <span><i class="fa-solid fa-briefcase"></i>${esc(person.job || "Cargo não informado")}</span>
             <span><i class="fa-solid fa-hospital"></i>${esc(person.unit || "Sem unidade fixa")}</span>
