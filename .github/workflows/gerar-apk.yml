@@ -54,6 +54,7 @@ jobs:
         # SERVIDOR_APP: endereço da Central embutido no APK (variável do repositório; pode ficar vazia).
         env:
           SERVIDOR_APP: ${{ vars.SERVIDOR_APP }}
+          VERSAO_APP: ${{ github.run_number }}   # número da versão mostrado no app (tela Mais)
         run: npm run preparar
 
       - name: Criar o projeto Android
