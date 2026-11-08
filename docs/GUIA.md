@@ -43,7 +43,8 @@ O mapa da Central usa o **OpenStreetMap** (biblioteca Leaflet, em `central/js/ve
 Para aparecer no mapa:
 
 - **Unidades:** cadastre a latitude e a longitude em **Unidades e QR Codes**. A unidade aparece no mapa com as fotos dos técnicos presentes, conforme as leituras do QR Code, e o raio de chegada.
-- **Técnicos:** durante a jornada (do primeiro QR Code até o encerramento), o aplicativo envia a localização automaticamente enquanto estiver aberto e com o GPS do celular permitido. Fora da jornada, nada é enviado. Se o GPS indicar que o técnico saiu do raio da unidade, o marcador com a foto dele passa a acompanhar a posição informada pelo celular. Selecione o técnico e toque em **Seguir técnico** para manter o mapa centralizado nele. O aplicativo envia posições a cada 15 segundos ou quando detecta deslocamento; o mapa consulta atualizações a cada 5 segundos. O rastreamento não continua com o aplicativo fechado ou sem GPS/internet.
+- **Técnicos em movimento:** durante a jornada (do primeiro QR Code até o encerramento), o APK acompanha o técnico **mesmo com a tela apagada ou com outro app aberto** (por exemplo, dirigindo o carro). Enquanto isso, o Android mostra a notificação fixa "REOBOTE: jornada em andamento". No mapa, ele aparece como um alfinete com a foto e o primeiro nome, na cor da situação. Selecione o técnico e toque em **Seguir técnico** para manter o mapa centralizado nele. O celular envia a posição a cada 10 metros percorridos (no máximo a cada 15 segundos); o mapa se atualiza a cada 5 segundos e mostra a última posição dos últimos 10 minutos. Fora da jornada, nada é enviado. Na versão pelo navegador, o acompanhamento só funciona com o app aberto na tela.
+- **Técnicos na unidade:** ao ler o QR Code de uma unidade, o técnico passa a aparecer no ícone dela (foto, número e nomes), sem limite de técnicos por unidade.
 
 ## Aplicativo Android (APK)
 
@@ -82,6 +83,11 @@ A página **Aplicativo** da Central (no menu lateral) apresenta o aplicativo e m
 
 Em produção, use um endereço com `https://`.
 
+### Colocar o REOBOTE na internet (testes fora do seu Wi-Fi)
+
+Com o Apache e o MySQL ligados no XAMPP, dê dois cliques em **`Ligar REOBOTE na internet.bat`**, na pasta do projeto. Ele liga um túnel gratuito da Cloudflare (programa em `C:
+mpp\cloudflared\cloudflared.exe`), gera um endereço `https://....trycloudflare.com`, grava esse endereço no `servidor.json` e envia ao GitHub. Os aplicativos leem esse arquivo ao abrir e passam a usar o endereço novo (pode levar até 5 minutos). **Deixe a janela aberta**: fechar a janela desliga o REOBOTE da internet. Se o endereço publicado não responder, o app tenta o endereço do PC na rede Wi-Fi (`app/js/config.js`).
+
 ### Alternativa: gerar no próprio computador
 
 Com Node.js 20, Java 17 e Android Studio instalados, rode dentro de `aplicativo-android/`: `npm install`, `npm run preparar`, `npx cap add android`, `npm run android:configurar`, `npx cap sync android` e, por fim, `npx cap open android`. No Android Studio, use **Build > Build APK(s)**.
@@ -94,6 +100,10 @@ Com Node.js 20, Java 17 e Android Studio instalados, rode dentro de `aplicativo-
 4. Em **Colaboradores**, cadastre a pessoa com foto, e-mail corporativo, cargo, unidade e, se for o caso, uma jornada individual. O sistema mostra uma **senha temporária** uma única vez. No primeiro acesso, o colaborador é obrigado a criar a própria senha.
 5. O colaborador abre o aplicativo, toca em **Escanear QR Code** e lê o QR Code do veículo (início do expediente) e depois o da unidade (chegada). O almoço é registrado com **Horário de Almoço** e **Retorno do Almoço**. Para **Encerrar Jornada**, ele escaneia de novo um QR Code (veículo ou unidade): sem a leitura, o encerramento não é aceito.
 6. A Central recebe os registros: a cada registro aparece um aviso no canto da tela, estilo WhatsApp (ex.: "Fulano chegou à unidade Hospital Central"), com som. O painel, o mapa, as notificações e os relatórios se atualizam sozinhos.
+
+### Histórico
+
+Os registros de ponto nunca são apagados. No aplicativo (**Meu Histórico**) e no perfil do colaborador na Central, dá para consultar os últimos 7 dias, um mês inteiro (até 12 meses atrás), o último ano ou um período personalizado de até 1 ano, com horário de chegada, atrasos, faltas e horas extras.
 
 ### Regras de jornada (calculadas no servidor, em `server/lib/journey.php`)
 
