@@ -10,7 +10,7 @@
  *
  * Uso: npm run preparar  (executado automaticamente pelo GitHub antes de gerar o APK)
  */
-import { cpSync, mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, writeFileSync, existsSync, copyFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -53,6 +53,21 @@ window.REOBOTE_CONFIG = { servidor: ${JSON.stringify(servidor)} };
   // Sem a variável, o APK usa o endereço que está em app/js/config.js (já copiado acima).
   console.log("Servidor embutido no APK: o endereço de app/js/config.js.");
 }
+
+// Ponte JavaScript do Capacitor (@capacitor/core): sem ela, o app não enxerga os plugins nativos
+// (detector de GPS falso e localização em segundo plano). O arquivo vai para www/app/js/vendor e é
+// carregado no index.html do APK antes dos scripts do aplicativo. A versão web não precisa dele.
+const core = join(project, "node_modules", "@capacitor", "core", "dist", "capacitor.js");
+if (!existsSync(core)) {
+  throw new Error("@capacitor/core não encontrado. Execute npm install antes de npm run preparar.");
+}
+copyFileSync(core, join(www, "app", "js", "vendor", "capacitor.js"));
+const indexPath = join(www, "app", "index.html");
+const indexHtml = readFileSync(indexPath, "utf8");
+const firstScript = indexHtml.indexOf("<script ");
+if (firstScript < 0) throw new Error("app/index.html sem scripts.");
+writeFileSync(indexPath, indexHtml.slice(0, firstScript) + "<script src=\"js/vendor/capacitor.js\"></script>\n  " + indexHtml.slice(firstScript));
+console.log("Ponte do Capacitor incluída no app (js/vendor/capacitor.js).");
 
 // Página inicial do APK: abre direto o aplicativo.
 writeFileSync(join(www, "index.html"), `<!DOCTYPE html>
