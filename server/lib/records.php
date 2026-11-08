@@ -265,3 +265,32 @@ function reobote_delete_photo(?string $fileName): void
         }
     }
 }
+
+// Detecção de "teletransporte" (GPS falso): compara a nova posição com a última posição conhecida do
+// colaborador nas últimas 3 horas (localizações da jornada e registros de ponto com GPS). Andar mais de
+// 5 km a mais de 300 km/h é impossível por terra: indica localização falsa. Retorna a explicação ou null.
+function reobote_location_jump(PDO $db, string $employeeId, float $latitude, float $longitude, DateTimeImmutable $at): ?string
+{
+    $moment = $at->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+    $query = $db->prepare(
+        '(SELECT latitude, longitude, recorded_at AS seen_at FROM employee_locations
+          WHERE employee_id = ? AND recorded_at <= ? AND recorded_at >= ? - INTERVAL 3 HOUR ORDER BY recorded_at DESC LIMIT 1)
+         UNION ALL
+         (SELECT latitude, longitude, occurred_at AS seen_at FROM attendance_events
+          WHERE employee_id = ? AND latitude IS NOT NULL AND voided_at IS NULL AND occurred_at <= ? AND occurred_at >= ? - INTERVAL 3 HOUR
+          ORDER BY occurred_at DESC LIMIT 1)
+         ORDER BY seen_at DESC LIMIT 1'
+    );
+    $query->execute([$employeeId, $moment, $moment, $employeeId, $moment, $moment]);
+    $previous = $query->fetch();
+    if (!$previous) {
+        return null;
+    }
+    $distance = reobote_distance_m((float) $previous['latitude'], (float) $previous['longitude'], $latitude, $longitude);
+    $seconds = max(1, $at->getTimestamp() - (new DateTimeImmutable($previous['seen_at'], new DateTimeZone('UTC')))->getTimestamp());
+    $speedKmh = ($distance / 1000) / ($seconds / 3600);
+    if ($distance > 5000 && $speedKmh > 300) {
+        return sprintf('salto de %.1f km em %s (%d km/h)', $distance / 1000, $seconds < 120 ? $seconds . ' s' : round($seconds / 60) . ' min', (int) round($speedKmh));
+    }
+    return null;
+}
