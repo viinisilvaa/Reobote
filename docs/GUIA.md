@@ -15,14 +15,35 @@ Instalação, configuração do mapa, geração do APK, regras de jornada, segur
 
 Faça backup diário do banco (`mysqldump`) e da pasta `server/storage`, que guarda as fotos.
 
+## Rodar no XAMPP (Windows)
+
+O XAMPP pode servir o REOBOTE direto da pasta do projeto, na porta 3000. Assim, basta dar **Start** no **Apache** e no **MySQL** pelo painel do XAMPP e abrir `http://localhost:3000/central/`.
+
+No final de `C:
+mpp\apache\confxtra\httpd-vhosts.conf`, acrescente (troque o caminho pela pasta do projeto):
+
+```apache
+Listen 3000
+<VirtualHost *:3000>
+    DocumentRoot "C:/Users/SEU-USUARIO/Documents/Reobote"
+    <Directory "C:/Users/SEU-USUARIO/Documents/Reobote">
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+Depois, no painel do XAMPP, clique em **Stop** e em **Start** no Apache. O `.htaccess` do projeto cuida das rotas da API e bloqueia o acesso à pasta `server/`.
+
 ## Mapa em tempo real
 
 O mapa da Central usa o **OpenStreetMap** (biblioteca Leaflet, em `central/js/vendor/leaflet`). É gratuito e não precisa de chave nem de cadastro.
 
 Para aparecer no mapa:
 
-- **Unidades:** cadastre a latitude e a longitude em **Unidades e QR Codes**. A unidade aparece como um quadrado roxo, com o raio de chegada em volta.
-- **Técnicos:** durante a jornada (do primeiro QR Code até o encerramento), o aplicativo envia a localização automaticamente, enquanto estiver aberto e com o GPS do celular permitido. Fora da jornada, nada é enviado. Ele aparece como um círculo na cor da situação (em atendimento, em deslocamento, em almoço...). A posição é atualizada enquanto o aplicativo está aberto, e o mapa da Central se atualiza a cada 15 segundos.
+- **Unidades:** cadastre a latitude e a longitude em **Unidades e QR Codes**. A unidade aparece no mapa com as fotos dos técnicos presentes, conforme as leituras do QR Code, e o raio de chegada.
+- **Técnicos:** durante a jornada (do primeiro QR Code até o encerramento), o aplicativo envia a localização automaticamente enquanto estiver aberto e com o GPS do celular permitido. Fora da jornada, nada é enviado. Se o GPS indicar que o técnico saiu do raio da unidade, o marcador com a foto dele passa a acompanhar a posição informada pelo celular. Selecione o técnico e toque em **Seguir técnico** para manter o mapa centralizado nele. O aplicativo envia posições a cada 15 segundos ou quando detecta deslocamento; o mapa consulta atualizações a cada 5 segundos. O rastreamento não continua com o aplicativo fechado ou sem GPS/internet.
 
 ## Aplicativo Android (APK)
 
