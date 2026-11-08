@@ -40,6 +40,18 @@ function api_employee_input(PDO $db, array $user, array $body, ?array $current):
     if ((int) $query->fetchColumn() || (int) $query2->fetchColumn()) {
         reobote_fail('Já existe um colaborador ou acesso com este e-mail.');
     }
+    // Matricula da empresa (opcional): letras, numeros, ponto, barra e hifen; nao pode repetir entre colaboradores.
+    $registration = reobote_str($body, 'registration', 30, false, 'Matrícula');
+    if ($registration !== null) {
+        if (!preg_match('/^[0-9A-Za-z.\/-]{1,30}$/', $registration)) {
+            reobote_fail('A matrícula deve ter só letras, números, ponto, barra ou hífen.');
+        }
+        $query3 = $db->prepare('SELECT name FROM employees WHERE registration = ? AND id <> ?');
+        $query3->execute([$registration, $current['id'] ?? 0]);
+        if ($owner = $query3->fetchColumn()) {
+            reobote_fail("Esta matrícula já pertence a $owner.");
+        }
+    }
     $phone = reobote_str($body, 'phone', 32, false, 'Telefone');
     if ($phone !== null && !preg_match('/^[0-9 ()+\-.]{8,32}$/', $phone)) {
         reobote_fail('Informe um telefone válido.');
@@ -59,6 +71,7 @@ function api_employee_input(PDO $db, array $user, array $body, ?array $current):
     }
     return [
         'name' => $name,
+        'registration' => $registration,
         'email' => $email,
         'phone' => $phone,
         'job_id' => $jobId,
@@ -102,9 +115,10 @@ route('GET', '/api/employees', static function (PDO $db): void {
         if (mb_strlen($search) > 100) {
             reobote_fail('Pesquisa muito longa.');
         }
-        $sql .= ' AND (e.name LIKE ? OR e.email LIKE ?)';
+        // Busca por nome, e-mail ou matrícula.
+        $sql .= ' AND (e.name LIKE ? OR e.email LIKE ? OR e.registration LIKE ?)';
         $term = '%' . addcslashes($search, '%_\\') . '%';
-        array_push($params, $term, $term);
+        array_push($params, $term, $term, $term);
     }
     $active = (string) ($_GET['active'] ?? '1');
     if ($active === '1' || $active === '0') {
@@ -136,8 +150,8 @@ route('POST', '/api/employees', static function (PDO $db): void {
 
     $db->beginTransaction();
     try {
-        $db->prepare('INSERT INTO employees (name, email, phone, job_id, schedule_id, unit_id, active, status) VALUES (?, ?, ?, ?, ?, ?, ?, \'Offline\')')
-            ->execute([$data['name'], $data['email'], $data['phone'], $data['job_id'], $data['schedule_id'], $data['unit_id'], $data['active'] ? 1 : 0]);
+        $db->prepare('INSERT INTO employees (name, registration, email, phone, job_id, schedule_id, unit_id, active, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, \'Offline\')')
+            ->execute([$data['name'], $data['registration'], $data['email'], $data['phone'], $data['job_id'], $data['schedule_id'], $data['unit_id'], $data['active'] ? 1 : 0]);
         $employeeId = (string) $db->lastInsertId();
         $db->prepare('INSERT INTO users (employee_id, email, password_hash, role, active, must_change_password) VALUES (?, ?, ?, ?, 1, 1)')
             ->execute([$employeeId, $data['email'], password_hash($password, PASSWORD_DEFAULT), $data['role']]);
@@ -176,8 +190,8 @@ route('PUT', '/api/employees/(\d+)', static function (PDO $db, string $id): void
     }
     $db->beginTransaction();
     try {
-        $db->prepare('UPDATE employees SET name = ?, email = ?, phone = ?, job_id = ?, schedule_id = ?, unit_id = ?, active = ? WHERE id = ?')
-            ->execute([$data['name'], $data['email'], $data['phone'], $data['job_id'], $data['schedule_id'], $data['unit_id'], $data['active'] ? 1 : 0, $id]);
+        $db->prepare('UPDATE employees SET name = ?, registration = ?, email = ?, phone = ?, job_id = ?, schedule_id = ?, unit_id = ?, active = ? WHERE id = ?')
+            ->execute([$data['name'], $data['registration'], $data['email'], $data['phone'], $data['job_id'], $data['schedule_id'], $data['unit_id'], $data['active'] ? 1 : 0, $id]);
         if ($current['user_id'] !== null) {
             $db->prepare('UPDATE users SET email = ?, role = ?, active = ? WHERE id = ?')
                 ->execute([$data['email'], $data['role'], $data['active'] ? 1 : 0, $current['user_id']]);
