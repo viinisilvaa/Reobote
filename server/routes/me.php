@@ -207,3 +207,21 @@ route('GET', '/api/me/photo', static function (PDO $db): void {
     $types = ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
     reobote_json(['photo' => 'data:' . $types[$match[1]] . ';base64,' . base64_encode((string) file_get_contents($path))]);
 });
+
+// O aplicativo detectou localizacao FALSA no celular (app de "GPS falso" / localizacao simulada do Android).
+// O registro ja foi bloqueado no aparelho; aqui a Central e avisada na hora e o fato fica no historico de alteracoes.
+// Avisa no maximo uma vez a cada 10 minutos por colaborador.
+route('POST', '/api/me/mock-location', static function (PDO $db): void {
+    $user = reobote_user();
+    $employee = api_me_employee($db, $user);
+    $body = reobote_body();
+    $context = (string) ($body['context'] ?? '') === 'checkin' ? 'checkin' : 'tracking';
+    $latitude = filter_var($body['latitude'] ?? null, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE);
+    $longitude = filter_var($body['longitude'] ?? null, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE);
+    $where = ($latitude !== null && $longitude !== null) ? sprintf(' • posição falsa informada: %.5f, %.5f', $latitude, $longitude) : '';
+    $detail = ($context === 'checkin' ? 'Registro de ponto bloqueado no aplicativo' : 'Localização da jornada bloqueada no aplicativo') . $where;
+    reobote_notify($db, 'fake_gps', $employee['name'] . ' está usando GPS falso', $detail, (string) $employee['id'], null,
+        'fake_gps:' . $employee['id'] . ':' . intdiv(time(), 600));
+    reobote_audit($db, $user, 'fake_gps_detected', 'employee', (string) $employee['id'], ['context' => $context]);
+    reobote_json(['reported' => true]);
+});
