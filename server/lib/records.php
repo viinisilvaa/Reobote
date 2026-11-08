@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 // Consultas e gravacoes compartilhadas entre as rotas: cadastro de colaboradores e registros de jornada.
 
-const REOBOTE_EMPLOYEE_SELECT = 'SELECT e.id, e.name, e.email, e.phone, e.photo_path, e.job_id, e.schedule_id, e.unit_id, e.active,
+const REOBOTE_EMPLOYEE_SELECT = 'SELECT e.id, e.name, e.registration, e.email, e.phone, e.photo_path, e.job_id, e.schedule_id, e.unit_id, e.active,
         e.tracking_enabled, e.created_at, j.name AS job_name, j.default_schedule_id AS job_schedule_id,
         un.name AS unit_name, s.name AS schedule_name,
         u.id AS user_id, u.role, u.must_change_password, u.last_login_at
@@ -39,6 +39,8 @@ function reobote_employee_public(PDO $db, array $row, ?array $state = null): arr
     $data = [
         'id' => (string) $row['id'],
         'name' => $row['name'],
+        // Matricula da empresa (pode ser a antiga); sem ela, o app mostra o numero do cadastro.
+        'registration' => $row['registration'] ?? null,
         'email' => $row['email'],
         'phone' => $row['phone'],
         'hasPhoto' => (bool) $row['photo_path'],
