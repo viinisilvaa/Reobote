@@ -375,7 +375,7 @@
       stack.setAttribute("aria-live", "polite");
       document.body.append(stack);
     }
-    const name = item.title.split(/ (chegou|iniciou|retornou|encerrou|registrou|ainda|saiu)/)[0];
+    const name = item.title.split(/ (chegou|iniciou|retornou|encerrou|registrou|ainda|saiu|está)/)[0];
     const link = item.employeeId ? `perfil-colaborador.html?id=${encodeURIComponent(item.employeeId)}` : "notificacoes.html";
     const card = document.createElement("a");
     card.className = `live-alert type-${item.type}`;
