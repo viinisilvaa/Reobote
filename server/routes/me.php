@@ -259,6 +259,7 @@ route('POST', '/api/me/diagnostic', static function (PDO $db): void {
         'backgroundPlugin' => (bool) ($body['backgroundPlugin'] ?? false),
         'result' => is_array($body['result'] ?? null) ? $body['result'] : null,
         'error' => isset($body['error']) ? mb_substr((string) $body['error'], 0, 300) : null,
+        'version' => isset($body['version']) ? mb_substr((string) $body['version'], 0, 20) : null,
         'userAgent' => mb_substr((string) ($body['userAgent'] ?? ''), 0, 200),
     ];
     // Limita o tamanho do que é guardado.
