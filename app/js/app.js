@@ -650,6 +650,7 @@
         ${session.company.phone ? `<div><i class="fa-solid fa-phone"></i><span><small>Telefone</small><strong>${esc(session.company.phone)}</strong></span></div>` : ""}
         ${session.company.email ? `<div><i class="fa-solid fa-envelope"></i><span><small>E-mail</small><strong>${esc(session.company.email)}</strong></span></div>` : ""}
       </section>
+      <p class="m-hint">Versão do aplicativo: <strong>${esc(window.REOBOTE_VERSAO || "web")}</strong></p>
       <p class="m-hint">Registros feitos sem internet ficam guardados neste celular até serem enviados. Não desinstale o aplicativo nem limpe os dados dele com registros pendentes.</p>
       <button type="button" class="m-button danger" data-action="logout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</button>`;
   }
@@ -993,7 +994,7 @@
     diagnosticSent = true;
     api.post("/api/me/diagnostic", {
       detector: Boolean(MockLocation), backgroundPlugin: Boolean(BackgroundGeolocation) && !backgroundUnavailable,
-      result: result || null, error: mockCheckError, userAgent: navigator.userAgent
+      result: result || null, error: mockCheckError, version: window.REOBOTE_VERSAO || null, userAgent: navigator.userAgent
     }, { handleAuth: false }).catch(() => {});
   }
 
