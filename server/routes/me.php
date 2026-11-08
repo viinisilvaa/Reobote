@@ -246,3 +246,26 @@ route('POST', '/api/me/mock-location', static function (PDO $db): void {
     reobote_audit($db, $user, 'fake_gps_detected', 'employee', (string) $employee['id'], ['context' => $context]);
     reobote_json(['reported' => true]);
 });
+
+// Diagnóstico do aplicativo (enviado uma vez ao abrir o APK): resultado do detector de GPS falso, se os
+// plugins nativos carregaram e eventuais erros. Fica no histórico de alterações (Configurações), para a
+// administração conferir se a proteção está funcionando em cada celular.
+route('POST', '/api/me/diagnostic', static function (PDO $db): void {
+    $user = reobote_user();
+    $employee = api_me_employee($db, $user);
+    $body = reobote_body();
+    $details = [
+        'detector' => (bool) ($body['detector'] ?? false),
+        'backgroundPlugin' => (bool) ($body['backgroundPlugin'] ?? false),
+        'result' => is_array($body['result'] ?? null) ? $body['result'] : null,
+        'error' => isset($body['error']) ? mb_substr((string) $body['error'], 0, 300) : null,
+        'userAgent' => mb_substr((string) ($body['userAgent'] ?? ''), 0, 200),
+    ];
+    // Limita o tamanho do que é guardado.
+    $json = json_encode($details, JSON_UNESCAPED_UNICODE);
+    if ($json === false || strlen($json) > 4000) {
+        $details['result'] = ['truncated' => true];
+    }
+    reobote_audit($db, $user, 'app_diagnostic', 'employee', (string) $employee['id'], $details);
+    reobote_json(['saved' => true]);
+});
