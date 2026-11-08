@@ -72,7 +72,7 @@ function reobote_notify_event(PDO $db, array $employee, array $event, ?array $jo
         'arrival' => "$name registrou entrada",
         'break_start' => "$name iniciou o almoço",
         'break_end' => "$name retornou do almoço",
-        'departure' => "$name encerrou a jornada",
+        'departure' => "$name encerrou a jornada" . ($place ? " em $place" : ''),
     ];
     $detail = trim(($employee['job_name'] ?? '') . ' • registro às ' . $time, ' •');
     if ($event['source'] === 'admin') {
