@@ -32,3 +32,7 @@ As pastas `node_modules/`, `www/` e `android/` são geradas automaticamente e n�
 O APK já sai com o endereço da Central embutido, então o colaborador só digita o e-mail e a senha. Na geração, o script `preparar-www.mjs` grava em `www/app/js/config.js` o valor da variável **`SERVIDOR_APP`** do repositório no GitHub (Settings > Secrets and variables > Actions > Variables).
 
 Para testes, dá para trocar o endereço no próprio celular: na tela de login, toque 5 vezes no logotipo REOBOTE.
+
+## Localização em segundo plano
+
+O plugin `@capacitor-community/background-geolocation` (em `package.json`) acompanha o técnico durante a jornada mesmo com a tela apagada. Ele acrescenta sozinho ao Android o serviço de localização e as permissões `FOREGROUND_SERVICE_LOCATION` e `POST_NOTIFICATIONS`. O script `configurar-android.mjs` dá o nome em português ao canal da notificação ("Localização da jornada"). O app liga o acompanhamento no primeiro QR Code do dia e desliga no encerramento da jornada ou ao sair da conta.
