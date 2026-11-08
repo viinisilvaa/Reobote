@@ -95,8 +95,9 @@
   };
   // "Fernando Silva" -> "FS" (usado quando não há foto).
   const initials = name => String(name || "?").split(/\s+/).filter(Boolean).map(p => p[0]).slice(0, 2).join("").toUpperCase();
-  // Matrícula exibida no cartão: número do cadastro com 6 dígitos (ex.: 000123).
-  const registration = id => String(id || "").padStart(6, "0");
+  // Matrícula exibida no cartão: a matrícula da empresa (cadastrada na Central) ou, sem ela,
+  // o número do cadastro com 6 dígitos (ex.: 000123).
+  const registration = () => store?.today?.employee?.registration || String(session?.user.employeeId || "").padStart(6, "0");
   // Identificador único de cada registro; o servidor usa para descartar envios repetidos.
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`);
 
@@ -444,13 +445,12 @@
         <div class="m-profile-copy">
           <h1>${esc(employee?.name || session.user.name)}</h1>
           <p>${esc(employee?.job || session.user.job || "Colaborador")}</p>
-          <span class="m-registration"><i class="fa-solid fa-id-card"></i> Mat. ${registration(session.user.employeeId)}</span>
+          <span class="m-registration"><i class="fa-solid fa-id-card"></i> Mat. ${registration()}</span>
           ${statusPill(state)}
         </div>
       </section>
       <div class="m-last"><span>${last ? `Último registro: <strong>${esc(last.label || EVENT_LABELS[last.eventType])}</strong> às ${time(last.occurredAt)}${last.pending ? " (aguardando envio)" : ""}` : "Nenhum registro hoje."}</span>
         <button type="button" class="m-sync ${sync.tone}" id="sync-status"><i class="fa-solid fa-circle"></i><span>${sync.text}</span></button></div>
-      <p class="m-gps ${gpsStatus.tone}"><i class="fa-solid fa-location-dot"></i><span>${esc(gpsStatus.text)}</span></p>
 
       <button type="button" class="m-scan-hero" data-action="scan" ${canScan ? "" : "disabled"}>
         <i class="fa-solid fa-qrcode"></i>
@@ -587,7 +587,7 @@
     const employee = store.today?.employee;
     const schedule = employee?.schedule;
     const rows = [
-      ["fa-id-card", "Matrícula", registration(session.user.employeeId)],
+      ["fa-id-card", "Matrícula", registration()],
       ["fa-envelope", "E-mail", session.user.email],
       ["fa-phone", "Telefone", employee?.phone || "—"],
       ["fa-hospital", "Unidade", employee?.unit || "Sem unidade fixa"],
@@ -600,7 +600,6 @@
         ${statusPill(predicted().state)}
       </section>
       <section class="m-card m-list">${rows.map(([icon, label, value]) => `<div><i class="fa-solid ${icon}"></i><span><small>${label}</small><strong>${esc(value)}</strong></span></div>`).join("")}</section>
-      <p class="m-gps ${gpsStatus.tone}"><i class="fa-solid fa-location-dot"></i><span>${esc(gpsStatus.text)}</span></p>
       <button type="button" class="m-wide-button light" data-action="test-gps">
         <i class="fa-solid fa-satellite-dish"></i><span><strong>Testar GPS</strong><small>Confere se o celular está enviando a localização</small></span><i class="fa-solid fa-chevron-right"></i>
       </button>
@@ -897,6 +896,34 @@
     toast("Permita a localização do REOBOTE (\"Permitir o tempo todo\" ou \"Durante o uso\") nas configurações do celular para a Central acompanhar a jornada.", "error");
   }
 
+  // Ao abrir o app (e ao voltar para ele), pede a permissão de localização. Se o técnico negar ou se a
+  // localização do celular estiver desligada, mostra uma janela explicando e pede de novo.
+  let gpsAsking = false;
+  function ensureGpsPermission() {
+    if (!navigator.geolocation || gpsAsking || !session) return;
+    gpsAsking = true;
+    navigator.geolocation.getCurrentPosition(() => {
+      gpsAsking = false;
+      locationDenied = false;
+      autoLocation();
+    }, async error => {
+      if (error.code === 3) { gpsAsking = false; return; } // demorou: tenta de novo na próxima vez
+      const denied = error.code === 1;
+      const openSettings = denied && isNative && BackgroundGeolocation;
+      const again = await confirmSheet({
+        title: denied ? "Permita a localização" : "Ligue a localização do celular",
+        message: denied
+          ? "O REOBOTE precisa da localização para registrar a jornada e mostrar sua posição à Central durante o trabalho. Escolha \"Permitir\" (de preferência \"o tempo todo\")."
+          : "A localização (GPS) do celular está desligada. Ligue-a no painel de atalhos do celular e toque em Tentar de novo.",
+        confirmLabel: openSettings ? "Abrir configurações" : "Tentar de novo"
+      });
+      gpsAsking = false;
+      if (!again) return;
+      if (openSettings) BackgroundGeolocation.openSettings().catch(() => {}); // volta ao app = novo pedido
+      else ensureGpsPermission();
+    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 });
+  }
+
   // Botão "Testar GPS" (tela Perfil): pede uma posição agora e mostra o resultado, para conferir o celular.
   function testGps() {
     if (!navigator.geolocation) return toast("Este aparelho não tem GPS disponível para o aplicativo.", "error");
@@ -1061,6 +1088,7 @@
     }
     chrome(true);
     loadStore(session.user.id);
+    ensureGpsPermission(); // pede a localização logo ao entrar
     tab = "home";
     render();
     await sync();          // envia o que ficou guardado
@@ -1233,6 +1261,7 @@
       if (scanner) go("home");
     } else {
       sync().then(refreshToday);
+      ensureGpsPermission(); // ex.: o técnico desligou e religou o GPS: pede a permissão de novo
     }
   });
 
