@@ -110,6 +110,17 @@ route('POST', '/api/me/attendance', static function (PDO $db): void {
                 $qr = $resolved['qr'];
                 $type = $resolved['type'];
             }
+            // O encerramento da jornada pelo aplicativo so vale com a leitura de um QR Code (veiculo ou unidade).
+            if ($type === 'departure') {
+                if ((string) ($item['qr'] ?? '') === '') {
+                    throw new InvalidArgumentException('Escaneie o QR Code do veículo ou da unidade para encerrar a jornada.');
+                }
+                $resolved = reobote_resolve_qr($db, (string) $item['qr']);
+                if (isset($resolved['error'])) {
+                    throw new InvalidArgumentException($resolved['error']);
+                }
+                $qr = $resolved['qr'];
+            }
             $lat = filter_var($item['latitude'] ?? null, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE);
             $lng = filter_var($item['longitude'] ?? null, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE);
             $accuracy = filter_var($item['accuracy'] ?? null, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE);
@@ -159,7 +170,7 @@ route('PUT', '/api/me/location-sharing', static function (PDO $db): void {
     reobote_json(['trackingEnabled' => $body['consent']]);
 });
 
-// Recebe a localização do colaborador que autorizou o compartilhamento (guardada por 30 dias).
+// Recebe a localização do colaborador durante a jornada (guardada por 30 dias).
 route('POST', '/api/me/locations', static function (PDO $db): void {
     $user = reobote_user();
     $employee = api_me_employee($db, $user);
@@ -171,15 +182,28 @@ route('POST', '/api/me/locations', static function (PDO $db): void {
         || $accuracy === false || $accuracy < 0 || $accuracy > 100000) {
         reobote_fail('Coordenadas ou precisão inválidas.');
     }
-    $query = $db->prepare(
-        'INSERT INTO employee_locations (employee_id, latitude, longitude, accuracy_m, recorded_at)
-         SELECT id, ?, ?, ?, UTC_TIMESTAMP() FROM employees WHERE id = ? AND tracking_enabled = 1'
-    );
-    $query->execute([$latitude, $longitude, $accuracy, $employee['id']]);
-    if ($query->rowCount() === 0) {
-        reobote_fail('Ative o compartilhamento de localização antes de enviar coordenadas.', 409);
+    // A localizacao e enviada automaticamente, mas SOMENTE durante a jornada (do primeiro registro ao encerramento).
+    $state = reobote_current_states($db, [(string) $employee['id']], new DateTimeImmutable('now', new DateTimeZone('UTC')))[(string) $employee['id']];
+    if (!in_array($state['state'], ['in_transit', 'working', 'on_break'], true)) {
+        reobote_fail('Fora da jornada a localização não é registrada.', 409, 'outside_shift');
     }
+    $db->prepare('INSERT INTO employee_locations (employee_id, latitude, longitude, accuracy_m, recorded_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())')
+        ->execute([$employee['id'], $latitude, $longitude, $accuracy]);
     // Mantem somente 30 dias de localizacoes (minimizacao de dados pessoais).
     $db->prepare('DELETE FROM employee_locations WHERE employee_id = ? AND recorded_at < UTC_TIMESTAMP() - INTERVAL 30 DAY')->execute([$employee['id']]);
     reobote_json(['recorded' => true], 201);
+});
+
+// Foto do proprio colaborador como texto (data URL). No APK, imagens comuns (<img src>) de outro endereco
+// nao levam o cookie de sessao; por isso o aplicativo busca a foto por esta rota, junto com os demais dados.
+route('GET', '/api/me/photo', static function (PDO $db): void {
+    $user = reobote_user();
+    $employee = api_me_employee($db, $user);
+    $fileName = (string) ($employee['photo_path'] ?? '');
+    $path = $fileName !== '' && preg_match('/^[a-f0-9]{24}\.(jpg|png|webp)$/', $fileName, $match) ? reobote_photo_dir() . '/' . $fileName : null;
+    if ($path === null || !is_file($path)) {
+        reobote_json(['photo' => null]);
+    }
+    $types = ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+    reobote_json(['photo' => 'data:' . $types[$match[1]] . ';base64,' . base64_encode((string) file_get_contents($path))]);
 });
