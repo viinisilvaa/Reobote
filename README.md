@@ -29,7 +29,7 @@ Depois de instalar, entre com o e-mail e a senha temporária entregue pela Centr
 
 **Central (painel administrativo)**
 - Painel com ativos, atrasados, ausentes e horas extras
-- Mapa em tempo real com a localização dos técnicos (OpenStreetMap, sem custo)
+- Mapa em tempo real (OpenStreetMap, sem custo): fotos dos técnicos nas unidades, acompanhamento dos deslocamentos por GPS autorizado e opção de seguir cada técnico
 - Colaboradores com foto, cargos com permissões, jornadas e escalas (tolerância, 12x36, feriados)
 - Notificações, relatórios em PDF/CSV e geração de QR Codes
 
