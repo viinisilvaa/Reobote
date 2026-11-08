@@ -20,21 +20,28 @@
 </head>
 <body>
   <div class="m-app" id="app">
+    <!-- Cabeçalho: marca REOBOTE, parceiros e sino (vai para a aba Notificações). -->
     <header class="m-header">
-      <div class="m-brand"><img src="../compartilhado/assets/reobote-mark.png" alt=""><div><strong>REOBOTE</strong><small>Tecnologia que conecta.</small></div></div>
-      <button type="button" class="m-sync" id="sync-status" aria-live="polite"><i class="fa-solid fa-circle"></i><span>...</span></button>
-      <button class="m-icon-button" type="button" data-theme-toggle aria-label="Ativar tema escuro"></button>
+      <div class="m-header-top">
+        <div class="m-brand"><img src="../compartilhado/assets/reobote-mark.png" alt=""><div><strong>REOBOTE</strong><small>Tecnologia que conecta.</small></div></div>
+        <button type="button" class="m-bell" id="header-bell" data-tab="notifications" aria-label="Notificações"><i class="fa-solid fa-bell"></i><b class="m-badge" id="bell-badge" hidden></b></button>
+      </div>
+      <div class="m-partners">
+        <span>Em parceria com</span>
+        <div><img src="../compartilhado/assets/intelbras-logo.png" alt="Intelbras"><img src="../compartilhado/assets/rede-americas-logo.png" alt="Rede Américas"></div>
+      </div>
     </header>
 
     <main class="m-main" id="screen" tabindex="-1">
       <p class="m-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</p>
     </main>
 
+    <!-- Barra inferior com as quatro abas. -->
     <nav class="m-tabs" aria-label="Navegação do aplicativo">
       <button type="button" data-tab="home" class="active"><i class="fa-solid fa-house"></i><span>Início</span></button>
-      <button type="button" data-tab="scan"><i class="fa-solid fa-qrcode"></i><span>Registrar</span></button>
-      <button type="button" data-tab="history"><i class="fa-solid fa-clock-rotate-left"></i><span>Histórico</span></button>
-      <button type="button" data-tab="account"><i class="fa-solid fa-user"></i><span>Conta</span></button>
+      <button type="button" data-tab="profile"><i class="fa-solid fa-user"></i><span>Perfil</span></button>
+      <button type="button" data-tab="notifications"><i class="fa-solid fa-bell"></i><span>Notificações</span><b class="m-badge" id="tab-badge" hidden></b></button>
+      <button type="button" data-tab="more"><i class="fa-solid fa-ellipsis"></i><span>Mais</span></button>
     </nav>
   </div>
   <div class="m-toast" id="toast" role="status" aria-live="polite"></div>
