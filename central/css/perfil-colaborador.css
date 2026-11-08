@@ -84,3 +84,6 @@
   [data-page="profile"] .profile-consent { align-items:flex-start; flex-direction:column; }
   [data-page="profile"] .profile-consent button { width:100%; }
 }
+/* Título de cada mês no histórico (períodos longos, até 1 ano). */
+[data-page="profile"] .profile-month { margin: 8px 0 0; color:#5423bd; font-size:12px; text-transform:uppercase; letter-spacing:.4px; }
+html[data-theme="dark"] [data-page="profile"] .profile-month { color:#c9a8ff; }
