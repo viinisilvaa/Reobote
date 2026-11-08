@@ -137,9 +137,11 @@ window.ReobotePage = {
       const color = stateColors[person.state] || "#8b8799";
       return L.divIcon({
         className: "map-technician-marker",
-        html: `<span class="map-technician-pin" style="--marker-color:${color}">${R.avatar(person, "map-technician-avatar")}<i class="fa-solid fa-location-dot"></i></span>`,
-        iconSize: [42, 48],
-        iconAnchor: [21, 24]
+        // Alfinete com a foto do técnico; a ponta (embaixo) marca a posição exata do GPS.
+        html: `<span class="map-technician-pin" style="--marker-color:${color}">${R.avatar(person, "map-technician-avatar")}</span><span class="map-technician-name">${esc(person.name.split(" ")[0])}</span>`,
+        iconSize: [52, 74],
+        iconAnchor: [26, 60],
+        popupAnchor: [0, -56]
       });
     }
 
