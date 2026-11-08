@@ -1,138 +1,239 @@
 /* REOBOTE | app/css/app.css — Aplicativo: estilos das telas do colaborador (claro e escuro) */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
-/* Aplicativo do colaborador: interface simples, botões grandes e cores da identidade REOBOTE. */
+/* Cores do tema claro (variáveis usadas no app inteiro). */
 :root {
   --m-purple: #5423bd;
-  --m-purple-dark: #32115f;
-  --m-green: #17a85a;
+  --m-purple-dark: #2a0f5c;
+  --m-green: #22b45a;
   --m-red: #e5324b;
-  --m-amber: #e8a20f;
+  --m-amber: #f2a516;
   --m-blue: #2f7de1;
-  --m-bg: #f0f2ff;
+  --m-bg: #f3f1fb;
   --m-surface: #ffffff;
-  --m-raised: #f6f3ff;
-  --m-text: #201b36;
+  --m-raised: #f4f0ff;
+  --m-text: #1e1838;
   --m-muted: #5d5873;
-  --m-border: #e1dcf0;
+  --m-border: #e6e0f3;
+  --m-shadow: 0 6px 18px rgba(60, 35, 130, .08);
   font-family: Inter, "Segoe UI", Arial, sans-serif;
   color: var(--m-text);
   background: var(--m-bg);
 }
 
-/* Cores do tema escuro: só as variáveis mudam. */
+/* Cores do tema escuro: só as variáveis mudam (tamanho e formato das letras ficam iguais). */
 html[data-theme="dark"] {
   color-scheme: dark;
-  --m-bg: #171321;
+  --m-bg: #15111f;
   --m-surface: #211b2e;
-  --m-raised: #2a2339;
+  --m-raised: #2b2340;
   --m-text: #f7f4ff;
   --m-muted: #cfc6e0;
-  --m-border: #403650;
+  --m-border: #3b3250;
+  --m-shadow: 0 6px 18px rgba(0, 0, 0, .3);
 }
 
 /* Regras básicas: caixa, fonte e elementos ocultos. */
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; background: var(--m-bg); color: var(--m-text); font-size: 15px; -webkit-tap-highlight-color: transparent; }
-button, input, select { font: inherit; }
+button, input, select { font: inherit; color: inherit; }
 [hidden] { display: none !important; }
 
 /* Moldura do aplicativo: coluna central com espaço para as abas. */
-.m-app { max-width: 560px; min-height: 100vh; margin: 0 auto; padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+.m-app { max-width: 560px; min-height: 100vh; margin: 0 auto; padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 
-/* Cabeçalho roxo com a marca, o indicador de sincronização e o botão de tema. */
+/* Cabeçalho roxo: marca, sino com contador e faixa "Em parceria com" (com a curva verde do modelo). */
 .m-header {
-  position: sticky; top: 0; z-index: 5;
-  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
-  display: flex; align-items: center; gap: 10px;
-  color: #fff; background: linear-gradient(120deg, #28104f, #4d1f9f);
-  box-shadow: 0 2px 10px rgba(30, 10, 70, .25);
+  position: relative; overflow: hidden;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 18px 34px;
+  color: #fff;
+  background: radial-gradient(ellipse at 110% 120%, rgba(34, 180, 90, .9) 0 18%, transparent 19%),
+              linear-gradient(135deg, #1d0a45 0%, #3b1690 55%, #5a24c4 100%);
+  border-radius: 0 0 28px 28px;
 }
-.m-brand { display: flex; align-items: center; gap: 8px; margin-right: auto; }
-.m-brand img { width: 34px; height: 32px; object-fit: contain; }
-.m-brand strong { display: block; font-size: 16px; letter-spacing: .3px; }
-.m-brand small { display: block; font-size: 10px; opacity: .8; }
-
-/* Indicador de sincronização: verde (ok), amarelo (pendente) e vermelho (sem internet). */
-.m-sync { min-height: 32px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,.3); border-radius: 16px; background: rgba(255,255,255,.1); color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; }
-.m-sync i { font-size: 8px; }
-.m-sync.ok i { color: #48e08a; }
-.m-sync.pending i { color: #ffd257; }
-.m-sync.offline i { color: #ff8a9a; }
-.m-icon-button { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; background: rgba(255,255,255,.1); color: #fff; cursor: pointer; }
+.m-header-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.m-brand { display: flex; align-items: center; gap: 10px; }
+.m-brand img { width: 44px; height: 42px; object-fit: contain; }
+.m-brand strong { display: block; font-size: 22px; font-weight: 800; letter-spacing: .4px; }
+.m-brand small { display: block; font-size: 11px; opacity: .85; }
+.m-bell { position: relative; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; font-size: 20px; cursor: pointer; }
+.m-badge { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; border-radius: 9px; background: var(--m-red); color: #fff; font-size: 10px; font-weight: 800; }
+.m-partners { margin-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.m-partners > span { font-size: 11px; opacity: .85; }
+.m-partners > div { display: flex; gap: 8px; }
+.m-partners img { height: 30px; padding: 4px 10px; border-radius: 10px; background: #fff; object-fit: contain; }
 
 /* Área de conteúdo de cada tela e mensagens de carregando/vazio. */
-.m-main { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; outline: none; }
+.m-main { position: relative; margin-top: -22px; padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; outline: none; }
 .m-loading, .m-empty { padding: 30px 10px; color: var(--m-muted); text-align: center; }
+.m-empty i { font-size: 28px; }
 
 /* Cartões brancos que agrupam as informações. */
-.m-card { padding: 16px; border: 1px solid var(--m-border); border-radius: 18px; background: var(--m-surface); box-shadow: 0 4px 14px rgba(60, 40, 120, .06); }
+.m-card { padding: 16px; border: 1px solid var(--m-border); border-radius: 20px; background: var(--m-surface); box-shadow: var(--m-shadow); }
 .m-card h1 { margin: 0; font-size: 19px; }
 .m-card h2 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .m-card p { margin: 4px 0; color: var(--m-muted); line-height: 1.45; }
 
-/* Foto, nome e cargo do colaborador na tela inicial. */
-.m-profile { display: flex; align-items: center; gap: 14px; }
-.m-avatar { width: 64px; height: 64px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border: 3px solid var(--m-green); border-radius: 50%; background: #ece5ff; color: var(--m-purple); font-size: 20px; font-weight: 800; }
+/* Cartão do colaborador: foto com aro verde, nome, cargo, matrícula e situação. */
+.m-profile-card { padding: 16px; display: flex; align-items: center; gap: 14px; border: 1px solid var(--m-border); border-radius: 22px; background: var(--m-surface); box-shadow: var(--m-shadow); }
+.m-profile-card.vertical { flex-direction: column; text-align: center; gap: 6px; }
+.m-profile-card h1 { margin: 0; font-size: 19px; line-height: 1.2; }
+.m-profile-card p { margin: 0; color: var(--m-muted); font-size: 14px; font-weight: 600; }
+.m-profile-copy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.m-avatar { width: 86px; height: 86px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border: 4px solid var(--m-green); border-radius: 50%; background: #ece5ff; color: var(--m-purple); font-size: 26px; font-weight: 800; }
+.m-avatar.big { width: 110px; height: 110px; font-size: 34px; }
 .m-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.m-profile p { font-size: 13px; }
+.m-registration { padding: 5px 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; background: var(--m-purple-dark); color: #fff; font-size: 12px; font-weight: 700; }
 
-/* Etiqueta do estado atual (aguardando, em trânsito, trabalhando, almoço, encerrado). */
-.m-status { display: flex; flex-direction: column; gap: 5px; border-left: 6px solid var(--m-muted); }
-.m-status strong { font-size: 24px; }
-.m-status span { color: var(--m-muted); font-size: 13px; }
-.m-status .m-status-label { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
-.m-status.state-working { border-left-color: var(--m-green); }
-.m-status.state-working strong { color: var(--m-green); }
-.m-status.state-in_transit { border-left-color: var(--m-blue); }
-.m-status.state-in_transit strong { color: var(--m-blue); }
-.m-status.state-on_break { border-left-color: var(--m-amber); }
-.m-status.state-on_break strong { color: #b97c00; }
-.m-status.state-finished strong { color: var(--m-purple); }
-html[data-theme="dark"] .m-status.state-on_break strong { color: #ffd257; }
-html[data-theme="dark"] .m-status.state-finished strong { color: #c9a8ff; }
+/* Etiqueta da situação atual, com bolinha na cor do estado. */
+.m-state { padding: 5px 12px; display: inline-flex; align-items: center; gap: 7px; border-radius: 20px; background: #e2f7ea; color: #137a3d; font-size: 13px; font-weight: 700; }
+.m-state i { width: 11px; height: 11px; border-radius: 50%; background: currentColor; }
+.m-state.state-waiting { background: #eeebf5; color: #615a78; }
+.m-state.state-in_transit { background: #e2eeff; color: #1f5fb8; }
+.m-state.state-on_break { background: #fff2d6; color: #8f6000; }
+.m-state.state-finished { background: #efe7ff; color: var(--m-purple); }
+html[data-theme="dark"] .m-state { background: #173a27; color: #7ee3a6; }
+html[data-theme="dark"] .m-state.state-waiting { background: #2e2840; color: #d4cce6; }
+html[data-theme="dark"] .m-state.state-in_transit { background: #182c4a; color: #9cc6ff; }
+html[data-theme="dark"] .m-state.state-on_break { background: #42330f; color: #ffd57a; }
+html[data-theme="dark"] .m-state.state-finished { background: #31235a; color: #d6c2ff; }
 
-/* Linha do tempo com as etapas do dia. */
-.m-steps { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; list-style: none; }
-.m-steps li { padding: 10px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; border: 1px solid var(--m-border); border-radius: 14px; background: var(--m-surface); color: var(--m-muted); text-align: center; font-size: 11px; }
-.m-steps li i { font-size: 17px; }
-.m-steps li small { font-weight: 700; }
-.m-steps li.done { border-color: var(--m-green); background: rgba(23, 168, 90, .1); color: var(--m-green); }
-.m-steps li.pending { border-style: dashed; border-color: var(--m-amber); color: #b97c00; background: rgba(232, 162, 15, .08); }
+/* Linha com o último registro e o indicador de envio (verde ok, amarelo pendente, vermelho sem internet). */
+.m-last { margin: 0; padding: 0 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--m-muted); font-size: 12px; }
+.m-sync { min-height: 28px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; border: 1px solid var(--m-border); border-radius: 14px; background: var(--m-surface); color: var(--m-muted); font-size: 11px; font-weight: 700; cursor: pointer; }
+.m-sync i { font-size: 8px; }
+.m-sync.ok i { color: var(--m-green); }
+.m-sync.pending i { color: var(--m-amber); }
+.m-sync.offline i { color: var(--m-red); }
 
-/* Botões grandes de ação (registrar presença, almoço, encerrar). */
-.m-actions { display: flex; flex-direction: column; gap: 10px; }
-.m-action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Botão grande "Escanear QR Code" com a borda verde do modelo. */
+.m-scan-hero { min-height: 170px; padding: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 0; border-bottom: 5px solid var(--m-green); border-radius: 22px; background: linear-gradient(135deg, #3a1590, #5b25c4); color: #fff; box-shadow: 0 10px 24px rgba(70, 30, 160, .35); cursor: pointer; }
+.m-scan-hero i { font-size: 58px; }
+.m-scan-hero strong { font-size: 24px; font-weight: 800; }
+.m-scan-hero span { font-size: 14px; opacity: .9; }
+
+/* Grade 2x2 de ações: ícone, título, subtítulo e seta. */
+.m-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.m-action-card { min-height: 96px; padding: 12px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--m-border); border-radius: 18px; background: var(--m-surface); box-shadow: var(--m-shadow); color: var(--m-text); text-align: left; cursor: pointer; }
+.m-action-card span { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.m-action-card strong { font-size: 14px; line-height: 1.2; }
+.m-action-card small { color: var(--m-muted); font-size: 11px; }
+.m-action-icon { flex: 0 0 auto; font-size: 30px; }
+.m-action-icon.purple { color: var(--m-purple); }
+.m-action-icon.green { color: var(--m-green); }
+.m-chevron { flex: 0 0 auto; color: var(--m-muted); font-size: 13px; }
+html[data-theme="dark"] .m-action-icon.purple { color: #b893ff; }
+
+/* Botões largos (Encerrar Jornada, Meu Histórico e itens das telas Perfil e Mais). */
+.m-wide-button { min-height: 70px; padding: 12px 16px; display: flex; align-items: center; gap: 14px; border: 0; border-radius: 18px; background: linear-gradient(135deg, #2f1270, #4a1fa6); color: #fff; text-align: left; text-decoration: none; box-shadow: var(--m-shadow); cursor: pointer; }
+.m-wide-button > i:first-child { width: 30px; font-size: 26px; text-align: center; }
+.m-wide-button span { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.m-wide-button strong { font-size: 16px; }
+.m-wide-button small { font-size: 12px; opacity: .85; }
+.m-wide-button.danger { background: linear-gradient(135deg, #b3132c, #e5324b); }
+.m-wide-button.light { background: var(--m-surface); color: var(--m-text); border: 1px solid var(--m-border); }
+
+/* Estados desativados e foco visível (acessibilidade). */
+.m-scan-hero:disabled, .m-action-card:disabled, .m-wide-button:disabled, .m-button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+:is(.m-scan-hero, .m-action-card, .m-wide-button, .m-button, .m-tabs button, .m-bell):focus-visible { outline: 3px solid #9c78e0; outline-offset: 2px; }
+
+/* Botões comuns (formulários, confirmação, sair). */
 .m-button { min-height: 50px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 14px; font-weight: 700; font-size: 14px; text-align: center; text-decoration: none; cursor: pointer; }
-.m-button.big { min-height: 72px; font-size: 18px; border-radius: 18px; }
-.m-button.small { min-height: 38px; font-size: 13px; }
+.m-button.small { min-height: 40px; font-size: 13px; }
 .m-button.primary { background: linear-gradient(110deg, #5d20bf, #49219b); color: #fff; box-shadow: 0 6px 16px rgba(79, 35, 162, .3); }
-.m-button.warning { background: #fff3d6; border-color: #f3cf78; color: #8a5a00; }
 .m-button.danger { background: #ffe3e7; border-color: #f6a8b3; color: #b3132c; }
 .m-button.ghost { background: var(--m-surface); border-color: var(--m-border); color: var(--m-purple); }
-.m-button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
-.m-button:focus-visible, .m-tabs button:focus-visible { outline: 3px solid #9c78e0; outline-offset: 2px; }
-html[data-theme="dark"] .m-button.warning { background: #4a3812; border-color: #7b5d1b; color: #ffe19a; }
 html[data-theme="dark"] .m-button.danger { background: #4d1d27; border-color: #84384a; color: #ffc1cb; }
 html[data-theme="dark"] .m-button.ghost { color: #d9c4ff; }
 
-/* Dicas e resumo do dia (trabalhado, atraso, hora extra). */
+/* Dicas curtas. */
 .m-hint { margin: 0; color: var(--m-muted); font-size: 12px; line-height: 1.4; text-align: center; }
-
-.m-summary dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.m-summary dl div { padding: 10px; border-radius: 12px; background: var(--m-raised); }
-.m-summary dt { color: var(--m-muted); font-size: 11px; }
-.m-summary dd { margin: 3px 0 0; font-size: 18px; font-weight: 800; }
-.m-summary small { display: block; margin-top: 8px; color: var(--m-muted); font-size: 11px; }
 .bad { color: var(--m-red) !important; }
 .good { color: var(--m-green) !important; }
+.purple { color: var(--m-purple) !important; }
+.amber { color: var(--m-amber) !important; }
+html[data-theme="dark"] .purple { color: #b893ff !important; }
 
-/* Aviso de registros recusados pelo servidor. */
-.m-rejected { border-color: #f6a8b3; }
-.m-rejected h2 { color: var(--m-red); }
-.m-rejected ul { margin: 0 0 10px; padding: 0; list-style: none; }
-.m-rejected li { padding: 8px 0; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--m-border); font-size: 13px; }
-.m-rejected li span { color: var(--m-muted); }
+/* Cabeçalho das telas internas: botão voltar, título e ícone de calendário. */
+.m-page-header { min-height: 56px; padding: 4px 2px; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; }
+.m-page-header h1 { margin: 0; font-size: 22px; text-align: center; }
+.m-round { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--m-border); border-radius: 50%; background: var(--m-surface); color: var(--m-purple); font-size: 18px; cursor: pointer; }
+html[data-theme="dark"] .m-round { color: #d9c4ff; }
+
+/* Meu Histórico: seletor de período (7 dias, 30 dias, personalizado). */
+.m-history { display: flex; flex-direction: column; gap: 12px; }
+.m-segment { padding: 5px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; border-radius: 26px; background: var(--m-purple-dark); }
+.m-segment button { min-height: 42px; border: 0; border-radius: 22px; background: transparent; color: #e7defc; font-size: 14px; font-weight: 600; cursor: pointer; }
+.m-segment button.active { background: linear-gradient(110deg, #6a2fe0, #5423bd); color: #fff; }
+.m-custom-range { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 8px; }
+.m-custom-range label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; }
+.m-custom-range input { min-height: 40px; padding: 0 8px; border: 1px solid var(--m-border); border-radius: 10px; background: var(--m-surface); color: var(--m-text); }
+
+/* Meu Histórico: quatro cartões de totais. */
+.m-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.m-stat { min-height: 84px; padding: 12px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--m-border); border-radius: 18px; background: var(--m-surface); box-shadow: var(--m-shadow); }
+.m-stat > i { font-size: 30px; }
+.m-stat span { display: flex; flex-direction: column; gap: 2px; }
+.m-stat small { color: var(--m-muted); font-size: 12px; font-weight: 600; }
+.m-stat strong { font-size: 24px; font-weight: 800; }
+
+/* Meu Histórico: lista de dias com ícone, etiqueta colorida e seta (toque abre os detalhes). */
+.m-day-list { overflow: hidden; border: 1px solid var(--m-border); border-radius: 20px; background: var(--m-surface); box-shadow: var(--m-shadow); }
+.m-day + .m-day { border-top: 1px solid var(--m-border); }
+.m-day-row { width: 100%; min-height: 72px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; border: 0; background: transparent; color: var(--m-text); text-align: left; cursor: pointer; }
+.m-day-copy { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.m-day-copy strong { font-size: 17px; }
+.m-day-copy small { color: var(--m-muted); font-size: 14px; }
+.m-day-icon { font-size: 24px; }
+.m-day.open .m-chevron { transform: rotate(90deg); }
+.m-day-detail { padding: 0 14px 14px; color: var(--m-muted); font-size: 13px; }
+.m-day-detail p { margin: 0 0 8px; }
+.m-day-detail ul { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; list-style: none; }
+.m-pill { padding: 6px 12px; border-radius: 16px; background: var(--m-raised); color: var(--m-muted); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.m-pill.good, .m-day-icon.good { color: #138a44 !important; }
+.m-pill.good { background: #dcf5e5; }
+.m-pill.warn, .m-day-icon.warn { color: #d96b0b !important; }
+.m-pill.warn { background: #ffe8d6; }
+.m-pill.bad { background: #ffe0e5; color: #c41a36 !important; }
+.m-day-icon.bad { color: var(--m-red); }
+.m-pill.extra, .m-day-icon.extra { color: var(--m-purple) !important; }
+.m-pill.extra { background: #ece3ff; }
+.m-pill.info, .m-day-icon.info { color: #1f5fb8 !important; }
+.m-pill.info { background: #e2eeff; }
+.m-day-icon.neutral { color: var(--m-muted); }
+html[data-theme="dark"] .m-pill.good { background: #173a27; color: #7ee3a6 !important; }
+html[data-theme="dark"] .m-pill.warn { background: #4a2c12; color: #ffbe85 !important; }
+html[data-theme="dark"] .m-pill.bad { background: #4d1d27; color: #ffb3c0 !important; }
+html[data-theme="dark"] .m-pill.extra { background: #31235a; color: #d6c2ff !important; }
+html[data-theme="dark"] .m-pill.info { background: #182c4a; color: #9cc6ff !important; }
+
+/* Caixa de informação (período selecionado, aviso de localização). */
+.m-info { margin: 0; padding: 12px 14px; display: flex; align-items: center; gap: 12px; border-radius: 16px; background: #ece5ff; color: #3b1f84; font-size: 13px; line-height: 1.4; }
+.m-info > i { font-size: 22px; }
+.m-info span { display: flex; flex-direction: column; gap: 2px; }
+html[data-theme="dark"] .m-info { background: #2e2450; color: #e4d8ff; }
+
+/* Lista de dados (Perfil e ajuda): ícone, rótulo e valor. */
+.m-list { padding: 6px 16px; }
+.m-list > div { padding: 10px 0; display: flex; align-items: center; gap: 14px; }
+.m-list > div + div { border-top: 1px solid var(--m-border); }
+.m-list i { width: 22px; color: var(--m-purple); font-size: 18px; text-align: center; }
+.m-list span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.m-list small { color: var(--m-muted); font-size: 12px; }
+.m-list strong { font-size: 14px; overflow-wrap: anywhere; }
+html[data-theme="dark"] .m-list i { color: #b893ff; }
+
+/* Notificações do colaborador: recusados (vermelho), aguardando envio (amarelo) e enviados (verde). */
+.m-notice-list { display: flex; flex-direction: column; gap: 8px; }
+.m-notice { padding: 12px 14px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--m-border); border-left: 5px solid var(--m-green); border-radius: 16px; background: var(--m-surface); box-shadow: var(--m-shadow); }
+.m-notice > i { width: 24px; color: var(--m-green); font-size: 20px; text-align: center; }
+.m-notice span { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.m-notice small { color: var(--m-muted); font-size: 12px; }
+.m-notice time { color: var(--m-muted); font-size: 11px; white-space: nowrap; }
+.m-notice.warn { border-left-color: var(--m-amber); }
+.m-notice.warn > i { color: var(--m-amber); }
+.m-notice.bad { border-left-color: var(--m-red); }
+.m-notice.bad > i { color: var(--m-red); }
 
 /* Tela de leitura do QR Code: câmera e moldura de mira. */
 .m-scan { display: flex; flex-direction: column; gap: 12px; text-align: center; }
@@ -150,48 +251,24 @@ html[data-theme="dark"] .m-button.ghost { color: #d9c4ff; }
 .m-result-time { font-size: 40px; font-weight: 800; color: var(--m-text) !important; }
 .m-result .m-button { width: 100%; margin-top: 10px; }
 
-/* Histórico de dias com seus registros e etiquetas. */
-.m-section-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.m-section-header h1 { margin: 0; font-size: 20px; }
-.m-section-header select, .m-history select { min-height: 40px; padding: 0 10px; border: 1px solid var(--m-border); border-radius: 10px; background: var(--m-surface); color: var(--m-text); }
-.m-history { display: flex; flex-direction: column; gap: 12px; }
-.m-day { padding: 14px; border: 1px solid var(--m-border); border-left: 5px solid var(--m-border); border-radius: 14px; background: var(--m-surface); }
-.m-day.status-worked { border-left-color: var(--m-green); }
-.m-day.status-in_progress { border-left-color: var(--m-blue); }
-.m-day.status-absent, .m-day.status-not_arrived { border-left-color: var(--m-red); }
-.m-day header { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-transform: capitalize; }
-.m-day dl { margin: 10px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.m-day dt { color: var(--m-muted); font-size: 10px; }
-.m-day dd { margin: 2px 0 0; font-weight: 700; font-size: 13px; }
-.m-day ul { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; list-style: none; color: var(--m-muted); font-size: 12px; }
-.m-day p { margin: 8px 0 0; color: var(--m-muted); font-size: 13px; }
-.m-pill { padding: 3px 9px; border-radius: 20px; background: var(--m-raised); color: var(--m-muted); font-size: 11px; font-weight: 700; text-transform: none; }
-
-/* Interruptor de compartilhamento de localização e links da conta. */
-.m-switch { margin: 10px 0 4px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
-.m-switch input { width: 22px; height: 22px; accent-color: var(--m-green); }
-
-/* Botões com aparência de link (ex.: "Esqueci minha senha"). */
-.m-links { display: flex; flex-direction: column; gap: 8px; }
-
-/* Barra de abas fixa no rodapé (Início, Histórico, Conta). */
+/* Barra de abas fixa no rodapé (Início, Perfil, Notificações, Mais). */
 .m-tabs {
   position: fixed; right: 0; bottom: 0; left: 0; z-index: 6;
   max-width: 560px; margin: 0 auto; padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
   border-top: 1px solid var(--m-border); background: var(--m-surface);
 }
-.m-tabs button { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 12px; background: transparent; color: var(--m-muted); font-size: 11px; font-weight: 600; cursor: pointer; }
-.m-tabs button i { font-size: 19px; }
-.m-tabs button.active { background: var(--m-raised); color: var(--m-purple); }
-html[data-theme="dark"] .m-tabs button.active { color: #d9c4ff; }
+.m-tabs button { position: relative; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--m-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+.m-tabs button i { font-size: 21px; }
+.m-tabs button.active { border-bottom-color: var(--m-purple); color: var(--m-purple); }
+.m-tabs .m-badge { top: 4px; right: calc(50% - 22px); }
+html[data-theme="dark"] .m-tabs button.active { border-bottom-color: #b893ff; color: #d9c4ff; }
 
-/* Mensagem temporária e painel deslizante (folha) de opções. */
-.m-toast { position: fixed; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); left: 16px; z-index: 10; max-width: 528px; margin: 0 auto; padding: 13px 16px; border-radius: 12px; background: #2c1a5d; color: #fff; font-size: 14px; opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .2s, transform .2s; }
+/* Mensagem temporária e painel de confirmação. */
+.m-toast { position: fixed; right: 16px; bottom: calc(90px + env(safe-area-inset-bottom, 0px)); left: 16px; z-index: 10; max-width: 528px; margin: 0 auto; padding: 13px 16px; border-radius: 12px; background: #2c1a5d; color: #fff; font-size: 14px; opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .2s, transform .2s; }
 .m-toast.visible { opacity: 1; transform: none; }
 .m-toast[data-tone="error"] { background: #a3162c; }
 .m-toast[data-tone="success"] { background: #0f7a41; }
-
 .m-sheet { width: min(480px, calc(100vw - 24px)); padding: 20px; border: 1px solid var(--m-border); border-radius: 18px; background: var(--m-surface); color: var(--m-text); }
 .m-sheet::backdrop { background: rgba(20, 10, 40, .5); }
 .m-sheet h2 { margin: 0 0 8px; font-size: 18px; }
@@ -199,7 +276,7 @@ html[data-theme="dark"] .m-tabs button.active { color: #d9c4ff; }
 .m-sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 /* Login e criação de senha dentro do aplicativo. */
-.m-auth { margin-top: 12px; padding: 24px 20px; display: flex; flex-direction: column; gap: 8px; text-align: center; }
+.m-auth { padding: 24px 20px; display: flex; flex-direction: column; gap: 8px; text-align: center; }
 .m-auth-logo { width: 72px; height: 66px; margin: 0 auto 4px; object-fit: contain; }
 .m-auth-notice { padding: 10px 12px; border-radius: 12px; background: #fff3d6; color: #8a5a00 !important; font-size: 13px; }
 html[data-theme="dark"] .m-auth-notice { background: #4a3812; color: #ffe19a !important; }
@@ -217,15 +294,22 @@ html[data-theme="dark"] .m-form-error { background: #4d1d27; color: #ffc1cb !imp
 html[data-theme="dark"] .m-link { color: #d9c4ff; }
 
 /* Celulares estreitos: reduz espaçamentos e fontes. */
-@media (max-width: 420px) {
+@media (max-width: 400px) {
   .m-brand small { display: none; }
-  .m-sync span { max-width: 128px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .m-steps { gap: 4px; }
-  .m-steps li { padding: 8px 2px; font-size: 10px; }
-  .m-day dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .m-partners img { height: 26px; }
+  .m-avatar { width: 72px; height: 72px; }
+  .m-action-card { padding: 10px; gap: 8px; }
+  .m-action-icon { font-size: 24px; }
+  .m-action-card strong { font-size: 13px; }
+  .m-pill { padding: 5px 9px; font-size: 12px; }
+  .m-day-icon { display: none; }
 }
 
 /* Respeita quem pediu ao sistema para reduzir animações. */
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* Telas internas (Histórico, Notificações, Mais): o título fica abaixo da curva do cabeçalho. */
+.m-main > .m-page-header:first-child, .m-history > .m-page-header:first-child { margin-top: 30px; }
+.m-last > span { min-width: 0; }
