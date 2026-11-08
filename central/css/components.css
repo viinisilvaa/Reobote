@@ -338,3 +338,26 @@ html[data-theme="dark"] a.person-cell:hover strong { color: #d3b7ff; }
   .qr-label p { margin: 0; color: #5423bd; font-size: 10pt; font-weight: 700; }
   .qr-label small { color: #444; font-size: 8pt; }
 }
+
+/* Avisos em tempo real no canto da tela (estilo WhatsApp): chegam a cada registro feito no aplicativo. */
+.live-alerts { position: fixed; right: 18px; bottom: 18px; z-index: 50; width: min(360px, calc(100vw - 36px)); display: flex; flex-direction: column; gap: 10px; }
+.live-alert { position: relative; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #e3ddf2; border-left: 5px solid #25d366; border-radius: 14px; background: #fff; color: #1e1838; text-decoration: none; box-shadow: 0 14px 34px rgba(30, 15, 70, .22); animation: live-alert-in .25s ease-out; }
+.live-alert:hover { border-color: #c9b8f0; }
+.live-alert-head { display: flex; align-items: center; gap: 6px; color: #6b6483; font-size: 11px; font-weight: 700; }
+.live-alert-head img { width: 16px; height: 15px; object-fit: contain; }
+.live-alert-head time { margin-left: auto; margin-right: 22px; font-weight: 500; }
+.live-alert-body { display: flex; align-items: center; gap: 10px; }
+.live-alert-body > span:last-child { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.live-alert-body strong { font-size: 13px; line-height: 1.3; }
+.live-alert-body small { color: #6b6483; font-size: 12px; }
+.live-alert-avatar { width: 42px; height: 42px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: #ece5ff; color: #5522b4; font-size: 13px; font-weight: 800; }
+.live-alert-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.live-alert-close { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: #8a83a0; cursor: pointer; }
+.live-alert-close:hover { background: #f1edfa; }
+.live-alert.type-late, .live-alert.type-absence, .live-alert.type-out_of_range { border-left-color: #e5324b; }
+.live-alert.type-break_start, .live-alert.type-break_end, .live-alert.type-overtime { border-left-color: #f2a516; }
+html[data-theme="dark"] .live-alert { border-color: var(--dark-border); background: var(--dark-surface); color: var(--dark-text); }
+html[data-theme="dark"] :is(.live-alert-head, .live-alert-body small) { color: var(--dark-muted); }
+html[data-theme="dark"] .live-alert-close:hover { background: var(--dark-raised); }
+@keyframes live-alert-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .live-alert { animation: none; } }
