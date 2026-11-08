@@ -15,7 +15,7 @@ window.ReobotePage = {
       <section class="panel content-panel wide-panel">
         <div class="content-panel-heading"><h2><i class="fa-solid fa-address-book"></i> Equipe</h2></div>
         <div class="toolbar">
-          <label class="search-control"><i class="fa-solid fa-magnifying-glass"></i><input id="employee-search" type="search" placeholder="Buscar por nome ou e-mail" aria-label="Buscar colaboradores"></label>
+          <label class="search-control"><i class="fa-solid fa-magnifying-glass"></i><input id="employee-search" type="search" placeholder="Buscar por nome, e-mail ou matrícula" aria-label="Buscar colaboradores"></label>
           <label class="select-control"><span>Cargo</span><select id="filter-job"><option value="">Todos</option>${jobs.map(job => `<option value="${esc(job.id)}">${esc(job.name)}</option>`).join("")}</select></label>
           <label class="select-control"><span>Unidade</span><select id="filter-unit"><option value="">Todas</option>${units.map(unit => `<option value="${esc(unit.id)}">${esc(unit.name)}</option>`).join("")}</select></label>
           <label class="select-control"><span>Situação</span><select id="filter-state"><option value="">Todas</option><option value="working">Em atendimento</option><option value="in_transit">Em deslocamento</option><option value="on_break">Em almoço</option><option value="waiting">Aguardando início</option><option value="finished">Jornada finalizada</option></select></label>
@@ -33,7 +33,7 @@ window.ReobotePage = {
       const visible = employees.filter(person => !filters.state || person.state === filters.state);
       root.querySelector("#employee-count").textContent = `${visible.length} colaborador(es)`;
       rowsElement.innerHTML = visible.map(person => `<tr${person.active ? "" : ' class="row-inactive"'}>
-        <td><a class="person-cell" href="perfil-colaborador.html?id=${encodeURIComponent(person.id)}">${R.avatar(person, "person-avatar")}<span><strong>${esc(person.name)}</strong><small>${esc(person.email)}</small></span></a></td>
+        <td><a class="person-cell" href="perfil-colaborador.html?id=${encodeURIComponent(person.id)}">${R.avatar(person, "person-avatar")}<span><strong>${esc(person.name)}</strong><small>${person.registration ? `Mat. ${esc(person.registration)} • ` : ""}${esc(person.email)}</small></span></a></td>
         <td><span class="cell-stack"><span>${esc(person.job || "—")}</span><small>${esc(person.unit || "Sem unidade fixa")}</small></span></td>
         <td>${person.schedule ? `<span title="${esc(person.schedule.description)}">${esc(person.schedule.name)}</span>${person.scheduleId ? ' <small class="muted-text">(individual)</small>' : ""}` : '<span class="state-pill warning">Sem jornada</span>'}</td>
         <td>${person.active ? R.statePill(person.state, person.stateLabel) : '<span class="state-pill muted">Desativado</span>'}${person.lastEvent ? `<small class="cell-note">${esc(person.lastEvent.label)} • ${fmt.relative(person.lastEvent.occurredAt)}</small>` : ""}</td>
@@ -82,7 +82,8 @@ window.ReobotePage = {
             ${person?.hasPhoto ? '<label class="checkbox-line"><input type="checkbox" name="removePhoto"> Remover foto</label>' : ""}
             <small>Foto de identificação (JPG, PNG ou WEBP, até 5 MB). Use somente com autorização do colaborador (LGPD).</small>
           </div>
-          <label class="field span-2"><span>Nome completo *</span><input class="text-control" name="name" required maxlength="160" autocomplete="off" value="${esc(person?.name || "")}"></label>
+          <label class="field"><span>Nome completo *</span><input class="text-control" name="name" required maxlength="160" autocomplete="off" value="${esc(person?.name || "")}"></label>
+          <label class="field"><span>Matrícula</span><input class="text-control" name="registration" maxlength="30" autocomplete="off" placeholder="Ex.: 000123 (a matrícula atual da empresa)" value="${esc(person?.registration || "")}"></label>
           <label class="field"><span>E-mail corporativo *</span><input class="text-control" name="email" type="email" required maxlength="190" autocomplete="off" placeholder="nome@${esc(domain)}" value="${esc(person?.email || "")}"></label>
           <label class="field"><span>Telefone</span><input class="text-control" name="phone" type="tel" maxlength="32" value="${esc(person?.phone || "")}"></label>
           <label class="field"><span>Cargo *</span><select class="text-control" name="jobId" required>${options(jobs, person?.jobId, jobs.length ? "Selecione" : "Cadastre um cargo primeiro")}</select></label>
@@ -114,7 +115,7 @@ window.ReobotePage = {
         },
         onSubmit: async (data, form) => {
           const payload = {
-            name: data.get("name"), email: data.get("email"), phone: data.get("phone"),
+            name: data.get("name"), registration: data.get("registration"), email: data.get("email"), phone: data.get("phone"),
             jobId: data.get("jobId"), unitId: data.get("unitId") || null, scheduleId: data.get("scheduleId") || null,
             role: data.get("role") || "employee", active: isNew ? true : form.elements.active.checked
           };
@@ -162,7 +163,7 @@ window.ReobotePage = {
             confirmLabel: activate ? "Reativar" : "Desativar", danger: !activate
           }))) return;
           await api.put(`/api/employees/${person.id}`, {
-            name: person.name, email: person.email, phone: person.phone, jobId: person.jobId, unitId: person.unitId,
+            name: person.name, registration: person.registration, email: person.email, phone: person.phone, jobId: person.jobId, unitId: person.unitId,
             scheduleId: person.scheduleId, role: person.role, active: activate
           });
           R.toast(activate ? "Cadastro reativado." : "Cadastro desativado.");
