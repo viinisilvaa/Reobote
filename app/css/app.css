@@ -323,12 +323,3 @@ html[data-theme="dark"] .m-month-title { color: #c9a8ff; }
 .m-segment { grid-template-columns: repeat(4, 1fr); }
 .m-segment button { font-size: 13px; }
 
-/* Situação do GPS: verde (enviado), amarelo (procurando), vermelho (sem permissão/erro), cinza (fora da jornada). */
-.m-gps { margin: -4px 0 0; padding: 8px 12px; display: flex; align-items: center; gap: 8px; border-radius: 12px; background: var(--m-raised); color: var(--m-muted); font-size: 12px; line-height: 1.35; }
-.m-gps i { font-size: 14px; }
-.m-gps.ok { background: #dcf5e5; color: #137a3d; }
-.m-gps.waiting { background: #fff2d6; color: #8f6000; }
-.m-gps.denied, .m-gps.error { background: #ffe0e5; color: #b3132c; }
-html[data-theme="dark"] .m-gps.ok { background: #173a27; color: #7ee3a6; }
-html[data-theme="dark"] .m-gps.waiting { background: #42330f; color: #ffd57a; }
-html[data-theme="dark"] :is(.m-gps.denied, .m-gps.error) { background: #4d1d27; color: #ffc1cb; }
