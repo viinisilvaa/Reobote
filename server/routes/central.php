@@ -143,7 +143,7 @@ route('GET', '/api/map', static function (PDO $db): void {
     $query = $db->query(
         'SELECT l.employee_id, l.latitude, l.longitude, l.accuracy_m, l.recorded_at FROM employee_locations l
          JOIN (SELECT employee_id, MAX(recorded_at) AS recorded_at FROM employee_locations
-               WHERE recorded_at >= UTC_TIMESTAMP() - INTERVAL 10 MINUTE GROUP BY employee_id) latest
+               WHERE recorded_at >= UTC_TIMESTAMP() - INTERVAL 2 MINUTE GROUP BY employee_id) latest
            ON latest.employee_id = l.employee_id AND latest.recorded_at = l.recorded_at'
     );
     foreach ($query->fetchAll() as $row) {
@@ -156,15 +156,42 @@ route('GET', '/api/map', static function (PDO $db): void {
     foreach ($employees as $row) {
         $id = (string) $row['id'];
         $item = reobote_employee_public($db, $row, $states[$id]);
+        // Unidade onde o tecnico esta presente: a do ultimo QR Code de unidade lido no turno em andamento
+        // (em atendimento ou almoco). Ler o QR do veiculo depois significa que ele saiu da unidade.
+        // Nao ha limite: varios tecnicos podem estar na mesma unidade.
+        $attendanceUnitId = null;
+        $shift = $states[$id]['shift'];
+        if ($shift !== null && $shift['ongoing'] && in_array($item['state'], ['working', 'on_break'], true)) {
+            foreach ($shift['events'] as $event) {
+                if ($event['type'] === 'vehicle_checkin') {
+                    $attendanceUnitId = null;
+                } elseif ($event['type'] === 'unit_checkin') {
+                    $attendanceUnitId = $event['unitId'];
+                }
+            }
+        }
         // A localizacao e enviada automaticamente pelo aplicativo durante a jornada.
-        $location = $locations[$id] ?? null;
+        $location = in_array($item['state'], ['in_transit', 'working', 'on_break'], true) ? ($locations[$id] ?? null) : null;
         $item['location'] = $location ? [
             'latitude' => (float) $location['latitude'], 'longitude' => (float) $location['longitude'],
             'accuracyM' => $location['accuracy_m'] === null ? null : (float) $location['accuracy_m'],
             'recordedAt' => reobote_iso($location['recorded_at']),
         ] : null;
-        // Distancia ate a unidade de referencia (a do ultimo registro ou a unidade do cadastro).
-        $unitId = $item['lastEvent']['unitId'] ?? $item['unitId'];
+        // Se o GPS mostrar o tecnico fora do raio da unidade (com margem da precisao do GPS), ele deixa de contar como presente.
+        $attendanceUnit = $attendanceUnitId !== null ? ($unitsById[$attendanceUnitId] ?? null) : null;
+        if ($attendanceUnit && $location && $attendanceUnit['latitude'] !== null && $attendanceUnit['longitude'] !== null) {
+            $distance = reobote_distance_m(
+                (float) $location['latitude'], (float) $location['longitude'],
+                $attendanceUnit['latitude'], $attendanceUnit['longitude']
+            );
+            $gpsTolerance = min(100, (float) ($location['accuracy_m'] ?? 0));
+            if ($distance > $attendanceUnit['radiusM'] + $gpsTolerance) {
+                $attendanceUnitId = null;
+            }
+        }
+        $item['attendanceUnitId'] = $attendanceUnitId;
+        // Distancia ate a unidade de presenca, do ultimo registro ou do cadastro.
+        $unitId = $attendanceUnitId ?? ($item['lastEvent']['unitId'] ?? $item['unitId']);
         $unit = $unitId !== null ? ($unitsById[$unitId] ?? null) : null;
         $item['referenceUnit'] = $unit ? $unit['name'] : null;
         $item['distanceToUnitM'] = $location && $unit && $unit['latitude'] !== null
