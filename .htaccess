@@ -6,6 +6,9 @@ DirectoryIndex index.html entrar.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
   # Arquivos internos (API, configuração, fotos) e arquivos ocultos nunca são públicos.
+  # A condição vale só para o endereço pedido pelo navegador: o redirecionamento interno da API
+  # para server/router.php (regra abaixo) não pode ser bloqueado.
+  RewriteCond %{ENV:REDIRECT_STATUS} ^$
   RewriteRule ^server(?:/|$) - [NC,F,L]
   RewriteRule (^|/)\. - [NC,F,L]
   RewriteRule ^api(?:/|$) server/router.php [QSA,L]
