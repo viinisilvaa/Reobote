@@ -404,6 +404,11 @@ $migrations[7] = static function (PDO $pdo): void {
     add_column($pdo, 'units', 'responsible_phone', 'VARCHAR(20) NULL AFTER `responsible_name`');
 };
 
+// 8) Último acesso de cada conta: Administrador e Gestor aparecem "Online" enquanto usam a Central.
+$migrations[8] = static function (PDO $pdo): void {
+    add_column($pdo, 'users', 'last_seen_at', 'DATETIME NULL AFTER `last_login_at`');
+};
+
 $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
   version INT UNSIGNED NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
