@@ -279,6 +279,8 @@ function api_unit_public(array $row): array
         'name' => $row['name'],
         'kind' => $row['kind'],
         'address' => $row['address'],
+        'responsibleName' => $row['responsible_name'] ?? null,   // responsável da unidade
+        'responsiblePhone' => $row['responsible_phone'] ?? null, // WhatsApp do responsável (só números, com DDI 55)
         'latitude' => $row['latitude'] === null ? null : (float) $row['latitude'],
         'longitude' => $row['longitude'] === null ? null : (float) $row['longitude'],
         'radiusM' => (int) $row['radius_m'],
@@ -286,6 +288,23 @@ function api_unit_public(array $row): array
         'employeeCount' => (int) ($row['employee_count'] ?? 0),
         'qrCount' => (int) ($row['qr_count'] ?? 0),
     ];
+}
+
+// Normaliza o WhatsApp do responsável: só números, com o código do Brasil (55) quando faltar.
+// Aceita "(21) 99999-8888", "21999998888" ou "+55 21 99999-8888". Vazio = sem responsável.
+function reobote_whatsapp_number($value): ?string
+{
+    $digits = preg_replace('/\D/', '', (string) ($value ?? ''));
+    if ($digits === '') {
+        return null;
+    }
+    if (strlen($digits) === 10 || strlen($digits) === 11) {
+        $digits = '55' . $digits; // número brasileiro com DDD, sem o 55
+    }
+    if (strlen($digits) < 12 || strlen($digits) > 15) {
+        reobote_fail('Informe o WhatsApp do responsável com DDD, por exemplo (21) 99999-8888.');
+    }
+    return $digits;
 }
 
 // Valida os dados do formulário de unidade (nome, endereço, coordenadas e raio de chegada).
@@ -304,6 +323,8 @@ function api_unit_input(PDO $db, array $body, ?string $id): array
         'name' => $name,
         'kind' => reobote_str($body, 'kind', 40, false, 'Tipo') ?? 'Unidade hospitalar',
         'address' => reobote_str($body, 'address', 300, false, 'Endereço'),
+        'responsible_name' => reobote_str($body, 'responsibleName', 120, false, 'Responsável'),
+        'responsible_phone' => reobote_whatsapp_number($body['responsiblePhone'] ?? null),
         'latitude' => $lat,
         'longitude' => $lng,
         'radius_m' => reobote_int($body, 'radiusM', 30, 5000, 300, 'Raio de chegada'),
@@ -325,7 +346,7 @@ route('POST', '/api/units', static function (PDO $db): void {
     $user = reobote_user();
     reobote_require($user, 'units');
     $data = api_unit_input($db, reobote_body(), null);
-    $db->prepare('INSERT INTO units (name, kind, address, latitude, longitude, radius_m, active) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute(array_values($data));
+    $db->prepare('INSERT INTO units (name, kind, address, responsible_name, responsible_phone, latitude, longitude, radius_m, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute(array_values($data));
     $id = (string) $db->lastInsertId();
     // Toda unidade nasce com o QR Code de chegada pronto para impressao.
     $db->prepare("INSERT INTO qr_codes (kind, label, unit_id, token) VALUES ('unit', ?, ?, ?)")->execute([$data['name'], $id, bin2hex(random_bytes(16))]);
@@ -340,7 +361,7 @@ route('PUT', '/api/units/(\d+)', static function (PDO $db, string $id): void {
     $user = reobote_user();
     reobote_require($user, 'units');
     $data = api_unit_input($db, reobote_body(), $id);
-    $db->prepare('UPDATE units SET name = ?, kind = ?, address = ?, latitude = ?, longitude = ?, radius_m = ?, active = ? WHERE id = ?')
+    $db->prepare('UPDATE units SET name = ?, kind = ?, address = ?, responsible_name = ?, responsible_phone = ?, latitude = ?, longitude = ?, radius_m = ?, active = ? WHERE id = ?')
         ->execute([...array_values($data), $id]);
     reobote_audit($db, $user, 'unit_updated', 'unit', $id, $data);
     $query = $db->prepare(API_UNIT_SELECT . ' WHERE un.id = ?');
