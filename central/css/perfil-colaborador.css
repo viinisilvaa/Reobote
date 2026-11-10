@@ -87,3 +87,7 @@
 /* Título de cada mês no histórico (períodos longos, até 1 ano). */
 [data-page="profile"] .profile-month { margin: 8px 0 0; color:#5423bd; font-size:12px; text-transform:uppercase; letter-spacing:.4px; }
 html[data-theme="dark"] [data-page="profile"] .profile-month { color:#c9a8ff; }
+/* Justificativa de falta/atraso lançada pela Central e botão para justificar. */
+[data-page="profile"] .profile-justification { margin:6px 0 0; display:flex; align-items:center; gap:6px; color:#1f5fb8; font-size:12px; font-weight:600; }
+[data-page="profile"] .profile-justify { margin-top:8px; }
+html[data-theme="dark"] [data-page="profile"] .profile-justification { color:#9cc6ff; }
