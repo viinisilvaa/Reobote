@@ -300,7 +300,8 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
     $tz = reobote_timezone();
     $now ??= new DateTimeImmutable('now', new DateTimeZone('UTC'));
     $today = $now->setTimezone($tz)->format('Y-m-d');
-    $schedule = reobote_employee_schedule($db, $employee);
+    // Administrador e Gestor não batem ponto: sem jornada, nunca contam falta nem atraso.
+    $schedule = in_array($employee['role'] ?? '', ['admin', 'dispatcher'], true) ? null : reobote_employee_schedule($db, $employee);
     $holidays = reobote_load_holidays($db, $from, $to);
 
     // Busca com folga de um dia para incluir turnos noturnos que atravessam o limite do intervalo.
