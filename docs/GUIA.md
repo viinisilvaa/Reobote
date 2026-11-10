@@ -101,6 +101,10 @@ Com Node.js 20, Java 17 e Android Studio instalados, rode dentro de `aplicativo-
 5. O colaborador abre o aplicativo, toca em **Escanear QR Code** e lê o QR Code do veículo (início do expediente) e depois o da unidade (chegada). O almoço é registrado com **Horário de Almoço** e **Retorno do Almoço**. Para **Encerrar Jornada**, ele escaneia de novo um QR Code (veículo ou unidade): sem a leitura, o encerramento não é aceito.
 6. A Central recebe os registros: a cada registro aparece um aviso no canto da tela, estilo WhatsApp (ex.: "Fulano chegou à unidade Hospital Central"), com som. O painel, o mapa, as notificações e os relatórios se atualizam sozinhos.
 
+### Aviso ao responsável da unidade (WhatsApp)
+
+Em **Unidades e QR Codes**, cada unidade pode ter um **responsável** e o **WhatsApp** dele. Quando um técnico lê o QR Code dessa unidade, o aviso da chegada na Central (no canto da tela e na página Notificações) mostra o botão **"Avisar no WhatsApp"**: ele abre a conversa com o responsável já com a mensagem pronta ("Olá, Fulano! O técnico Nome chegou na unidade X às 08:20. — Grupo REOBOTE"). Basta apertar **Enviar**. O envio totalmente automático exige um serviço pago de WhatsApp (Z-API ou a API oficial da Meta) e pode ser ligado depois.
+
 ### Histórico
 
 Os registros de ponto nunca são apagados. No aplicativo (**Meu Histórico**) e no perfil do colaborador na Central, dá para consultar os últimos 7 dias, um mês inteiro (até 12 meses atrás), o último ano ou um período personalizado de até 1 ano, com horário de chegada, atrasos, faltas e horas extras.
