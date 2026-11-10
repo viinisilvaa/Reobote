@@ -7,7 +7,8 @@ declare(strict_types=1);
 // Colaboradores ativos com cargo e escala, usados pelos calculos coletivos.
 function api_active_employees(PDO $db, ?string $jobId = null, ?string $unitId = null, ?string $employeeId = null, bool $includeInactive = false): array
 {
-    $sql = REOBOTE_EMPLOYEE_SELECT . ($includeInactive ? ' WHERE 1 = 1' : ' WHERE e.active = 1');
+    // Só técnicos (perfil Colaborador): Administrador e Gestor não batem ponto e ficam fora do painel, mapa e relatórios.
+    $sql = REOBOTE_EMPLOYEE_SELECT . ($includeInactive ? ' WHERE 1 = 1' : ' WHERE e.active = 1') . " AND (u.role IS NULL OR u.role = 'employee')";
     $params = [];
     if ($jobId !== null) {
         $sql .= ' AND e.job_id = ?';
