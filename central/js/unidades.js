@@ -31,10 +31,17 @@ window.ReobotePage = {
       return `<img class="qr-image" src="${qr.createDataURL(cellSize, cellSize * 2)}" alt="QR Code">`;
     }
 
+    // Mostra o WhatsApp no formato brasileiro: 5521999998888 -> (21) 99999-8888.
+    function formatWhatsapp(digits) {
+      const local = String(digits || "").replace(/^55(?=\d{10,11}$)/, "");
+      const match = local.match(/^(\d{2})(\d{4,5})(\d{4})$/);
+      return match ? `(${match[1]}) ${match[2]}-${match[3]}` : `+${digits}`;
+    }
+
     // Desenha a tabela de unidades e os cartões de QR Code.
     function render() {
       root.querySelector("#unit-rows").innerHTML = units.map(unit => `<tr${unit.active ? "" : ' class="row-inactive"'}>
-        <td><strong>${esc(unit.name)}</strong><small class="cell-note">${esc(unit.kind)}</small></td>
+        <td><strong>${esc(unit.name)}</strong><small class="cell-note">${esc(unit.kind)}</small>${unit.responsiblePhone ? `<small class="cell-note unit-responsible"><i class="fa-brands fa-whatsapp"></i> ${esc(unit.responsibleName || "Responsável")} • ${esc(formatWhatsapp(unit.responsiblePhone))}</small>` : ""}</td>
         <td>${esc(unit.address || "—")}</td>
         <td>${unit.latitude !== null ? `<a href="https://www.google.com/maps?q=${unit.latitude},${unit.longitude}" target="_blank" rel="noopener noreferrer">${unit.latitude.toFixed(5)}, ${unit.longitude.toFixed(5)}</a>` : '<span class="muted-text">Não informada</span>'}</td>
         <td>${unit.radiusM} m</td>
@@ -103,6 +110,9 @@ window.ReobotePage = {
             <datalist id="unit-kinds"><option>Unidade hospitalar</option><option>Clínica</option><option>Base operacional</option><option>Cliente</option><option>Almoxarifado</option></datalist></label>
           <label class="field"><span>Raio de chegada (m)</span><input class="text-control" type="number" name="radiusM" min="30" max="5000" value="${unit?.radiusM ?? 300}"></label>
           <label class="field span-2"><span>Endereço</span><input class="text-control" name="address" maxlength="300" value="${esc(unit?.address || "")}"></label>
+          <label class="field"><span>Responsável pela unidade</span><input class="text-control" name="responsibleName" maxlength="120" value="${esc(unit?.responsibleName || "")}" placeholder="Ex.: Enf. Mariana (supervisão)"></label>
+          <label class="field"><span>WhatsApp do responsável</span><input class="text-control" name="responsiblePhone" type="tel" inputmode="tel" maxlength="20" value="${esc(unit?.responsiblePhone ? formatWhatsapp(unit.responsiblePhone) : "")}" placeholder="(21) 99999-8888"></label>
+          <p class="form-hint span-2"><i class="fa-brands fa-whatsapp"></i> Quando um técnico ler o QR Code desta unidade, o aviso na Central terá o botão "Avisar no WhatsApp", com a mensagem pronta para este responsável.</p>
           <label class="field"><span>Latitude</span><input class="text-control" name="latitude" inputmode="decimal" value="${unit?.latitude ?? ""}" placeholder="-22.9068"></label>
           <label class="field"><span>Longitude</span><input class="text-control" name="longitude" inputmode="decimal" value="${unit?.longitude ?? ""}" placeholder="-43.1729"></label>
           <button type="button" class="button-secondary small-button span-2" data-use-location><i class="fa-solid fa-location-crosshairs"></i> Usar minha localização atual (estando na unidade)</button>
@@ -119,6 +129,7 @@ window.ReobotePage = {
         onSubmit: (data, form) => {
           const payload = {
             name: data.get("name"), kind: data.get("kind"), address: data.get("address"), radiusM: Number(data.get("radiusM")),
+            responsibleName: data.get("responsibleName"), responsiblePhone: data.get("responsiblePhone"),
             latitude: String(data.get("latitude")).replace(",", ".").trim(), longitude: String(data.get("longitude")).replace(",", ".").trim(),
             active: unit ? form.elements.active.checked : true
           };
