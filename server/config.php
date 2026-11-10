@@ -218,6 +218,8 @@ const REOBOTE_SETTING_DEFAULTS = [
     'offline_max_days' => '7',
     'request_gps_on_checkin' => '1',
     'shift_gap_hours' => '16',
+    // Minutos depois do inicio previsto sem registro para o dia contar como FALTA (e o app bloquear o inicio).
+    'absence_after_minutes' => '60',
     // Link de download do APK. Vazio = versão mais nova publicada no GitHub (REOBOTE_APK_URL_PADRAO).
     'apk_download_url' => '',
 ];
