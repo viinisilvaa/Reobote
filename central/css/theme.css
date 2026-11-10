@@ -455,3 +455,31 @@ body .app-dashboard :is(button, input:not([type="checkbox"]):not([type="radio"])
     transition: background-color .18s ease, color .18s ease, border-color .18s ease;
   }
 }
+
+/* Legibilidade --------------------------------------------------------------------------------
+   1) Tamanho mínimo das letras pequenas (etiquetas, resumos, legendas e menu): vale IGUAL nos dois temas,
+      para o formato das letras não mudar ao trocar entre claro e escuro.
+   2) No tema claro, textos secundários em cinza mais escuro, com bom contraste sobre o fundo branco. */
+.navigation .nav-link { font-size: 13px; }
+.brand small, .partner-entry small { font-size: 11px; }
+body .app-dashboard :is(.profile-day-summary span, .profile-status, .profile-justification,
+  .state-pill, .status-pill, .chip, .stat-copy small, .stat-copy em, .person-cell small, .read-label, .result-count,
+  .map-detail-fields small, .map-detail-fields strong, .map-team-copy small, .map-unit-attendees li small, .dashboard-preview-note,
+  .activity-info, .activity-name, .notification-copy time, .form-hint, .panel-description, .link-button) { font-size: 12px; }
+body .app-dashboard :is(.person-cell strong, .profile-day h3, .map-team-copy strong, .map-detail-fields strong) { font-size: 13px; }
+body .app-dashboard .stat-copy strong { font-size: 24px; }
+
+html:not([data-theme="dark"]) { --muted: #3c4560; }
+html:not([data-theme="dark"]) body .app-dashboard :is(p, small, label, th, td, time, .panel-description, .form-hint, .helper-text,
+  .stat-copy small, .person-cell small, .read-label, .result-count, .profile-event, .profile-empty, .profile-heading p,
+  .profile-stat span, .profile-contact, .map-detail-fields small, .map-team-copy small, .activity-info, .notification-copy p,
+  .notification-copy time, .welcome p, .page-heading p) { color: #2f2a45; }
+html:not([data-theme="dark"]) body .app-dashboard :is(.profile-day-summary span) { background: #ebe6f7; color: #2f2a45; }
+html:not([data-theme="dark"]) body .app-dashboard .link-button { color: #4a2a9a; }
+html:not([data-theme="dark"]) body .app-dashboard .stat-copy em { color: #3f1d96; }
+html:not([data-theme="dark"]) .welcome p { color: #3b3555; }
+/* Textos com cor de propósito (avisos, justificativas, valores) mantêm a cor no tema claro. */
+html:not([data-theme="dark"]) body .app-dashboard .profile-justification { color: #1f5fb8; }
+html:not([data-theme="dark"]) body .app-dashboard .warn-text { color: #8a4b00; }
+html:not([data-theme="dark"]) body .app-dashboard :is(.text-danger, .bad) { color: #b4142f !important; }
+html:not([data-theme="dark"]) body .app-dashboard :is(.text-success, .good) { color: #0f7a41 !important; }
