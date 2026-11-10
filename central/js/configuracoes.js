@@ -35,6 +35,7 @@ window.ReobotePage = {
           <label class="field"><span>Domínio dos e-mails corporativos</span><input class="text-control" name="emailDomain" maxlength="120" value="${esc(settings.emailDomain)}" placeholder="reobote.com"></label>
           <label class="field"><span>Fuso horário da empresa</span><select class="text-control" name="timezone">${timezones.map(tz => `<option ${tz === settings.timezone ? "selected" : ""}>${tz}</option>`).join("")}</select></label>
           <label class="field"><span>Prazo para sincronizar registros offline (dias)</span><input class="text-control" type="number" name="offlineMaxDays" min="1" max="30" value="${settings.offlineMaxDays}"></label>
+          <label class="field"><span>Sem registro, conta falta após (minutos do início)</span><input class="text-control" type="number" name="absenceAfterMinutes" min="16" max="480" value="${settings.absenceAfterMinutes ?? 60}"></label>
           <label class="field"><span>Turno sem encerramento é fechado após (horas)</span><input class="text-control" type="number" name="shiftGapHours" min="4" max="24" value="${settings.shiftGapHours}"></label>
           <label class="field span-2"><span>Link de download do APK (página “Aplicativo”)</span><input class="text-control" type="url" name="apkDownloadUrl" maxlength="500" value="${esc(settings.apkDownloadUrl || "")}" placeholder="https://github.com/USUARIO/REPOSITORIO/releases/latest/download/reobote.apk"></label>
           <p class="form-hint span-2">Deixe em branco para usar a versão mais nova publicada no GitHub do projeto.</p>
@@ -85,7 +86,7 @@ window.ReobotePage = {
         if (form.id === "rules-form") {
           await api.put("/api/settings", {
             emailDomain: data.get("emailDomain"), timezone: data.get("timezone"), offlineMaxDays: Number(data.get("offlineMaxDays")),
-            shiftGapHours: Number(data.get("shiftGapHours")), requireEmailDomain: data.has("requireEmailDomain"), requestGpsOnCheckin: data.has("requestGpsOnCheckin"),
+            shiftGapHours: Number(data.get("shiftGapHours")), absenceAfterMinutes: Number(data.get("absenceAfterMinutes")), requireEmailDomain: data.has("requireEmailDomain"), requestGpsOnCheckin: data.has("requestGpsOnCheckin"),
             apkDownloadUrl: String(data.get("apkDownloadUrl") || "").trim()
           });
           R.toast("Regras salvas.");
