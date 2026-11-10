@@ -188,7 +188,17 @@ body[data-page="dashboard"] .activity-copy strong i { color: var(--purple); }
 .report-filter-actions .save { height: 36px; padding: 0 14px; border-radius: 8px; }
 .report-section { padding-top: 14px; }
 .report-table td, .report-table th { white-space: nowrap; }
-.events-cell { display: flex; flex-wrap: wrap; gap: 4px 10px; white-space: normal !important; min-width: 220px; color: var(--muted) !important; font-size: 10px !important; }
+/* Coluna "Registros" do relatório: um registro por linha (horário, ícone, o que foi e o local). */
+.events-cell { min-width: 300px; white-space: normal !important; }
+.report-events { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; list-style: none; }
+.report-events li { display: grid; grid-template-columns: 42px 18px 1fr; align-items: start; gap: 6px; font-size: 12px; line-height: 1.35; }
+.report-events time { font-weight: 700; font-variant-numeric: tabular-nums; }
+.report-events i { margin-top: 2px; color: var(--purple); text-align: center; }
+.report-events span { display: flex; flex-direction: column; }
+.report-events strong { font-weight: 600; }
+.report-events small { color: var(--muted); font-size: 11px; }
+html[data-theme="dark"] .report-events i { color: #b893ff; }
+html[data-theme="dark"] .report-events small { color: var(--dark-muted); }
 .print-header, .print-signatures { display: none; }
 
 /* Página "Aplicativo": download do APK, QR Codes e passo a passo de instalação. */
