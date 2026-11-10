@@ -253,8 +253,8 @@ route('POST', '/api/me/mock-location', static function (PDO $db): void {
 });
 
 // Diagnóstico do aplicativo (enviado uma vez ao abrir o APK): resultado do detector de GPS falso, se os
-// plugins nativos carregaram e eventuais erros. Fica no histórico de alterações (Configurações), para a
-// administração conferir se a proteção está funcionando em cada celular.
+// plugins nativos carregaram e eventuais erros. Fica num arquivo interno do servidor
+// (server/storage/diagnosticos.log, fora da Central), para investigar problemas em um celular.
 route('POST', '/api/me/diagnostic', static function (PDO $db): void {
     $user = reobote_user();
     $employee = api_me_employee($db, $user);
@@ -272,6 +272,15 @@ route('POST', '/api/me/diagnostic', static function (PDO $db): void {
     if ($json === false || strlen($json) > 4000) {
         $details['result'] = ['truncated' => true];
     }
-    reobote_audit($db, $user, 'app_diagnostic', 'employee', (string) $employee['id'], $details);
+    $dir = __DIR__ . '/../storage';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0750, true);
+    }
+    $file = $dir . '/diagnosticos.log';
+    if (is_file($file) && filesize($file) > 1024 * 1024) {
+        @rename($file, $file . '.antigo'); // guarda no maximo ~1 MB atual + 1 MB antigo
+    }
+    $line = json_encode(['em' => gmdate('c'), 'colaborador' => $employee['name'], 'id' => (string) $employee['id']] + $details, JSON_UNESCAPED_UNICODE);
+    @file_put_contents($file, $line . PHP_EOL, FILE_APPEND | LOCK_EX);
     reobote_json(['saved' => true]);
 });
