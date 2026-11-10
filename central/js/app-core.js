@@ -99,7 +99,8 @@
 
   const dayStatus = {
     worked: ["Trabalhado", "success"], in_progress: ["Em andamento", "info"], absent: ["Falta", "danger"],
-    not_arrived: ["Não iniciou", "danger"], scheduled: ["Previsto", "muted"], off: ["Folga", "muted"], holiday: ["Feriado", "muted"]
+    not_arrived: ["Não iniciou", "danger"], scheduled: ["Previsto", "muted"], off: ["Folga", "muted"], holiday: ["Feriado", "muted"],
+    justified: ["Falta justificada", "info"]
   };
   // Etiqueta colorida com a situação de um dia (Trabalhado, Falta, Folga...).
   function dayPill(status) {
@@ -375,7 +376,7 @@
       stack.setAttribute("aria-live", "polite");
       document.body.append(stack);
     }
-    const name = item.title.split(/ (chegou|iniciou|retornou|encerrou|registrou|ainda|saiu|está)/)[0];
+    const name = item.title.split(/ (chegou|iniciou|retornou|encerrou|registrou|ainda|saiu|está|faltou)/)[0];
     const link = item.employeeId ? `perfil-colaborador.html?id=${encodeURIComponent(item.employeeId)}` : "notificacoes.html";
     const card = document.createElement("a");
     card.className = `live-alert type-${item.type}`;
