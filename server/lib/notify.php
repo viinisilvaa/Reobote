@@ -136,5 +136,13 @@ function reobote_sweep_absences(PDO $db): void
                 'Escala prevista para ' . substr((string) $schedule['start_time'], 0, 5) . ' com tolerância de ' . (int) $schedule['tolerance_minutes'] . ' min',
                 (string) $employee['id'], null, 'absence:' . $employee['id'] . ':' . $today);
         }
+        // Passou do limite (1 h por padrao) sem registro e sem justificativa: falta.
+        $absenceAfter = max(16, (int) (reobote_settings()['absence_after_minutes'] ?? 60));
+        if ($now->getTimestamp() > $expectedStart->getTimestamp() + $absenceAfter * 60 && !$startedToday && $state !== null && $state['state'] === 'waiting'
+            && !reobote_load_justifications($db, (string) $employee['id'], $today, $today)) {
+            reobote_notify($db, 'absence', $employee['name'] . ' faltou hoje',
+                'Sem registro ' . $absenceAfter . ' min após o início previsto (' . substr((string) $schedule['start_time'], 0, 5) . '). Se ele avisou, justifique a falta no perfil.',
+                (string) $employee['id'], null, 'absence-final:' . $employee['id'] . ':' . $today);
+        }
     }
 }
