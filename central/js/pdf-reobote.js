@@ -2,21 +2,28 @@
 /**
  * Visual único dos PDFs do REOBOTE, usado pelo espelho de ponto do perfil e pelos Relatórios.
  * Gera o arquivo no próprio navegador com a biblioteca jsPDF (js/vendor/jspdf), carregada só quando
- * alguém pede um PDF. Folha A4 deitada, compacta, com texto escuro e legível.
+ * alguém pede um PDF. Folha A4 deitada, compacta e com bom contraste: fundo lilás claro, quadros e
+ * tabelas brancos com bordas visíveis e texto escuro.
  *
  * Uso:
- *   const pdf = await window.ReobotePdf.create({ title: "Espelho de ponto", company: "...", subtitle: "..." });
- *   pdf.cards([["Faltas", "1"], ...]);   // totais em cartões
+ *   const pdf = await window.ReobotePdf.create({ title: "Espelho de ponto", company: "...", subtitle: [...] });
+ *   pdf.cards([["Faltas", "1", "bad"], ...]);   // totais em cartões
  *   pdf.table({ head: [...], body: [...] });
  *   pdf.signatures("Nome do colaborador");
  *   pdf.save("arquivo.pdf");
  */
 (function () {
-  const BRAND = [84, 35, 189];    // roxo REOBOTE
-  const GREEN = [34, 180, 90];    // verde REOBOTE
-  const INK = [24, 18, 44];       // texto quase preto
-  const MUTED = [88, 80, 112];    // texto secundário
-  const SOFT = [243, 239, 252];   // fundo dos cartões e linhas alternadas
+  const BRAND = [84, 35, 189];      // roxo REOBOTE
+  const BRAND_DARK = [52, 19, 120]; // roxo escuro (faixa inferior do cabeçalho)
+  const GREEN = [34, 180, 90];      // verde REOBOTE
+  const RED = [178, 20, 47];        // faltas e atrasos
+  const OK = [15, 122, 65];         // horas extras
+  const INK = [20, 15, 38];         // texto quase preto
+  const MUTED = [70, 62, 96];       // texto secundário (escuro o bastante para ler bem)
+  const PAPER = [238, 233, 248];    // fundo da folha (lilás claro, menos branco)
+  const PANEL = [255, 255, 255];    // quadros e tabelas
+  const LINE = [176, 163, 214];     // bordas e grade da tabela
+  const STRIPE = [231, 224, 248];   // linhas alternadas da tabela
   const PAGE_W = 297;
   const PAGE_H = 210;
   const MARGIN = 10;
@@ -64,76 +71,97 @@
     const doc = new window.jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     let y = 0;
 
-    // Cabeçalho: faixa roxa com linha verde, logotipo num círculo branco, título e empresa.
+    // Fundo da folha + cabeçalho (faixa roxa, faixa roxa escura, linha verde, logotipo, título e empresa).
     function header() {
+      doc.setFillColor(...PAPER);
+      doc.rect(0, 0, PAGE_W, PAGE_H, "F");
       doc.setFillColor(...BRAND);
-      doc.rect(0, 0, PAGE_W, 17, "F");
+      doc.rect(0, 0, PAGE_W, 15, "F");
+      doc.setFillColor(...BRAND_DARK);
+      doc.rect(0, 15, PAGE_W, 3, "F");
       doc.setFillColor(...GREEN);
-      doc.rect(0, 17, PAGE_W, 1.1, "F");
+      doc.rect(0, 18, PAGE_W, 1.2, "F");
       doc.setFillColor(255, 255, 255);
-      doc.circle(MARGIN + 6, 8.5, 6.2, "F");
-      if (logo) doc.addImage(logo, "PNG", MARGIN + 1.8, 4.4, 8.4, 8);
+      doc.circle(MARGIN + 6, 9, 6.6, "F");
+      if (logo) doc.addImage(logo, "PNG", MARGIN + 1.6, 4.8, 8.8, 8.4);
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(13.5);
-      doc.text(title, MARGIN + 15, 8.6);
+      doc.setFontSize(14);
+      doc.text(title, MARGIN + 15.5, 8.8);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.text("Grupo REOBOTE  •  Tecnologia que conecta.", MARGIN + 15, 13);
-      doc.setFontSize(8.5);
-      doc.text(company || "Central REOBOTE", PAGE_W - MARGIN, 8.6, { align: "right" });
-      if (generated) doc.text(generated, PAGE_W - MARGIN, 13, { align: "right" });
+      doc.text("Grupo REOBOTE  •  Tecnologia que conecta.", MARGIN + 15.5, 13.4);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(company || "Central REOBOTE", PAGE_W - MARGIN, 8.8, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      if (generated) doc.text(generated, PAGE_W - MARGIN, 13.4, { align: "right" });
       doc.setTextColor(...INK);
     }
-    header();
-    y = 24;
-    if (subtitle) {
-      // Linha de identificação (ex.: colaborador, matrícula, cargo e período).
-      const lines = Array.isArray(subtitle) ? subtitle : [subtitle];
+
+    // Quadro branco de identificação (1ª linha em destaque, demais em texto secundário).
+    function identity(lines) {
+      if (!lines.length) return;
+      const height = 5 + 5.5 + (lines.length - 1) * 4.4;
+      doc.setFillColor(...PANEL);
+      doc.setDrawColor(...LINE);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(MARGIN, y, PAGE_W - MARGIN * 2, height, 2, 2, "FD");
+      doc.setFillColor(...BRAND);
+      doc.rect(MARGIN, y, 2.2, height, "F"); // barra roxa na lateral
+      let lineY = y + 6.5;
       lines.forEach((line, index) => {
         doc.setFont("helvetica", index === 0 ? "bold" : "normal");
-        doc.setFontSize(index === 0 ? 11.5 : 8.5);
+        doc.setFontSize(index === 0 ? 12 : 9);
         doc.setTextColor(...(index === 0 ? INK : MUTED));
-        doc.text(line, MARGIN, y);
-        y += index === 0 ? 5 : 4.2;
+        doc.text(line, MARGIN + 6, lineY);
+        lineY += index === 0 ? 5.5 : 4.4;
       });
       doc.setTextColor(...INK);
-      y += 1.5;
+      y += height + 4;
     }
+
+    header();
+    y = 23.5;
+    identity(Array.isArray(subtitle) ? subtitle : subtitle ? [subtitle] : []);
 
     const api = {
       doc,
-      // Totais em cartões pequenos, lado a lado: [["Rótulo", "Valor", "cor opcional"], ...].
+      // Totais em cartões brancos com barra colorida: [["Rótulo", "Valor", "bad" | "good" | ""], ...].
       cards(items) {
         const gap = 3;
         const width = (PAGE_W - MARGIN * 2 - gap * (items.length - 1)) / items.length;
         items.forEach(([label, value, tone], index) => {
           const x = MARGIN + index * (width + gap);
-          doc.setFillColor(...SOFT);
-          doc.setDrawColor(214, 205, 238);
-          doc.roundedRect(x, y, width, 13, 2, 2, "FD");
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(7.5);
-          doc.setTextColor(...MUTED);
-          doc.text(label, x + 3, y + 4.6);
+          const color = tone === "bad" ? RED : tone === "good" ? OK : BRAND;
+          doc.setFillColor(...PANEL);
+          doc.setDrawColor(...LINE);
+          doc.setLineWidth(0.3);
+          doc.roundedRect(x, y, width, 14, 2, 2, "FD");
+          doc.setFillColor(...color);
+          doc.rect(x, y + 2, 1.8, 10, "F");
           doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.setTextColor(...(tone === "bad" ? [178, 20, 47] : tone === "good" ? [15, 122, 65] : BRAND));
-          doc.text(String(value), x + 3, y + 10.6);
+          doc.setFontSize(7.8);
+          doc.setTextColor(...MUTED);
+          doc.text(label.toUpperCase(), x + 4.5, y + 5);
+          doc.setFontSize(13);
+          doc.setTextColor(...color);
+          doc.text(String(value), x + 4.5, y + 11.5);
         });
         doc.setTextColor(...INK);
-        y += 17;
+        y += 18;
       },
-      // Tabela compacta (jsPDF AutoTable) com o cabeçalho roxo e linhas alternadas.
+      // Tabela compacta (jsPDF AutoTable): cabeçalho roxo, células brancas, faixas lilás e grade visível.
       table(options) {
         doc.autoTable({
           startY: y,
           margin: { left: MARGIN, right: MARGIN, top: 24, bottom: 14 },
           theme: "grid",
-          styles: { font: "helvetica", fontSize: 8.5, textColor: INK, cellPadding: 1.6, lineColor: [222, 215, 240], lineWidth: 0.15, valign: "top" },
-          headStyles: { fillColor: BRAND, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8.5 },
-          alternateRowStyles: { fillColor: [249, 247, 254] },
-          didDrawPage: data => { if (data.pageNumber > 1) header(); }, // cabeçalho também nas páginas seguintes
+          styles: { font: "helvetica", fontSize: 9, textColor: INK, fillColor: PANEL, cellPadding: 1.8, lineColor: LINE, lineWidth: 0.25, valign: "top" },
+          headStyles: { fillColor: BRAND, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9, lineColor: BRAND_DARK },
+          alternateRowStyles: { fillColor: STRIPE },
+          willDrawPage: data => { if (data.pageNumber > 1) header(); }, // fundo e cabeçalho nas páginas seguintes
           ...options
         });
         y = doc.lastAutoTable.finalY + 5;
@@ -141,61 +169,58 @@
       // Observação em letra pequena.
       note(text) {
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
+        doc.setFontSize(8);
         doc.setTextColor(...MUTED);
         doc.text(text, MARGIN, y);
         doc.setTextColor(...INK);
         y += 5;
       },
-      // Nova página com o mesmo cabeçalho.
+      // Nova página com o mesmo fundo e cabeçalho.
       newPage(newTitle, newSubtitle) {
         doc.addPage();
         if (newTitle) title = newTitle;
         header();
-        y = 24;
-        (Array.isArray(newSubtitle) ? newSubtitle : newSubtitle ? [newSubtitle] : []).forEach((line, index) => {
-          doc.setFont("helvetica", index === 0 ? "bold" : "normal");
-          doc.setFontSize(index === 0 ? 11.5 : 8.5);
-          doc.setTextColor(...(index === 0 ? INK : MUTED));
-          doc.text(line, MARGIN, y);
-          y += index === 0 ? 5 : 4.2;
-        });
-        doc.setTextColor(...INK);
-        y += 1.5;
+        y = 23.5;
+        identity(Array.isArray(newSubtitle) ? newSubtitle : newSubtitle ? [newSubtitle] : []);
       },
-      // Assinaturas: colaborador à esquerda e Grupo REOBOTE à direita.
+      // Assinaturas num quadro branco: colaborador à esquerda e Grupo REOBOTE à direita.
       signatures(employeeName) {
-        let line = y + 14;
-        if (line > PAGE_H - 22) { doc.addPage(); header(); line = 50; }
-        doc.setDrawColor(...MUTED);
+        let top = y + 2;
+        if (top + 20 > PAGE_H - 9) { doc.addPage(); header(); top = 26; } // não coube: vai para a próxima folha
+        doc.setFillColor(...PANEL);
+        doc.setDrawColor(...LINE);
         doc.setLineWidth(0.3);
+        doc.roundedRect(MARGIN, top, PAGE_W - MARGIN * 2, 20, 2, 2, "FD");
+        const line = top + 10.5;
+        doc.setDrawColor(...INK);
+        doc.setLineWidth(0.35);
         doc.line(30, line, 125, line);
         doc.line(172, line, 267, line);
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.text(employeeName, 77.5, line + 4.5, { align: "center" });
-        doc.text("Grupo REOBOTE", 219.5, line + 4.5, { align: "center" });
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
-        doc.setTextColor(...MUTED);
-        doc.text("Colaborador", 77.5, line + 8.5, { align: "center" });
-        doc.text("Gestão de jornada", 219.5, line + 8.5, { align: "center" });
+        doc.setFontSize(9.5);
         doc.setTextColor(...INK);
-        y = line + 12;
+        doc.text(employeeName, 77.5, line + 4, { align: "center" });
+        doc.text("Grupo REOBOTE", 219.5, line + 4, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...MUTED);
+        doc.text("Colaborador", 77.5, line + 7.6, { align: "center" });
+        doc.text("Gestão de jornada", 219.5, line + 7.6, { align: "center" });
+        doc.setTextColor(...INK);
+        y = top + 24;
       },
       // Rodapé em todas as páginas e download do arquivo.
       save(fileName) {
         const pages = doc.getNumberOfPages();
         for (let page = 1; page <= pages; page++) {
           doc.setPage(page);
-          doc.setDrawColor(222, 215, 240);
-          doc.setLineWidth(0.2);
-          doc.line(MARGIN, PAGE_H - 9, PAGE_W - MARGIN, PAGE_H - 9);
+          doc.setFillColor(...BRAND);
+          doc.rect(0, PAGE_H - 8, PAGE_W, 8, "F");
           doc.setFont("helvetica", "normal");
-          doc.setFontSize(7.5);
-          doc.setTextColor(...MUTED);
-          doc.text("Grupo REOBOTE  •  Tecnologia que conecta.", MARGIN, PAGE_H - 5);
-          doc.text(`Página ${page} de ${pages}`, PAGE_W - MARGIN, PAGE_H - 5, { align: "right" });
+          doc.setFontSize(8);
+          doc.setTextColor(255, 255, 255);
+          doc.text("Grupo REOBOTE  •  Tecnologia que conecta.", MARGIN, PAGE_H - 3);
+          doc.text(`Página ${page} de ${pages}`, PAGE_W - MARGIN, PAGE_H - 3, { align: "right" });
         }
         doc.save(fileName);
       }
