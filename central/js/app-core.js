@@ -385,15 +385,27 @@
     card.innerHTML = `<span class="live-alert-head"><img src="../compartilhado/assets/reobote-mark.png" alt=""> REOBOTE <time>agora</time></span>
       <span class="live-alert-body">${avatar({ employeeId: item.employeeId, hasPhoto: item.hasPhoto, name }, "live-alert-avatar")}
         <span><strong>${esc(item.title)}</strong><small>${esc(item.detail || "")}</small></span></span>
+      ${item.whatsapp ? `<button type="button" class="live-alert-whatsapp"><i class="fa-brands fa-whatsapp"></i> Avisar ${esc(item.whatsapp.name || "o responsável")} no WhatsApp</button>` : ""}
       <button type="button" class="live-alert-close" aria-label="Fechar aviso"><i class="fa-solid fa-xmark"></i></button>`;
     card.querySelector(".live-alert-close").addEventListener("click", event => { event.preventDefault(); card.remove(); });
+    // WhatsApp: abre a conversa do responsável com a mensagem pronta (falta só apertar Enviar).
+    card.querySelector(".live-alert-whatsapp")?.addEventListener("click", event => {
+      event.preventDefault();
+      window.open(whatsappUrl(item.whatsapp), "_blank", "noopener");
+      card.remove();
+    });
     stack.prepend(card);
     while (stack.children.length > 3) stack.lastElementChild.remove();
-    setTimeout(() => card.remove(), 10000);
+    setTimeout(() => card.remove(), item.whatsapp ? 60000 : 10000); // com WhatsApp, fica 1 minuto na tela
     playAlertSound();
     // Aviso do Windows (como o WhatsApp Web) sempre que a janela da Central não estiver em foco:
     // minimizada, atrás de outra janela ou em outra aba.
     if (!document.hasFocus()) desktopNotify(item.title, item.detail || "", link, `reobote-${item.id}`);
+  }
+
+  // Endereço do WhatsApp (Web ou aplicativo) com a conversa do responsável e a mensagem já escrita.
+  function whatsappUrl(whatsapp) {
+    return `https://wa.me/${encodeURIComponent(whatsapp.phone)}?text=${encodeURIComponent(whatsapp.text)}`;
   }
 
   // Notificação do Windows (API de notificações do navegador). Clicar nela traz a Central para a frente
@@ -473,7 +485,7 @@
 
   window.Reobote = {
     api, esc, fmt, localDate, initials, avatar, statePill, dayPill, dayLabel, eventIcons, debounce, downloadCsv,
-    toast, openDialog, confirm: confirmAction, askReason, showTemporaryPassword, heading, emptyState, loading,
+    toast, whatsappUrl, openDialog, confirm: confirmAction, askReason, showTemporaryPassword, heading, emptyState, loading,
     pages, refreshBadge, session: null, has: () => false
   };
 
