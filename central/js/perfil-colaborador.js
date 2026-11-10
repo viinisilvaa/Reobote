@@ -42,9 +42,8 @@ window.ReobotePage = {
     }
 
     // Localizações recentes, resumidas em PARADAS: posições seguidas a até 60 m umas das outras viram uma
-    // linha só (horário de chegada e saída, quantidade de posições). Separadas por dia; mostra as 8 mais
-    // recentes e o botão "Mostrar todas" abre o resto.
-    let showAllStops = false;
+    // linha só (horário de chegada e saída, quantidade de posições). Mostra só as 3 mais recentes: quando o
+    // técnico manda uma posição nova, ela entra no topo e as anteriores descem (atualiza a cada 15 s).
     function locationStops() {
       const meters = (a, b) => {
         const rad = Math.PI / 180;
@@ -65,7 +64,7 @@ window.ReobotePage = {
         }
       }
       if (!stops.length) return '<p class="profile-empty">Nenhuma localização registrada.</p>';
-      const visibleStops = showAllStops ? stops : stops.slice(0, 8);
+      const visibleStops = stops.slice(0, 3);
       let lastDay = null;
       const rows = visibleStops.map(stop => {
         const day = R.localDate ? fmt.day(new Intl.DateTimeFormat("en-CA", { timeZone: R.session.rules.timezone }).format(new Date(stop.to))) : "";
@@ -78,8 +77,7 @@ window.ReobotePage = {
           <td>${stop.best < 9999 ? `${Math.round(stop.best)} m` : "—"}</td>
           <td>${stop.count}</td></tr>`;
       }).join("");
-      return `<div class="table-wrap"><table class="data-table location-stops"><thead><tr><th>Horário</th><th>Local</th><th>Precisão</th><th>Posições</th></tr></thead><tbody>${rows}</tbody></table></div>
-        ${stops.length > 8 ? `<button type="button" class="link-button" data-action="toggle-stops">${showAllStops ? "Mostrar menos" : `Mostrar todas (${stops.length} paradas)`}</button>` : ""}`;
+      return `<div class="table-wrap"><table class="data-table location-stops"><thead><tr><th>Horário</th><th>Local</th><th>Precisão</th><th>Posições</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     }
 
     // Desenha dados, indicadores do período, histórico de jornada, cargos e localizações.
@@ -141,7 +139,7 @@ window.ReobotePage = {
 
         <section class="profile-card profile-section"><h2><i class="fa-solid fa-location-dot"></i> Localizações recentes</h2>
           <p class="panel-description">Enviadas automaticamente pelo aplicativo durante a jornada e guardadas por 30 dias. Posições seguidas no mesmo lugar aparecem juntas.</p>
-          ${locationStops()}
+          <div id="location-stops">${locationStops()}</div>
         </section>
       </section>`;
     }
@@ -277,7 +275,6 @@ window.ReobotePage = {
 
     root.addEventListener("click", async event => {
       if (event.target.closest('[data-action="add-record"]')) addRecord();
-      if (event.target.closest('[data-action="toggle-stops"]')) { showAllStops = !showAllStops; render(); return; }
       if (event.target.closest('[data-action="download-pdf"]')) downloadPdf().catch(error => R.toast(`Não foi possível gerar o PDF: ${error.message}`, "error"));
       // Justificar falta/atraso (ex.: o técnico avisou pelo WhatsApp): a falta deixa de contar e o
       // técnico volta a conseguir registrar o ponto naquele dia.
@@ -327,5 +324,18 @@ window.ReobotePage = {
     });
 
     await load();
+
+    // A cada 15 segundos, busca as localizações mais recentes e atualiza só essa parte da página.
+    setInterval(async () => {
+      if (document.hidden || !data) return;
+      try {
+        const { locations } = await api.get(`/api/employees/${id}/locations`);
+        data.locations = locations;
+        const box = root.querySelector("#location-stops");
+        if (box) box.innerHTML = locationStops();
+      } catch {
+        // Sem conexão: mantém a lista atual.
+      }
+    }, 15000);
   }
 };
