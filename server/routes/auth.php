@@ -85,6 +85,10 @@ route('GET', '/api/auth/me', static function (PDO $db): void {
 
 // Sair: encerra a sessão.
 route('POST', '/api/auth/logout', static function (PDO $db): void {
+    // Ao sair, a conta fica "Offline" na hora.
+    if (!empty($_SESSION['user_id'])) {
+        $db->prepare('UPDATE users SET last_seen_at = NULL WHERE id = ?')->execute([(int) $_SESSION['user_id']]);
+    }
     reobote_logout_session();
     http_response_code(204);
     exit;
