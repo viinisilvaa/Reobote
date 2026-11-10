@@ -89,9 +89,10 @@ function reobote_logout_session(): void
 // Permissoes efetivas de uma conta, combinando perfil e cargo.
 function reobote_effective_permissions(string $role, ?string $jobPermissions): array
 {
-    // Administrador e Gestor da Central: tudo o que existe na Central (inclusive Configurações) e o aplicativo.
+    // Administrador e Gestor da Central: tudo o que existe na Central (inclusive Configurações).
+    // Usam só o navegador: não batem ponto nem usam o aplicativo dos técnicos.
     if ($role === 'admin' || $role === 'dispatcher') {
-        return array_keys(REOBOTE_PERMISSIONS);
+        return array_values(array_diff(array_keys(REOBOTE_PERMISSIONS), ['app']));
     }
     // Colaborador: somente o aplicativo (quando o cargo libera o aplicativo). Não entra na Central.
     $permissions = [];
@@ -116,7 +117,7 @@ function reobote_current_user(): ?array
         return $cache = null;
     }
     $query = reobote_db()->prepare(
-        'SELECT u.id, u.employee_id, u.email, u.role, u.active, u.must_change_password,
+        'SELECT u.id, u.employee_id, u.email, u.role, u.active, u.must_change_password, u.last_seen_at,
                 e.name, e.photo_path, e.active AS employee_active, e.job_id, j.name AS job_name, j.permissions
          FROM users u
          LEFT JOIN employees e ON e.id = u.employee_id
@@ -128,6 +129,10 @@ function reobote_current_user(): ?array
     if (!$row || !(int) $row['active'] || ($row['employee_id'] !== null && !(int) $row['employee_active'])) {
         $_SESSION = [];
         return $cache = null;
+    }
+    // Marca a conta como ativa agora ("Online"). Grava no máximo uma vez por minuto.
+    if ($row['last_seen_at'] === null || strtotime($row['last_seen_at'] . ' UTC') < time() - 60) {
+        reobote_db()->prepare('UPDATE users SET last_seen_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$userId]);
     }
     $permissions = reobote_effective_permissions((string) $row['role'], $row['permissions']);
     return $cache = [
