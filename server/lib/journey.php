@@ -308,6 +308,9 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
     $toUtc = (new DateTimeImmutable("$to 00:00:00", $tz))->modify('+2 days')->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
     $events = reobote_load_events($db, (string) $employee['id'], $fromUtc, $toUtc);
     $shifts = reobote_build_shifts($events, $now);
+    // Justificativas lancadas pela Central e limite (em minutos) para o dia sem registro virar falta.
+    $justifications = reobote_load_justifications($db, (string) $employee['id'], $from, $to);
+    $absenceAfter = max(16, (int) (reobote_settings()['absence_after_minutes'] ?? 60));
 
     $byDate = [];
     foreach ($shifts as $shift) {
@@ -360,9 +363,14 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
         } elseif ($holiday !== null) {
             $status = 'holiday';
         } elseif ($workday) {
-            if ($date < $today) {
+            $minutesLate = $expectedStart !== null ? ($now->getTimestamp() - $expectedStart->getTimestamp()) / 60 : 0;
+            if (isset($justifications[$date]) && ($date < $today || $minutesLate > $tolerance)) {
+                $status = 'justified'; // falta justificada pela Central: nao conta como falta
+            } elseif ($date < $today) {
                 $status = 'absent';
-            } elseif ($date === $today && $expectedStart !== null && $now->getTimestamp() > $expectedStart->getTimestamp() + $tolerance * 60) {
+            } elseif ($date === $today && $expectedStart !== null && $minutesLate > $absenceAfter) {
+                $status = 'absent'; // passou do limite (1 h por padrao) sem registro: falta ja no proprio dia
+            } elseif ($date === $today && $expectedStart !== null && $minutesLate > $tolerance) {
                 $status = 'not_arrived';
             } else {
                 $status = 'scheduled';
@@ -400,6 +408,7 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
             'lateMinutes' => $late,
             'overtimeMinutes' => $overtime,
             'flags' => array_values(array_unique($flags)),
+            'justification' => $justifications[$date] ?? null, // { reason, author, createdAt } quando a Central justificou
             'firstRecord' => $dayShifts ? $dayShifts[0]['start']->format('Y-m-d\TH:i:s\Z') : null,
             'lastRecord' => $dayShifts ? end($dayShifts)['lastEvent']['at']->format('Y-m-d\TH:i:s\Z') : null,
             'events' => array_map('reobote_event_public', array_merge(...array_map(static fn ($s) => $s['events'], $dayShifts ?: [['events' => []]]))),
@@ -407,6 +416,50 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
     }
 
     return ['schedule' => reobote_schedule_public($schedule), 'days' => array_reverse($days), 'totals' => $totals];
+}
+
+// Justificativas de falta/atraso lancadas pela Central, por dia (AAAA-MM-DD).
+function reobote_load_justifications(PDO $db, string $employeeId, string $from, string $to): array
+{
+    $query = $db->prepare(
+        'SELECT j.day, j.reason, j.created_at, e.name AS author FROM attendance_justifications j
+         LEFT JOIN users u ON u.id = j.created_by_user_id LEFT JOIN employees e ON e.id = u.employee_id
+         WHERE j.employee_id = ? AND j.day BETWEEN ? AND ?'
+    );
+    $query->execute([$employeeId, $from, $to]);
+    $list = [];
+    foreach ($query->fetchAll() as $row) {
+        $list[$row['day']] = ['reason' => $row['reason'], 'author' => $row['author'], 'createdAt' => reobote_iso($row['created_at'])];
+    }
+    return $list;
+}
+
+// Bloqueio por falta: o primeiro registro do dia feito pelo aplicativo depois do limite (1 h por padrao)
+// apos o inicio previsto e recusado, a menos que a Central tenha justificado o dia. Retorna a mensagem
+// para o tecnico, ou null quando o registro e permitido.
+function reobote_absence_block(PDO $db, array $employee, DateTimeImmutable $at): ?string
+{
+    $tz = reobote_timezone();
+    $local = $at->setTimezone($tz);
+    $date = $local->format('Y-m-d');
+    $schedule = reobote_employee_schedule($db, $employee);
+    if ($schedule === null || !reobote_schedule_is_workday($schedule, $date) || isset(reobote_load_holidays($db, $date, $date)[$date])) {
+        return null;
+    }
+    $start = new DateTimeImmutable($date . ' ' . substr((string) $schedule['start_time'], 0, 5) . ':00', $tz);
+    $limit = max(16, (int) (reobote_settings()['absence_after_minutes'] ?? 60));
+    if ($at->getTimestamp() <= $start->getTimestamp() + $limit * 60) {
+        return null;
+    }
+    // Ja registrou algo hoje (jornada em andamento ou retomada): nao bloqueia.
+    $dayStart = (new DateTimeImmutable($date . ' 00:00:00', $tz))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+    $query = $db->prepare('SELECT COUNT(*) FROM attendance_events WHERE employee_id = ? AND voided_at IS NULL AND occurred_at >= ? AND occurred_at < ?');
+    $query->execute([$employee['id'], $dayStart, $at->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s')]);
+    if ((int) $query->fetchColumn() > 0 || reobote_load_justifications($db, (string) $employee['id'], $date, $date)) {
+        return null;
+    }
+    $hours = intdiv($limit, 60) > 0 ? (intdiv($limit, 60) . ' h' . ($limit % 60 ? ' ' . ($limit % 60) . ' min' : '')) : $limit . ' min';
+    return "Mais de $hours de atraso (início previsto às " . $start->format('H:i') . "): o dia foi registrado como falta. Avise a Central pelo WhatsApp para justificar e liberar o registro.";
 }
 
 // Situacao atual --------------------------------------------------------------------------------
