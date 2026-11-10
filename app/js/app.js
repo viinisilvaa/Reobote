@@ -526,6 +526,7 @@
   // Etiqueta de cada dia do histórico: Normal, Atraso, Hora Extra, Falta, Folga...
   function dayBadge(day) {
     if (day.status === "absent") return ["bad", "fa-circle-xmark", "Falta"];
+    if (day.status === "justified") return ["info", "fa-comment-medical", "Justificada"]; // falta justificada pela Central
     if (day.status === "in_progress") return ["info", "fa-clock", "Em andamento"];
     if (day.status === "holiday") return ["neutral", "fa-umbrella-beach", "Feriado"];
     if (day.status === "off") return ["neutral", "fa-mug-saucer", "Folga"];
