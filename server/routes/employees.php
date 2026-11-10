@@ -369,3 +369,33 @@ route('POST', '/api/attendance/(\d+)/void', static function (PDO $db, string $ev
     reobote_audit($db, $user, 'attendance_voided', 'employee', (string) $event['employee_id'], ['eventId' => $eventId, 'tipo' => $event['event_type'], 'horario' => reobote_iso($event['occurred_at']), 'motivo' => $reason]);
     reobote_json(['voided' => true]);
 });
+
+// Justificativa de falta/atraso (ex.: o técnico avisou a Central pelo WhatsApp). Tira a falta da contagem
+// e libera o registro de ponto do dia, mesmo depois do limite. Fica no histórico de alterações.
+route('POST', '/api/employees/(\d+)/justifications', static function (PDO $db, string $id): void {
+    $user = reobote_user();
+    reobote_require($user, 'employees');
+    $employee = reobote_require_employee($db, $id);
+    $body = reobote_body();
+    $day = (string) ($body['date'] ?? '');
+    reobote_date_value($day, 'Data');
+    if ($day === '') {
+        reobote_fail('Informe o dia da justificativa.');
+    }
+    $reason = reobote_str($body, 'reason', 300, true, 'Motivo');
+    $db->prepare('INSERT INTO attendance_justifications (employee_id, day, reason, created_by_user_id) VALUES (?, ?, ?, ?)
+                  ON DUPLICATE KEY UPDATE reason = VALUES(reason), created_by_user_id = VALUES(created_by_user_id), created_at = CURRENT_TIMESTAMP')
+        ->execute([$id, $day, $reason, $user['id']]);
+    reobote_audit($db, $user, 'absence_justified', 'employee', $id, ['date' => $day, 'reason' => $reason, 'name' => $employee['name']]);
+    reobote_json(['justification' => reobote_load_justifications($db, $id, $day, $day)[$day] ?? null]);
+});
+
+// Remove a justificativa de um dia (a falta volta a contar).
+route('DELETE', '/api/employees/(\d+)/justifications/(\d{4}-\d{2}-\d{2})', static function (PDO $db, string $id, string $day): void {
+    $user = reobote_user();
+    reobote_require($user, 'employees');
+    $employee = reobote_require_employee($db, $id);
+    $db->prepare('DELETE FROM attendance_justifications WHERE employee_id = ? AND day = ?')->execute([$id, $day]);
+    reobote_audit($db, $user, 'absence_justification_removed', 'employee', $id, ['date' => $day, 'name' => $employee['name']]);
+    reobote_json(['removed' => true]);
+});
