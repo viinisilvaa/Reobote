@@ -382,6 +382,22 @@ $migrations[5] = static function (PDO $pdo): void {
     add_index($pdo, 'employees', 'uq_employees_registration', 'UNIQUE INDEX `uq_employees_registration` (`registration`)');
 };
 
+// 6) Justificativas de falta/atraso lancadas pela Central (ex.: o tecnico avisou pelo WhatsApp).
+//    Uma por colaborador e dia; libera o registro de ponto depois do limite e tira a falta da contagem.
+$migrations[6] = static function (PDO $pdo): void {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS attendance_justifications (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      employee_id BIGINT UNSIGNED NOT NULL,
+      day DATE NOT NULL,
+      reason VARCHAR(300) NOT NULL,
+      created_by_user_id BIGINT UNSIGNED NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_justification_day (employee_id, day),
+      CONSTRAINT fk_justification_employee FOREIGN KEY (employee_id) REFERENCES employees (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+};
+
 $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
   version INT UNSIGNED NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
