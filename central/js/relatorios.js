@@ -85,7 +85,7 @@ window.ReobotePage = {
           <td>${day.expectedMinutes ? fmt.duration(day.expectedMinutes) : "—"}</td>
           <td class="${day.lateMinutes ? "text-danger" : ""}">${day.lateMinutes ? fmt.duration(day.lateMinutes) : "—"}</td>
           <td class="${day.overtimeMinutes ? "text-success" : ""}">${day.overtimeMinutes ? fmt.duration(day.overtimeMinutes) : "—"}</td>
-          <td class="events-cell">${day.events.map(e => `<span title="${esc(e.label)}"><i class="fa-solid ${R.eventIcons[e.eventType] || "fa-clock"}"></i> ${fmt.time(e.occurredAt)}${e.place ? ` ${esc(e.place)}` : ""}</span>`).join("")}</td>
+          <td class="events-cell">${day.events.length ? `<ul class="report-events">${day.events.map(e => `<li><time>${fmt.time(e.occurredAt)}</time><i class="fa-solid ${R.eventIcons[e.eventType] || "fa-clock"}"></i><span><strong>${esc(e.label)}</strong>${e.place ? `<small>${esc(e.place)}</small>` : ""}</span></li>`).join("")}</ul>` : "—"}</td>
         </tr>`;
       }).join("");
       return `<section class="panel content-panel wide-panel report-section" id="report-detail">
