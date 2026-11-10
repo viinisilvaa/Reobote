@@ -91,7 +91,7 @@
   }
 
   // Situação da jornada com cor semântica.
-  const stateTones = { working: "success", in_transit: "info", on_break: "warning", finished: "muted", waiting: "muted" };
+  const stateTones = { working: "success", in_transit: "info", on_break: "warning", finished: "muted", waiting: "muted", online: "success", offline: "muted" }; // online/offline: contas da Central
   // Etiqueta colorida com a situação do colaborador (Em atendimento, Em almoço...).
   function statePill(state, label) {
     return `<span class="state-pill state-${esc(state)} ${stateTones[state] || "muted"}">${esc(label)}</span>`;
