@@ -138,6 +138,11 @@ route('POST', '/api/me/attendance', static function (PDO $db): void {
     // Processa na ordem cronologica original para validar a sequencia corretamente.
     usort($prepared, static fn ($a, $b) => $a['at'] <=> $b['at']);
     foreach ($prepared as $item) {
+        // Falta: inicio do dia depois do limite (1 h por padrao) sem justificativa da Central e recusado.
+        if (in_array($item['type'], ['vehicle_checkin', 'unit_checkin'], true) && ($block = reobote_absence_block($db, $employee, $item['at'])) !== null) {
+            $results[$item['index']] = ['clientId' => $item['clientId'], 'eventType' => $item['type'], 'status' => 'rejected', 'error' => $block];
+            continue;
+        }
         // GPS falso: registro com posicao impossivel em relacao a anterior ("teletransporte") e recusado.
         if ($item['lat'] !== null && $item['lng'] !== null) {
             $jump = reobote_location_jump($db, (string) $employee['id'], (float) $item['lat'], (float) $item['lng'], $item['at']);
