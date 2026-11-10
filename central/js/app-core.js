@@ -300,6 +300,7 @@
             <div class="welcome">${user.hasPhoto ? avatar({ id: user.employeeId, name: user.name, hasPhoto: true, photoVersion: Date.now().toString(36).slice(0, 4) }, "account-photo") : '<div class="account-avatar"><i class="fa-solid fa-user"></i></div>'}
               <div><strong>Olá, ${esc(user.name.split(" ")[0])}</strong><p>${esc(session.company.name)} • ${esc(user.roleLabel)}${user.job ? ` • ${esc(user.job)}` : ""}</p></div></div>
             <div class="top-actions">
+              ${canNotify ? '<button type="button" class="desktop-alerts-button" id="desktop-alerts" hidden><i class="fa-solid fa-desktop"></i> Ativar avisos no Windows</button>' : ""}
               ${canNotify ? '<a class="notification-button" href="notificacoes.html" aria-label="Notificações"><i class="fa-solid fa-bell"></i><span hidden></span></a>' : ""}
               <button class="theme-toggle" type="button" data-theme-toggle aria-label="Ativar tema escuro" title="Ativar tema escuro" aria-pressed="false"></button>
               <button class="logout" type="button" data-action="logout" title="Sair" aria-label="Sair"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
@@ -390,10 +391,42 @@
     while (stack.children.length > 3) stack.lastElementChild.remove();
     setTimeout(() => card.remove(), 10000);
     playAlertSound();
-    // Com a aba da Central em segundo plano, avisa também pela notificação do computador.
-    if (document.hidden && "Notification" in window && Notification.permission === "granted") {
-      try { new Notification(item.title, { body: item.detail || "", icon: "../compartilhado/assets/reobote-mark.png", tag: `reobote-${item.id}` }); } catch { /* navegador sem suporte */ }
+    // Aviso do Windows (como o WhatsApp Web) sempre que a janela da Central não estiver em foco:
+    // minimizada, atrás de outra janela ou em outra aba.
+    if (!document.hasFocus()) desktopNotify(item.title, item.detail || "", link, `reobote-${item.id}`);
+  }
+
+  // Notificação do Windows (API de notificações do navegador). Clicar nela traz a Central para a frente
+  // e abre a página indicada (ex.: perfil do técnico).
+  function desktopNotify(title, body, link = "notificacoes.html", tag = undefined) {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    try {
+      const notice = new Notification(title, { body, icon: "../compartilhado/assets/reobote-mark.png", tag });
+      notice.onclick = () => { window.focus(); location.assign(link); notice.close(); };
+    } catch {
+      // Navegador sem suporte a notificações.
     }
+  }
+
+  // Botão "Ativar avisos no Windows" no topo: aparece enquanto a permissão não foi dada.
+  function setupDesktopAlertsButton() {
+    const button = document.querySelector("#desktop-alerts");
+    if (!button || !("Notification" in window)) return;
+    button.hidden = Notification.permission === "granted";
+    button.addEventListener("click", async () => {
+      if (Notification.permission === "denied") {
+        toast("Os avisos estão bloqueados neste navegador. Clique no cadeado ao lado do endereço do site, em Notificações escolha Permitir e recarregue a página.");
+        return;
+      }
+      const result = await Notification.requestPermission().catch(() => "default");
+      if (result === "granted") {
+        button.hidden = true;
+        desktopNotify("Avisos do REOBOTE ativados", "Você vai receber aqui cada chegada ao carro, à unidade, almoço e encerramento dos técnicos.");
+        toast("Avisos no Windows ativados.");
+      } else {
+        toast("Permissão não concedida. Para ativar depois, clique de novo no botão.");
+      }
+    });
   }
 
   // Som curto de aviso (dois tons), gerado pelo navegador, sem arquivo de áudio.
@@ -418,9 +451,8 @@
     }
   }
 
-  // No primeiro clique na Central, pede permissão para as notificações do computador (uma vez).
+  // No primeiro clique na Central, libera o som dos avisos (o navegador exige um clique antes).
   document.addEventListener("click", () => {
-    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {});
     if (audioContext?.state === "suspended") audioContext.resume().catch(() => {});
   }, { once: true });
 
@@ -491,6 +523,7 @@
       console.error(error);
       root.innerHTML = heading(activePage) + `<section class="panel content-panel">${emptyState("fa-triangle-exclamation", "Não foi possível carregar esta página", error.message, '<button type="button" class="button-primary" data-action="reload">Tentar novamente</button>')}</section>`;
     }
+    setupDesktopAlertsButton();
     refreshBadge();
     setInterval(refreshBadge, 10000); // a cada 10 segundos: contador e avisos em tempo real
   }
