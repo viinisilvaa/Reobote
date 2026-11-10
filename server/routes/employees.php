@@ -302,7 +302,7 @@ route('GET', '/api/employees/(\d+)/profile', static function (PDO $db, string $i
         'assignedAt' => reobote_iso($job['assigned_at']),
         'endedAt' => reobote_iso($job['ended_at']),
     ], $query->fetchAll());
-    $query = $db->prepare('SELECT latitude, longitude, accuracy_m, recorded_at FROM employee_locations WHERE employee_id = ? ORDER BY recorded_at DESC LIMIT 20');
+    $query = $db->prepare('SELECT latitude, longitude, accuracy_m, recorded_at FROM employee_locations WHERE employee_id = ? ORDER BY recorded_at DESC LIMIT 200');
     $query->execute([$id]);
     $locations = array_map(static fn ($l) => [
         'latitude' => (float) $l['latitude'], 'longitude' => (float) $l['longitude'],
