@@ -91,3 +91,12 @@ html[data-theme="dark"] [data-page="profile"] .profile-month { color:#c9a8ff; }
 [data-page="profile"] .profile-justification { margin:6px 0 0; display:flex; align-items:center; gap:6px; color:#1f5fb8; font-size:12px; font-weight:600; }
 [data-page="profile"] .profile-justify { margin-top:8px; }
 html[data-theme="dark"] [data-page="profile"] .profile-justification { color:#9cc6ff; }
+/* Localizações recentes em paradas (tabela compacta, separada por dia). */
+[data-page="profile"] .location-stops { font-size:13px; }
+[data-page="profile"] .location-stops td, [data-page="profile"] .location-stops th { padding:7px 10px; }
+[data-page="profile"] .location-stops .stop-day th { padding-top:12px; color:#5423bd; font-size:12px; text-transform:capitalize; text-align:left; background:transparent; }
+[data-page="profile"] .location-stops .stop-time { font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
+[data-page="profile"] .location-stops a { color:#5121ad; font-weight:600; text-decoration:none; white-space:nowrap; }
+[data-page="profile"] .location-stops small { margin-left:6px; color:#5d5873; font-size:11px; }
+html[data-theme="dark"] [data-page="profile"] .location-stops .stop-day th, html[data-theme="dark"] [data-page="profile"] .location-stops a { color:#c9a8ff; }
+html[data-theme="dark"] [data-page="profile"] .location-stops small { color:#d0c8df; }
