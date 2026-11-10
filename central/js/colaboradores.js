@@ -91,7 +91,7 @@ window.ReobotePage = {
           <label class="field"><span>Jornada</span><select class="text-control" name="scheduleId">${options(schedules, person?.scheduleId, "Usar a jornada padrão do cargo")}</select></label>
           <label class="field"><span>Perfil de acesso</span><select class="text-control" name="role">${roleOptions}</select></label>
           ${!isNew ? `<label class="checkbox-line span-2"><input type="checkbox" name="active" ${person.active ? "checked" : ""}> Cadastro ativo (desmarque para bloquear o acesso sem apagar o histórico)</label>` : ""}
-          <p class="form-hint span-2"><i class="fa-solid fa-circle-info"></i> Administradores acessam tudo. Gestores acessam a Central (exceto configurações). Colaboradores seguem as permissões do cargo.</p>
+          <p class="form-hint span-2"><i class="fa-solid fa-circle-info"></i> Colaborador: usa só o aplicativo. Gestor da Central e Administrador: acessam tudo na Central. Só o Administrador pode dar perfis de Gestor ou Administrador.</p>
         </div>`,
         onOpen: form => {
           const emailInput = form.elements.email;
