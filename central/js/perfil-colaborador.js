@@ -115,21 +115,34 @@ window.ReobotePage = {
         </div>
 
         <section class="profile-card profile-section"><h2><i class="fa-solid fa-clock-rotate-left"></i> Histórico de jornada</h2>
-          <div class="profile-history">${days.map((day, index) => `${index === 0 || day.date.slice(0, 7) !== days[index - 1].date.slice(0, 7) ? `<h3 class="profile-month">${monthName(day.date.slice(0, 7))}</h3>` : ""}<article class="profile-day">
-            <h3>${fmt.day(day.date)} ${R.dayPill(day.status)}${day.holiday ? ` <small>${esc(day.holiday)}</small>` : ""}</h3>
-            <div class="profile-day-summary">
-              ${day.events.length ? `<span>Trabalhadas: ${fmt.duration(day.workedMinutes)}</span><span>Almoço: ${fmt.duration(day.breakMinutes)}</span>` : ""}
-              ${day.expectedMinutes ? `<span>Previstas: ${fmt.duration(day.expectedMinutes)}</span>` : ""}
-              ${day.lateMinutes ? `<span class="late">Atraso: ${fmt.duration(day.lateMinutes)}</span>` : ""}
-              ${day.overtimeMinutes ? `<span class="overtime">Horas extras: ${fmt.duration(day.overtimeMinutes)}</span>` : ""}
-              ${day.flags.includes("missing_departure") ? '<span class="late">Jornada sem encerramento</span>' : ""}
-              ${day.flags.includes("missing_start") ? '<span class="late">Sem registro de início</span>' : ""}
-            </div>
+          <div class="profile-history">${days.map((day, index) => `${index === 0 || day.date.slice(0, 7) !== days[index - 1].date.slice(0, 7) ? `<h3 class="profile-month">${monthName(day.date.slice(0, 7))}</h3>` : ""}
+          <details class="profile-day" ${index < 2 ? "open" : ""}>
+            <!-- Linha do dia (clique abre/fecha): data, situação e números principais. Os 2 dias mais recentes vêm abertos. -->
+            <summary>
+              <i class="fa-solid fa-chevron-right profile-day-chevron"></i>
+              <strong class="profile-day-date">${fmt.day(day.date)}</strong>${R.dayPill(day.status)}${day.holiday ? ` <small>${esc(day.holiday)}</small>` : ""}
+              <span class="profile-day-numbers">
+                ${day.events.length ? `<span>${fmt.duration(day.workedMinutes)} trabalhadas</span>` : day.expectedMinutes ? `<span>${fmt.duration(day.expectedMinutes)} previstas</span>` : ""}
+                ${day.breakMinutes ? `<span>almoço ${fmt.duration(day.breakMinutes)}</span>` : ""}
+                ${day.lateMinutes ? `<span class="late">atraso ${fmt.duration(day.lateMinutes)}</span>` : ""}
+                ${day.overtimeMinutes ? `<span class="overtime">extra ${fmt.duration(day.overtimeMinutes)}</span>` : ""}
+                ${day.flags.includes("missing_departure") ? '<span class="late">sem encerramento</span>' : ""}
+                ${day.flags.includes("missing_start") ? '<span class="late">sem início</span>' : ""}
+              </span>
+              ${day.events.length ? `<span class="profile-day-count">${day.events.length} registro${day.events.length === 1 ? "" : "s"}</span>` : ""}
+            </summary>
             ${day.justification ? `<p class="profile-justification"><i class="fa-solid fa-circle-check"></i> Justificado: ${esc(day.justification.reason)}${day.justification.author ? ` • por ${esc(day.justification.author)}` : ""}${data.canManage ? ` <button type="button" class="link-button" data-unjustify="${esc(day.date)}">remover</button>` : ""}</p>` : ""}
-            ${data.canManage && !day.justification && day.workday && (day.status === "absent" || day.status === "not_arrived" || day.lateMinutes > 0) ? `<button type="button" class="button-secondary small-button profile-justify" data-justify="${esc(day.date)}"><i class="fa-solid fa-comment-medical"></i> Justificar ${day.status === "absent" || day.status === "not_arrived" ? "falta" : "atraso"} e liberar o registro</button>` : ""}
-            <div class="profile-events">${day.events.map(event => `<span class="profile-event"><i class="fa-solid ${R.eventIcons[event.eventType] || "fa-clock"}"></i>${esc(event.label)} • ${fmt.time(event.occurredAt)}${event.place ? ` • ${esc(event.place)}` : ""}${event.distanceM !== null ? ` • ${event.distanceM} m da unidade` : ""}${event.syncedLater ? ' <em title="Registrado sem internet e sincronizado depois">offline</em>' : ""}${event.source === "admin" ? ` <em title="${esc(event.notes || "")}">lançado pela Central</em>` : ""}
-              ${data.canManage ? `<button type="button" class="link-button" data-void="${esc(event.id)}" aria-label="Anular registro">anular</button>` : ""}</span>`).join("")}</div>
-          </article>`).join("") || '<p class="profile-empty">Nenhum dia previsto ou registro no período.</p>'}</div>
+            ${data.canManage && !day.justification && day.workday && (day.status === "absent" || day.status === "not_arrived" || day.lateMinutes > 0) ? `<button type="button" class="link-button profile-justify" data-justify="${esc(day.date)}"><i class="fa-solid fa-comment-medical"></i> Justificar ${day.status === "absent" || day.status === "not_arrived" ? "falta" : "atraso"} e liberar o registro</button>` : ""}
+            <!-- Registros do dia: um por linha, alinhados em colunas (horário, o que foi, local, marcas e anular). -->
+            ${day.events.length ? `<ul class="profile-event-list">${day.events.map(event => `<li>
+              <time>${fmt.time(event.occurredAt)}</time>
+              <i class="fa-solid ${R.eventIcons[event.eventType] || "fa-clock"}"></i>
+              <span class="event-label">${esc(event.label)}</span>
+              <span class="event-place">${event.place ? esc(event.place) : ""}${event.distanceM !== null ? `${event.place ? " • " : ""}${event.distanceM < 1000 ? event.distanceM + " m" : (event.distanceM / 1000).toFixed(1) + " km"} da unidade` : ""}</span>
+              <span class="event-tags">${event.syncedLater ? '<em title="Registrado sem internet e sincronizado depois">offline</em>' : ""}${event.source === "admin" ? `<em title="${esc(event.notes || "")}">lançado pela Central</em>` : ""}</span>
+              ${data.canManage ? `<button type="button" class="link-button" data-void="${esc(event.id)}" aria-label="Anular registro">anular</button>` : "<span></span>"}
+            </li>`).join("")}</ul>` : ""}
+          </details>`).join("") || '<p class="profile-empty">Nenhum dia previsto ou registro no período.</p>'}</div>
         </section>
 
         <section class="profile-card profile-section"><h2><i class="fa-solid fa-briefcase"></i> Histórico de cargos e jornadas</h2>
