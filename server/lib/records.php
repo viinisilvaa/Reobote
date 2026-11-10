@@ -7,7 +7,7 @@ declare(strict_types=1);
 const REOBOTE_EMPLOYEE_SELECT = 'SELECT e.id, e.name, e.registration, e.email, e.phone, e.photo_path, e.job_id, e.schedule_id, e.unit_id, e.active,
         e.tracking_enabled, e.created_at, j.name AS job_name, j.default_schedule_id AS job_schedule_id,
         un.name AS unit_name, s.name AS schedule_name,
-        u.id AS user_id, u.role, u.must_change_password, u.last_login_at
+        u.id AS user_id, u.role, u.must_change_password, u.last_login_at, u.last_seen_at
     FROM employees e
     LEFT JOIN jobs j ON j.id = e.job_id
     LEFT JOIN units un ON un.id = e.unit_id
@@ -30,6 +30,12 @@ function reobote_require_employee(PDO $db, string $id): array
         reobote_fail('Colaborador não encontrado.', 404);
     }
     return $row;
+}
+
+// Conta da Central (Administrador ou Gestor): usa só o navegador, sem jornada nem ponto.
+function reobote_is_central_staff(array $row): bool
+{
+    return in_array($row['role'] ?? '', ['admin', 'dispatcher'], true);
 }
 
 // Formato publico de um colaborador; a situacao atual e opcional.
@@ -59,6 +65,17 @@ function reobote_employee_public(PDO $db, array $row, ?array $state = null): arr
         'trackingEnabled' => (bool) $row['tracking_enabled'],
         'createdAt' => reobote_iso($row['created_at']),
     ];
+    // Administrador e Gestor: não batem ponto. Ficam "Online" enquanto usam a Central (últimos 5 minutos).
+    if (reobote_is_central_staff($row)) {
+        $online = !empty($row['last_seen_at']) && strtotime($row['last_seen_at'] . ' UTC') > time() - 300;
+        $data['centralStaff'] = true;
+        $data['schedule'] = null;
+        $data['state'] = $online ? 'online' : 'offline';
+        $data['stateLabel'] = $online ? 'Online na Central' : 'Offline';
+        $data['lastEvent'] = null;
+        $data['shiftStart'] = null;
+        return $data;
+    }
     if ($state !== null) {
         $data['state'] = $state['state'];
         $data['stateLabel'] = $state['stateLabel'];
