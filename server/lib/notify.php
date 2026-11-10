@@ -117,7 +117,8 @@ function reobote_sweep_absences(PDO $db): void
     $today = $now->setTimezone($tz)->format('Y-m-d');
     $employees = $db->query(
         'SELECT e.id, e.name, e.schedule_id, e.created_at, j.default_schedule_id AS job_schedule_id, j.name AS job_name
-         FROM employees e LEFT JOIN jobs j ON j.id = e.job_id WHERE e.active = 1'
+         FROM employees e LEFT JOIN jobs j ON j.id = e.job_id LEFT JOIN users u ON u.employee_id = e.id
+         WHERE e.active = 1 AND (u.role IS NULL OR u.role = \'employee\')'
     )->fetchAll();
     $holidays = reobote_load_holidays($db, $today, $today);
     $states = reobote_current_states($db, array_column($employees, 'id'), $now);
