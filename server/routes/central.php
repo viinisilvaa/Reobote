@@ -225,6 +225,19 @@ route('GET', '/api/notifications/count', static function (PDO $db): void {
     reobote_json(['unread' => api_unread_count($db, $user), 'latestId' => $latest]);
 });
 
+// Mensagem pronta para o responsável da unidade: { phone, text, name } ou null.
+// Só para chegadas à unidade cuja unidade tem WhatsApp do responsável cadastrado.
+function api_unit_whatsapp(array $row): ?array
+{
+    if ($row['type'] !== 'unit_checkin' || empty($row['responsible_phone'])) {
+        return null;
+    }
+    $time = $row['event_at'] ? reobote_local_time(new DateTimeImmutable($row['event_at'], new DateTimeZone('UTC'))) : '';
+    $hello = $row['responsible_name'] ? 'Olá, ' . $row['responsible_name'] . '!' : 'Olá!';
+    $text = sprintf('%s O técnico %s chegou na unidade %s%s. — Grupo REOBOTE', $hello, $row['employee_name'] ?? 'da equipe', $row['unit_name'] ?? '', $time !== '' ? ' às ' . $time : '');
+    return ['phone' => $row['responsible_phone'], 'name' => $row['responsible_name'], 'text' => $text];
+}
+
 // Lista as notificações dos últimos 90 dias, com filtros de lidas/não lidas e de tipo.
 route('GET', '/api/notifications', static function (PDO $db): void {
     $user = reobote_user();
@@ -233,10 +246,14 @@ route('GET', '/api/notifications', static function (PDO $db): void {
     $filter = (string) ($_GET['filter'] ?? 'all');
     $type = (string) ($_GET['type'] ?? '');
     $limit = max(1, min(200, (int) ($_GET['limit'] ?? 50)));
-    $sql = 'SELECT n.id, n.type, n.title, n.detail, n.employee_id, n.created_at, r.read_at, e.photo_path
+    // Para chegadas à unidade, traz também o responsável da unidade (botão "Avisar no WhatsApp").
+    $sql = 'SELECT n.id, n.type, n.title, n.detail, n.employee_id, n.created_at, r.read_at, e.photo_path, e.name AS employee_name,
+                   ev.occurred_at AS event_at, un.name AS unit_name, un.responsible_name, un.responsible_phone
             FROM notifications n
             LEFT JOIN notification_reads r ON r.notification_id = n.id AND r.user_id = ?
             LEFT JOIN employees e ON e.id = n.employee_id
+            LEFT JOIN attendance_events ev ON ev.id = n.event_id
+            LEFT JOIN units un ON un.id = ev.unit_id
             WHERE n.created_at >= UTC_TIMESTAMP() - INTERVAL 90 DAY';
     $params = [$user['id']];
     if ($filter === 'unread') {
@@ -269,6 +286,7 @@ route('GET', '/api/notifications', static function (PDO $db): void {
         'hasPhoto' => (bool) $row['photo_path'],
         'createdAt' => reobote_iso($row['created_at']),
         'read' => $row['read_at'] !== null,
+        'whatsapp' => api_unit_whatsapp($row),
     ], $query->fetchAll());
     reobote_json(['notifications' => $items, 'unread' => api_unread_count($db, $user), 'hasMore' => count($items) === $limit]);
 });
