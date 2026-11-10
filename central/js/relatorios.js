@@ -1,6 +1,6 @@
 // REOBOTE | central/js/relatorios.js — Central: relatórios com filtros e exportação CSV/PDF
 // Relatórios: frequência, entradas e saídas, atrasos, faltas, horas extras, intervalos e horas trabalhadas.
-// Exporta em CSV (planilha) e em PDF (pela impressão do navegador, com layout próprio para papel).
+// Exporta em CSV (planilha) e em PDF (arquivo gerado no navegador com a biblioteca jsPDF, texto escuro e legível).
 window.ReobotePage = {
   // Monta a página de relatórios dentro de "root"; R são os utilitários da Central (app-core.js).
   async mount(root, R) {
@@ -197,6 +197,114 @@ window.ReobotePage = {
       form.elements.to.value = to;
       load();
     });
+    // PDF do relatório -----------------------------------------------------------------------------
+    // Gera um arquivo PDF de verdade (biblioteca jsPDF em js/vendor/jspdf, carregada no primeiro clique),
+    // com texto escuro e tabelas legíveis, e baixa direto. Traz o resumo de todos os colaboradores e,
+    // quando um colaborador está selecionado, o espelho de ponto dele com assinaturas.
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("biblioteca de PDF não carregou"));
+        document.head.append(script);
+      });
+    }
+
+    async function exportPdf() {
+      if (!window.jspdf?.jsPDF) {
+        await loadScript("js/vendor/jspdf/jspdf.umd.min.js");
+        await loadScript("js/vendor/jspdf/jspdf.plugin.autotable.min.js");
+      }
+      const report = state.report;
+      const o = report.overall;
+      const doc = new window.jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const dash = value => value || "-";
+      const ink = [24, 18, 44];     // texto quase preto
+      const brand = [84, 35, 189];  // roxo REOBOTE
+
+      // Cabeçalho de cada página do PDF.
+      const header = title => {
+        doc.setFillColor(...brand);
+        doc.rect(0, 0, 297, 20, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(15);
+        doc.text(title, 12, 13);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(report.company || "Central REOBOTE", 285, 13, { align: "right" });
+        doc.setTextColor(...ink);
+        doc.text(`Período: ${fmt.dayFull(report.from)} a ${fmt.dayFull(report.to)}   |   Gerado em ${fmt.dateTime(report.generatedAt)} por ${report.generatedBy}`, 12, 28);
+      };
+      const tableStyle = {
+        styles: { fontSize: 10, textColor: ink, cellPadding: 2.2, lineColor: [205, 198, 225], lineWidth: 0.2 },
+        headStyles: { fillColor: brand, textColor: [255, 255, 255], fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [244, 241, 252] }
+      };
+
+      // 1) Resumo geral e por colaborador.
+      header("REOBOTE - Relatório de frequência e jornada");
+      doc.autoTable({ ...tableStyle, startY: 33, theme: "grid",
+        head: [["Frequência", "Dias trabalhados", "Faltas", "Atrasos", "Horas extras", "Trabalhadas", "Intervalos"]],
+        body: [[percent(o.attendanceRate), String(o.daysWorked), String(o.absences), o.lateMinutes ? `${o.lateDays}x - ${fmt.duration(o.lateMinutes)}` : "-",
+          fmt.duration(o.overtimeMinutes), fmt.duration(o.workedMinutes), fmt.duration(o.breakMinutes)]],
+        styles: { ...tableStyle.styles, halign: "center", fontSize: 11 } });
+      doc.autoTable({ ...tableStyle, startY: doc.lastAutoTable.finalY + 7, theme: "grid",
+        head: [["Colaborador", "Matrícula", "Cargo", "Unidade", "Dias trab.", "Faltas", "Frequência", "Atrasos", "Horas extras", "Intervalos", "Trabalhadas", "Previstas", "Pendências"]],
+        body: report.rows.map(row => [row.employee.name, dash(row.employee.registration), dash(row.employee.job), dash(row.employee.unit),
+          String(row.totals.daysWorked), String(row.totals.absences), percent(row.attendanceRate),
+          row.totals.lateDays ? `${row.totals.lateDays}x - ${fmt.duration(row.totals.lateMinutes)}` : "-",
+          row.totals.overtimeMinutes ? fmt.duration(row.totals.overtimeMinutes) : "-",
+          fmt.duration(row.totals.breakMinutes), fmt.duration(row.totals.workedMinutes), fmt.duration(row.totals.expectedMinutes),
+          row.totals.incompleteDays ? `${row.totals.incompleteDays} dia(s)` : "-"]),
+        // Faltas e atrasos em vermelho, horas extras em verde (cores escuras, legíveis no papel).
+        didParseCell: cell => {
+          if (cell.section !== "body") return;
+          if ((cell.column.index === 5 && cell.cell.raw !== "0") || (cell.column.index === 7 && cell.cell.raw !== "-")) {
+            cell.cell.styles.textColor = [178, 20, 47];
+            cell.cell.styles.fontStyle = "bold";
+          }
+          if (cell.column.index === 8 && cell.cell.raw !== "-") {
+            cell.cell.styles.textColor = [15, 122, 65];
+            cell.cell.styles.fontStyle = "bold";
+          }
+        } });
+      doc.setFontSize(9);
+      doc.text("Faltas: dias previstos sem registro (exceto feriados e faltas justificadas). Atrasos e horas extras respeitam a tolerância de cada jornada.", 12, doc.lastAutoTable.finalY + 6);
+
+      // 2) Espelho de ponto do colaborador selecionado.
+      const detail = state.detail;
+      if (detail) {
+        doc.addPage();
+        header(`Espelho de ponto - ${detail.employee.name}`);
+        const days = detail.days.filter(day => day.status !== "off" || day.events.length).slice().sort((a, b) => a.date.localeCompare(b.date));
+        doc.autoTable({ ...tableStyle, startY: 33, theme: "striped",
+          head: [["Dia", "Situação", "Entrada", "Saída", "Almoço", "Trabalhadas", "Atraso", "Extra", "Registros"]],
+          body: days.map(day => {
+            const end = [...day.events].reverse().find(event => event.eventType === "departure");
+            return [fmt.day(day.date), R.dayLabel(day.status) + (day.justification ? ` (${day.justification.reason})` : ""),
+              day.events[0] ? fmt.time(day.events[0].occurredAt) : "-", end ? fmt.time(end.occurredAt) : "-",
+              day.events.length ? fmt.duration(day.breakMinutes) : "-", day.events.length ? fmt.duration(day.workedMinutes) : "-",
+              day.lateMinutes ? fmt.duration(day.lateMinutes) : "-", day.overtimeMinutes ? fmt.duration(day.overtimeMinutes) : "-",
+              day.events.map(event => `${fmt.time(event.occurredAt)}  ${event.label}${event.place ? ` - ${event.place}` : ""}`).join("\n") || "-"];
+          }),
+          styles: { ...tableStyle.styles, fontSize: 9, valign: "top" },
+          columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 34 }, 8: { cellWidth: 100 } } });
+        let y = doc.lastAutoTable.finalY + 18;
+        if (y > 198) { doc.addPage(); y = 30; } // sem espaço: assinaturas vão para a próxima página
+        doc.setDrawColor(90, 80, 120);
+        doc.line(20, y, 120, y);
+        doc.line(170, y, 270, y);
+        doc.setFontSize(10);
+        doc.text(detail.employee.name, 70, y + 5, { align: "center" });
+        doc.text("Responsável pela Central", 220, y + 5, { align: "center" });
+      }
+
+      doc.save(`relatorio-reobote-${report.from}-a-${report.to}.pdf`);
+      R.toast("PDF baixado.");
+    }
+
     ["from", "to"].forEach(name => form.elements[name].addEventListener("change", () => { form.elements.preset.value = "custom"; }));
     root.addEventListener("click", event => {
       const detail = event.target.closest("[data-detail]");
@@ -204,15 +312,7 @@ window.ReobotePage = {
       const action = event.target.closest("[data-action]")?.dataset.action;
       if (action === "close-detail") { state.detail = null; render(); }
       if (action === "csv") exportCsv();
-      if (action === "pdf") {
-        if (!state.report) return;
-        R.toast("Na janela de impressão, escolha “Salvar como PDF”.");
-        document.body.classList.add("printing-report");
-        // Depois da impressão, volta a página ao normal.
-        const done = () => { document.body.classList.remove("printing-report"); window.removeEventListener("afterprint", done); };
-        window.addEventListener("afterprint", done);
-        setTimeout(() => window.print(), 300);
-      }
+      if (action === "pdf" && state.report) exportPdf().catch(error => R.toast(`Não foi possível gerar o PDF: ${error.message}`, "error"));
     });
 
     await load();
