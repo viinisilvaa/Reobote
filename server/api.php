@@ -63,9 +63,9 @@ try {
     // do controle de cache existir (cada perfil ?id=N guardava a sua cópia). Na primeira consulta da sessão
     // (/api/auth/me, feita por todas as páginas), o navegador recebe a ordem de apagar o cache do site e
     // um cookie marca que isso já foi feito. Ao trocar a versão abaixo, a limpeza acontece de novo.
-    if ($path === '/api/auth/me' && ($_COOKIE['reobote_cache'] ?? '') !== '2') {
+    if ($path === '/api/auth/me' && ($_COOKIE['reobote_cache'] ?? '') !== '3') {
         header('Clear-Site-Data: "cache"');
-        setcookie('reobote_cache', '2', ['expires' => time() + 31536000, 'path' => '/', 'samesite' => 'Lax', 'secure' => reobote_is_https(), 'httponly' => true]);
+        setcookie('reobote_cache', '3', ['expires' => time() + 31536000, 'path' => '/', 'samesite' => 'Lax', 'secure' => reobote_is_https(), 'httponly' => true]);
     }
     reobote_start_session();
 
