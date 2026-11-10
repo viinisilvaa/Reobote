@@ -399,3 +399,18 @@ route('DELETE', '/api/employees/(\d+)/justifications/(\d{4}-\d{2}-\d{2})', stati
     reobote_audit($db, $user, 'absence_justification_removed', 'employee', $id, ['date' => $day, 'name' => $employee['name']]);
     reobote_json(['removed' => true]);
 });
+
+// Localizações recentes do colaborador (as últimas 60), para o perfil atualizar a lista sozinho sem
+// recarregar a página inteira. Mesma regra de acesso do perfil.
+route('GET', '/api/employees/(\d+)/locations', static function (PDO $db, string $id): void {
+    $user = reobote_user();
+    if (!reobote_can_view_employee($user, $id)) {
+        reobote_fail('Você só pode consultar o seu próprio perfil.', 403);
+    }
+    $query = $db->prepare('SELECT latitude, longitude, accuracy_m, recorded_at FROM employee_locations WHERE employee_id = ? ORDER BY recorded_at DESC LIMIT 60');
+    $query->execute([$id]);
+    reobote_json(['locations' => array_map(static fn ($l) => [
+        'latitude' => (float) $l['latitude'], 'longitude' => (float) $l['longitude'],
+        'accuracyM' => $l['accuracy_m'] === null ? null : (float) $l['accuracy_m'], 'recordedAt' => reobote_iso($l['recorded_at']),
+    ], $query->fetchAll())]);
+});
