@@ -347,6 +347,7 @@ route('GET', '/api/settings', static function (PDO $db): void {
         'offlineMaxDays' => (int) $settings['offline_max_days'],
         'requestGpsOnCheckin' => $settings['request_gps_on_checkin'] === '1',
         'shiftGapHours' => (int) $settings['shift_gap_hours'],
+        'absenceAfterMinutes' => (int) $settings['absence_after_minutes'],
         'apkDownloadUrl' => $settings['apk_download_url'],
     ]]);
 });
@@ -393,6 +394,10 @@ route('PUT', '/api/settings', static function (PDO $db): void {
     if (array_key_exists('requestGpsOnCheckin', $body)) {
         $values['request_gps_on_checkin'] = reobote_bool($body, 'requestGpsOnCheckin') ? '1' : '0';
     }
+    if (array_key_exists('absenceAfterMinutes', $body)) {
+        // Minutos sem registro apos o inicio previsto para contar falta (de 16 min a 8 h).
+        $values['absence_after_minutes'] = (string) reobote_int($body, 'absenceAfterMinutes', 16, 480, 60, 'Falta após');
+    }
     if (array_key_exists('shiftGapHours', $body)) {
         $values['shift_gap_hours'] = (string) reobote_int($body, 'shiftGapHours', 4, 24, 16, 'Intervalo entre turnos');
     }
@@ -421,7 +426,7 @@ const API_AUDIT_LABELS = [
     'holiday_saved' => 'Feriado salvo', 'holiday_deleted' => 'Feriado excluído', 'unit_created' => 'Unidade criada', 'unit_updated' => 'Unidade alterada',
     'unit_deleted' => 'Unidade excluída', 'qr_created' => 'QR Code criado', 'qr_updated' => 'QR Code alterado', 'qr_deactivated' => 'QR Code desativado',
     'qr_regenerated' => 'QR Code substituído', 'settings_updated' => 'Configurações alteradas',
-    'location_consent_given' => 'Localização autorizada', 'fake_gps_detected' => 'GPS falso detectado', 'app_diagnostic' => 'Diagnóstico do aplicativo', 'location_consent_revoked' => 'Localização revogada',
+    'location_consent_given' => 'Localização autorizada', 'fake_gps_detected' => 'GPS falso detectado', 'app_diagnostic' => 'Diagnóstico do aplicativo', 'absence_justified' => 'Falta justificada', 'absence_justification_removed' => 'Justificativa removida', 'location_consent_revoked' => 'Localização revogada',
 ];
 
 // Histórico de alterações administrativas (quem fez, o quê e quando).
