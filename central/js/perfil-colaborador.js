@@ -176,91 +176,54 @@ window.ReobotePage = {
     }
 
     // PDF do perfil (espelho de ponto) ------------------------------------------------------------
-    // Gera o arquivo no próprio navegador com a biblioteca jsPDF (js/vendor/jspdf), carregada só no
-    // primeiro clique, e baixa direto, sem passar pela página de Relatórios.
-    function loadScript(src) {
-      return new Promise((resolve, reject) => {
+    // Usa o visual padrão dos PDFs do REOBOTE (js/pdf-reobote.js, carregado no primeiro clique) e baixa
+    // o arquivo direto, sem passar pela página de Relatórios.
+    async function downloadPdf() {
+      if (!window.ReobotePdf) await new Promise((resolve, reject) => {
         const script = document.createElement("script");
-        script.src = src;
+        script.src = "js/pdf-reobote.js";
         script.onload = resolve;
-        script.onerror = () => reject(new Error("biblioteca de PDF não carregou"));
+        script.onerror = () => reject(new Error("gerador de PDF não carregou"));
         document.head.append(script);
       });
-    }
-
-    async function downloadPdf() {
-      if (!window.jspdf?.jsPDF) {
-        await loadScript("js/vendor/jspdf/jspdf.umd.min.js");
-        await loadScript("js/vendor/jspdf/jspdf.plugin.autotable.min.js");
-      }
       const person = data.employee;
       const t = data.journey.totals;
-      const doc = new window.jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       const brDate = iso => iso.split("-").reverse().join("/");
       const time = value => value ? fmt.time(value) : "-";
-
-      // Cabeçalho: empresa, colaborador e período.
-      doc.setFillColor(84, 35, 189);
-      doc.rect(0, 0, 297, 20, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(15);
-      doc.text("REOBOTE - Espelho de ponto", 12, 13);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(R.session.company.name || "Central REOBOTE", 285, 13, { align: "right" });
-      doc.setTextColor(30, 24, 56);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(13);
-      doc.text(person.name, 12, 30);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      const info = [person.registration ? `Matrícula: ${person.registration}` : null, person.job ? `Cargo: ${person.job}` : null, `Unidade: ${person.unit || "Sem unidade fixa"}`, `Jornada: ${person.schedule?.description || "Sem jornada"}`].filter(Boolean).join("   |   ");
-      doc.text(info, 12, 36);
-      doc.text(`Período: ${brDate(period.from)} a ${brDate(period.to)}   |   Gerado em ${new Date().toLocaleString("pt-BR")}`, 12, 42);
-
-      // Totais do período.
-      const totals = [["Dias trabalhados", String(t.daysWorked)], ["Faltas", String(t.absences)], ["Atrasos", fmt.duration(t.lateMinutes)], ["Horas extras", fmt.duration(t.overtimeMinutes)], ["Trabalhadas", fmt.duration(t.workedMinutes)], ["Intervalos", fmt.duration(t.breakMinutes)]];
-      doc.autoTable({ startY: 47, head: [totals.map(item => item[0])], body: [totals.map(item => item[1])], theme: "grid", styles: { fontSize: 10, halign: "center" }, headStyles: { fillColor: [236, 229, 255], textColor: [40, 22, 79] } });
-
+      const info = [person.registration ? `Matrícula ${person.registration}` : null, person.job, person.unit || "Sem unidade fixa", person.schedule?.description || "Sem jornada"].filter(Boolean).join("   •   ");
+      const pdf = await window.ReobotePdf.create({
+        title: "Espelho de ponto",
+        company: R.session.company.name,
+        generated: `Gerado em ${new Date().toLocaleString("pt-BR")}`,
+        subtitle: [person.name, info, `Período: ${brDate(period.from)} a ${brDate(period.to)}`]
+      });
+      pdf.cards([
+        ["Dias trabalhados", t.daysWorked], ["Faltas", t.absences, t.absences ? "bad" : ""], ["Atrasos", fmt.duration(t.lateMinutes), t.lateMinutes ? "bad" : ""],
+        ["Horas extras", fmt.duration(t.overtimeMinutes), t.overtimeMinutes ? "good" : ""], ["Trabalhadas", fmt.duration(t.workedMinutes)], ["Intervalos", fmt.duration(t.breakMinutes)]
+      ]);
       // Um dia por linha, do mais antigo para o mais recente.
       const days = data.journey.days.filter(day => day.status !== "off" || day.events.length).slice().sort((a, b) => a.date.localeCompare(b.date));
-      const rows = days.map(day => {
-        const end = [...day.events].reverse().find(event => event.eventType === "departure");
-        return [
-          fmt.day(day.date),
-          R.dayLabel(day.status) + (day.justification ? ` (${day.justification.reason})` : ""),
-          time(day.events[0]?.occurredAt),
-          time(end?.occurredAt),
-          day.events.length ? fmt.duration(day.breakMinutes) : "-",
-          day.events.length ? fmt.duration(day.workedMinutes) : "-",
-          day.lateMinutes ? fmt.duration(day.lateMinutes) : "-",
-          day.overtimeMinutes ? fmt.duration(day.overtimeMinutes) : "-",
-          day.events.map(event => `${time(event.occurredAt)}  ${event.label}${event.place ? ` - ${event.place}` : ""}`).join("\n") || "-"
-        ];
-      });
-      doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 6,
+      pdf.table({
         head: [["Dia", "Situação", "Entrada", "Saída", "Almoço", "Trabalhadas", "Atraso", "Extra", "Registros"]],
-        body: rows.length ? rows : [["Nenhum dia previsto ou registro no período.", "", "", "", "", "", "", "", ""]],
-        theme: "striped",
-        styles: { fontSize: 9, cellPadding: 2, valign: "top" },
-        headStyles: { fillColor: [84, 35, 189] },
-        columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 34 }, 8: { cellWidth: 105 } }
+        body: days.length ? days.map(day => {
+          const end = [...day.events].reverse().find(event => event.eventType === "departure");
+          return [fmt.day(day.date), R.dayLabel(day.status) + (day.justification ? `\n(${day.justification.reason})` : ""),
+            time(day.events[0]?.occurredAt), time(end?.occurredAt),
+            day.events.length ? fmt.duration(day.breakMinutes) : "-", day.events.length ? fmt.duration(day.workedMinutes) : "-",
+            day.lateMinutes ? fmt.duration(day.lateMinutes) : "-", day.overtimeMinutes ? fmt.duration(day.overtimeMinutes) : "-",
+            day.events.map(event => `${time(event.occurredAt)}  ${event.label}${event.place ? ` - ${event.place}` : ""}`).join("\n") || "-"];
+        }) : [["Nenhum dia previsto ou registro no período.", "", "", "", "", "", "", "", ""]],
+        columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 30 }, 2: { cellWidth: 15 }, 3: { cellWidth: 15 }, 4: { cellWidth: 15 }, 5: { cellWidth: 22 }, 6: { cellWidth: 15 }, 7: { cellWidth: 15 } },
+        // Atraso em vermelho e hora extra em verde.
+        didParseCell: cell => {
+          if (cell.section !== "body" || cell.cell.raw === "-") return;
+          if (cell.column.index === 6) cell.cell.styles.textColor = [178, 20, 47];
+          if (cell.column.index === 7) cell.cell.styles.textColor = [15, 122, 65];
+        }
       });
-
-      // Assinaturas.
-      let y = doc.lastAutoTable.finalY + 18;
-      if (y > 198) { doc.addPage(); y = 30; } // sem espaço na página: assinaturas vão para a próxima
-      doc.setDrawColor(120, 110, 150);
-      doc.line(20, y, 120, y);
-      doc.line(170, y, 270, y);
-      doc.setFontSize(9);
-      doc.text(person.name, 70, y + 5, { align: "center" });
-      doc.text("Responsável pela Central", 220, y + 5, { align: "center" });
-
+      pdf.signatures(person.name);
       const slug = person.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      doc.save(`ponto-${slug}-${period.from}-a-${period.to}.pdf`);
+      pdf.save(`ponto-${slug}-${period.from}-a-${period.to}.pdf`);
       R.toast("PDF baixado.");
     }
 
