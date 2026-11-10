@@ -100,3 +100,34 @@ html[data-theme="dark"] [data-page="profile"] .profile-justification { color:#9c
 [data-page="profile"] .location-stops small { margin-left:6px; color:#5d5873; font-size:11px; }
 html[data-theme="dark"] [data-page="profile"] .location-stops .stop-day th, html[data-theme="dark"] [data-page="profile"] .location-stops a { color:#c9a8ff; }
 html[data-theme="dark"] [data-page="profile"] .location-stops small { color:#d0c8df; }
+/* Histórico de jornada compacto: linha do dia (clique abre/fecha) e registros numa lista alinhada. */
+[data-page="profile"] details.profile-day { padding:0; }
+[data-page="profile"] .profile-day > summary { padding:9px 12px; display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; cursor:pointer; list-style:none; }
+[data-page="profile"] .profile-day > summary::-webkit-details-marker { display:none; }
+[data-page="profile"] .profile-day-chevron { width:12px; color:#5423bd; font-size:11px; transition:transform .15s; }
+[data-page="profile"] details[open] > summary .profile-day-chevron { transform:rotate(90deg); }
+[data-page="profile"] .profile-day-date { color:#28164f; font-size:14px; }
+[data-page="profile"] .profile-day-numbers { display:flex; flex-wrap:wrap; gap:4px 14px; color:#3b3555; font-size:12px; }
+[data-page="profile"] .profile-day-numbers .late { color:#b45309; font-weight:700; }
+[data-page="profile"] .profile-day-numbers .overtime { color:#0f7a41; font-weight:700; }
+[data-page="profile"] .profile-day-count { margin-left:auto; color:#5d5873; font-size:12px; }
+[data-page="profile"] .profile-day .profile-justify, [data-page="profile"] .profile-day .profile-justification { margin:0 12px 6px 34px; }
+[data-page="profile"] .profile-event-list { margin:0; padding:0 12px 8px 34px; list-style:none; }
+[data-page="profile"] .profile-event-list li { padding:4px 0; display:grid; grid-template-columns:44px 18px minmax(140px, 200px) minmax(0, 1fr) auto auto; align-items:center; gap:8px; border-top:1px solid #ebe6f5; font-size:13px; }
+[data-page="profile"] .profile-event-list time { font-weight:700; font-variant-numeric:tabular-nums; }
+[data-page="profile"] .profile-event-list li > i { color:#5423bd; text-align:center; }
+[data-page="profile"] .profile-event-list .event-place { overflow:hidden; color:#5d5873; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+[data-page="profile"] .profile-event-list .event-tags em { margin-left:4px; padding:1px 6px; border-radius:8px; background:#fff2d6; color:#8f6000; font-size:11px; font-style:normal; }
+html[data-theme="dark"] [data-page="profile"] .profile-day-date { color:#f7f4ff; }
+html[data-theme="dark"] [data-page="profile"] :is(.profile-day-numbers, .profile-day-count, .profile-event-list .event-place) { color:#d0c8df; }
+html[data-theme="dark"] [data-page="profile"] .profile-day-numbers .late { color:#ffbe85; }
+html[data-theme="dark"] [data-page="profile"] .profile-day-numbers .overtime { color:#7ee3a6; }
+html[data-theme="dark"] [data-page="profile"] :is(.profile-day-chevron, .profile-event-list li > i) { color:#c9a8ff; }
+html[data-theme="dark"] [data-page="profile"] .profile-event-list li { border-color:#3a3347; }
+html[data-theme="dark"] [data-page="profile"] .profile-event-list .event-tags em { background:#42330f; color:#ffd57a; }
+@media (max-width:700px) {
+  [data-page="profile"] .profile-event-list { padding-left:12px; }
+  [data-page="profile"] .profile-event-list li { grid-template-columns:44px 18px minmax(0, 1fr) auto; }
+  [data-page="profile"] .profile-event-list .event-place { grid-column:3 / -1; }
+  [data-page="profile"] .profile-event-list .event-tags { grid-column:3 / -1; }
+}
