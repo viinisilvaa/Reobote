@@ -483,3 +483,16 @@ html:not([data-theme="dark"]) body .app-dashboard .profile-justification { color
 html:not([data-theme="dark"]) body .app-dashboard .warn-text { color: #8a4b00; }
 html:not([data-theme="dark"]) body .app-dashboard :is(.text-danger, .bad) { color: #b4142f !important; }
 html:not([data-theme="dark"]) body .app-dashboard :is(.text-success, .good) { color: #0f7a41 !important; }
+
+/* Tema claro mais suave (menos brilho): fundo cinza-lilás e painéis/cartões em branco gelo,
+   no lugar do branco puro. O tema escuro não muda. */
+html:not([data-theme="dark"]) body,
+html:not([data-theme="dark"]) .app,
+html:not([data-theme="dark"]) body[data-page="dashboard"],
+html:not([data-theme="dark"]) body[data-page="dashboard"] .app { background: #dcdae6; }
+html:not([data-theme="dark"]) :is(.topbar, .panel, .stat-card, .app-dialog, .map-surface-card, .profile-card, .dashboard-card,
+  .dashboard-metric, .map-metric, .data-table thead th, .content-panel-heading, .job-row, .info-card, .qr-card, .faq-item) { background-color: #f1f0f6; }
+html:not([data-theme="dark"]) :is(.text-control, .search-control, .select-control) { background-color: #f8f7fc; }
+html:not([data-theme="dark"]) :is(.panel, .stat-card, .map-surface-card, .profile-card, .dashboard-card, .dashboard-metric) { border-color: #cfcbdd; }
+html:not([data-theme="dark"]) .topbar { border-bottom-color: #cfcbdd; }
+html:not([data-theme="dark"]) body .app-dashboard .profile-day { background: #f7f6fa; border-color: #d9d4e6; }
