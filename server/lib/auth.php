@@ -89,20 +89,19 @@ function reobote_logout_session(): void
 // Permissoes efetivas de uma conta, combinando perfil e cargo.
 function reobote_effective_permissions(string $role, ?string $jobPermissions): array
 {
-    if ($role === 'admin') {
+    // Administrador e Gestor da Central: tudo o que existe na Central (inclusive Configurações) e o aplicativo.
+    if ($role === 'admin' || $role === 'dispatcher') {
         return array_keys(REOBOTE_PERMISSIONS);
     }
+    // Colaborador: somente o aplicativo (quando o cargo libera o aplicativo). Não entra na Central.
     $permissions = [];
     if ($jobPermissions) {
         $decoded = json_decode($jobPermissions, true);
         if (is_array($decoded)) {
-            $permissions = array_values(array_intersect(array_keys(REOBOTE_PERMISSIONS), $decoded));
+            $permissions = $decoded;
         }
     }
-    if ($role === 'dispatcher') {
-        $permissions = array_unique(array_merge($permissions, ['dashboard', 'notifications', 'employees', 'jobs', 'units', 'reports']));
-    }
-    return array_values(array_intersect(array_keys(REOBOTE_PERMISSIONS), $permissions));
+    return in_array('app', $permissions, true) ? ['app'] : [];
 }
 
 // Carrega a conta da sessao no banco a cada requisicao, refletindo desativacoes e mudancas de permissao na hora.
