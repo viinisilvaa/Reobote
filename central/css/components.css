@@ -361,3 +361,9 @@ html[data-theme="dark"] :is(.live-alert-head, .live-alert-body small) { color: v
 html[data-theme="dark"] .live-alert-close:hover { background: var(--dark-raised); }
 @keyframes live-alert-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .live-alert { animation: none; } }
+
+/* Botão "Ativar avisos no Windows" no topo da Central (some quando a permissão é dada). */
+.desktop-alerts-button { min-height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid #c9b8f0; border-radius: 17px; background: #efe8ff; color: #4a1fa6; font: 700 12px/1 Inter, "Segoe UI", sans-serif; cursor: pointer; }
+.desktop-alerts-button:hover { background: #e4d8ff; }
+html[data-theme="dark"] .desktop-alerts-button { border-color: #4a3c65; background: #302541; color: #ddccff; }
+@media (max-width: 700px) { .desktop-alerts-button { font-size: 0; gap: 0; } .desktop-alerts-button i { font-size: 14px; } }
