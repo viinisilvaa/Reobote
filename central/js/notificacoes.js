@@ -41,6 +41,7 @@ window.ReobotePage = {
         </div>
         <div class="notification-actions">
           ${item.employeeId ? `<a class="button-secondary small-button" href="${item.type === "access_request" ? "colaboradores.html" : `perfil-colaborador.html?id=${encodeURIComponent(item.employeeId)}`}">${item.type === "access_request" ? "Colaboradores" : "Ver perfil"}</a>` : ""}
+          ${item.whatsapp ? `<a class="button-secondary small-button whatsapp-button" href="${esc(R.whatsappUrl(item.whatsapp))}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Avisar no WhatsApp</a>` : ""}
           ${item.read ? '<span class="read-label">Lida</span>' : `<button type="button" class="button-secondary small-button" data-read="${esc(item.id)}">Marcar como lida</button>`}
         </div>
       </article>`).join("") || R.emptyState("fa-bell-slash", "Nenhuma notificação", "Os avisos aparecem aqui conforme os colaboradores registram a jornada.");
