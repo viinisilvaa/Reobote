@@ -16,8 +16,9 @@ window.ReobotePage = {
         <div class="content-panel-heading"><h2><i class="fa-solid fa-shield-halved"></i> Como as permissões funcionam</h2></div>
         <ul class="plain-list">
           <li><strong>Aplicativo</strong>: permite registrar a própria jornada (QR Code, almoço e encerramento) e consultar o histórico.</li>
-          <li><strong>Central</strong>: cada área marcada libera a página correspondente no painel administrativo.</li>
-          <li>Contas com perfil <strong>Administrador</strong> têm acesso total; <strong>Gestor da Central</strong> acessa todas as áreas exceto Configurações.</li>
+          <li>O acesso à <strong>Central</strong> depende do <strong>perfil de acesso</strong> de cada pessoa (em Colaboradores), não do cargo.</li>
+          <li>Perfil <strong>Colaborador</strong>: usa somente o aplicativo, qualquer que seja o cargo.</li>
+          <li>Perfis <strong>Gestor da Central</strong> e <strong>Administrador</strong>: acessam tudo o que existe na Central, inclusive Configurações. Só o Administrador pode dar ou tirar esses dois perfis.</li>
           <li>Mudanças valem no próximo carregamento de página dos colaboradores do cargo.</li>
         </ul>
       </section>`;
