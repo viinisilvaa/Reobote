@@ -85,6 +85,8 @@ window.ReobotePage = {
               ${day.flags.includes("missing_departure") ? '<span class="late">Jornada sem encerramento</span>' : ""}
               ${day.flags.includes("missing_start") ? '<span class="late">Sem registro de início</span>' : ""}
             </div>
+            ${day.justification ? `<p class="profile-justification"><i class="fa-solid fa-circle-check"></i> Justificado: ${esc(day.justification.reason)}${day.justification.author ? ` • por ${esc(day.justification.author)}` : ""}${data.canManage ? ` <button type="button" class="link-button" data-unjustify="${esc(day.date)}">remover</button>` : ""}</p>` : ""}
+            ${data.canManage && !day.justification && day.workday && (day.status === "absent" || day.status === "not_arrived" || day.lateMinutes > 0) ? `<button type="button" class="button-secondary small-button profile-justify" data-justify="${esc(day.date)}"><i class="fa-solid fa-comment-medical"></i> Justificar ${day.status === "absent" || day.status === "not_arrived" ? "falta" : "atraso"} e liberar o registro</button>` : ""}
             <div class="profile-events">${day.events.map(event => `<span class="profile-event"><i class="fa-solid ${R.eventIcons[event.eventType] || "fa-clock"}"></i>${esc(event.label)} • ${fmt.time(event.occurredAt)}${event.place ? ` • ${esc(event.place)}` : ""}${event.distanceM !== null ? ` • ${event.distanceM} m da unidade` : ""}${event.syncedLater ? ' <em title="Registrado sem internet e sincronizado depois">offline</em>' : ""}${event.source === "admin" ? ` <em title="${esc(event.notes || "")}">lançado pela Central</em>` : ""}
               ${data.canManage ? `<button type="button" class="link-button" data-void="${esc(event.id)}" aria-label="Anular registro">anular</button>` : ""}</span>`).join("")}</div>
           </article>`).join("") || '<p class="profile-empty">Nenhum dia previsto ou registro no período.</p>'}</div>
@@ -144,6 +146,33 @@ window.ReobotePage = {
 
     root.addEventListener("click", async event => {
       if (event.target.closest('[data-action="add-record"]')) addRecord();
+      // Justificar falta/atraso (ex.: o técnico avisou pelo WhatsApp): a falta deixa de contar e o
+      // técnico volta a conseguir registrar o ponto naquele dia.
+      const justifyButton = event.target.closest("[data-justify]");
+      if (justifyButton) {
+        const reason = await R.askReason({ title: "Justificar e liberar", message: `${data.employee.name} • ${fmt.day(justifyButton.dataset.justify)}. A falta deixa de contar e o técnico volta a conseguir registrar o ponto neste dia.`, label: "Motivo (ex.: avisou pelo WhatsApp que o pneu furou)", confirmLabel: "Justificar" });
+        if (!reason) return;
+        try {
+          await api.post(`/api/employees/${id}/justifications`, { date: justifyButton.dataset.justify, reason });
+          R.toast("Justificado. O técnico já pode registrar o ponto.");
+          load();
+        } catch (error) {
+          R.toast(error.message, "error");
+        }
+        return;
+      }
+      const unjustifyButton = event.target.closest("[data-unjustify]");
+      if (unjustifyButton) {
+        if (!(await R.confirm({ title: "Remover justificativa?", message: "O dia volta a contar como falta (se não houver registro).", confirmLabel: "Remover", danger: true }))) return;
+        try {
+          await api.del(`/api/employees/${id}/justifications/${unjustifyButton.dataset.unjustify}`);
+          R.toast("Justificativa removida.");
+          load();
+        } catch (error) {
+          R.toast(error.message, "error");
+        }
+        return;
+      }
       const voidButton = event.target.closest("[data-void]");
       if (voidButton) {
         const reason = await R.askReason({ title: "Anular registro", message: "O registro deixará de contar nos cálculos de jornada, mas continuará guardado no histórico de alterações.", confirmLabel: "Anular", danger: true });
