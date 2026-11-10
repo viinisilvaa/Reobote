@@ -277,7 +277,7 @@
   // Usa a última posição enviada (até 2 minutos); senão pede ao GPS com alta precisão (até 10 s) e,
   // se falhar (ex.: dentro de prédio), com precisão normal (até 6 s).
   async function currentPosition() {
-    if (!session.rules.requestGpsOnCheckin || !navigator.geolocation) return null;
+    if (!navigator.geolocation) return null;
     if (lastLocationSent.lat !== null && Date.now() - lastLocationSent.at < 120000) {
       return { latitude: lastLocationSent.lat, longitude: lastLocationSent.lng, accuracy: lastLocationSent.accuracy };
     }
@@ -288,6 +288,48 @@
     ));
     return (await ask({ enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }))
       || ask({ enableHighAccuracy: false, timeout: 6000, maximumAge: 120000 });
+  }
+
+  // GPS obrigatório para bater o ponto ---------------------------------------------------------------
+  // O aplicativo abre normalmente com o GPS desligado, mas só registra o ponto com o GPS ligado.
+
+  // Confere rapidamente se o celular consegue dar uma posição. Mostra "Carregando" enquanto confere.
+  // Resolve true (GPS ok) ou false (já avisou o técnico para ligar o GPS).
+  async function gpsReady() {
+    if (!navigator.geolocation) {
+      askToTurnOnGps("unavailable");
+      return false;
+    }
+    if (lastLocationSent.lat !== null && Date.now() - lastLocationSent.at < 120000) return true; // posição recente
+    toast("Conferindo o GPS...");
+    const result = await new Promise(resolve => navigator.geolocation.getCurrentPosition(
+      () => resolve("ok"),
+      error => resolve(error.code === 1 ? "denied" : error.code === 3 ? "timeout" : "unavailable"),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 120000 }
+    ));
+    if (result === "ok") return true;
+    askToTurnOnGps(result);
+    return false;
+  }
+
+  // Janela "Ligue o GPS para bater o ponto". Sem permissão (APK): o botão abre as configurações do app.
+  let gpsSheetOpen = false;
+  async function askToTurnOnGps(reason) {
+    if (gpsSheetOpen) return;
+    gpsSheetOpen = true;
+    const denied = reason === "denied";
+    const openSettings = denied && isNative && BackgroundGeolocation;
+    const again = await confirmSheet({
+      title: denied ? "Permita a localização para bater o ponto" : "Ligue o GPS para bater o ponto",
+      message: denied
+        ? "O ponto só é registrado com a localização do celular. Permita a localização para o REOBOTE e tente de novo."
+        : reason === "timeout"
+          ? "O GPS demorou para responder. Confira se a localização do celular está ligada, vá para perto de uma janela ou área aberta e tente de novo."
+          : "A localização (GPS) do celular está desligada. Ligue-a no painel de atalhos do celular e tente de novo. O aplicativo funciona normalmente, mas o ponto só é registrado com o GPS ligado.",
+      confirmLabel: openSettings ? "Abrir configurações" : "Entendi"
+    });
+    gpsSheetOpen = false;
+    if (again && openSettings) BackgroundGeolocation.openSettings().catch(() => {});
   }
 
   /**
@@ -303,21 +345,24 @@
       return null;
     }
     const occurredAt = nowIso();
-    let position = null;
-    if (extra.qr) {
-      // 1º: algum app de GPS falso está ativado no celular? Então o registro é bloqueado.
-      const mock = await checkMockApps();
-      if (mock?.mock) {
-        blockFakeGps(null, "checkin", mock.mockApps);
-        return null;
-      }
-      // 2º: no APK, a posição vem do plugin nativo, que informa se ela é FALSA (app de GPS falso).
-      const fix = await nativeFix();
-      if (fix?.simulated) {
-        blockFakeGps(fix, "checkin");
-        return null; // registro bloqueado: não entra na fila nem vai para a Central
-      }
-      position = fix ? { latitude: fix.latitude, longitude: fix.longitude, accuracy: fix.accuracy } : await currentPosition();
+    // Todo registro (QR Code, almoço e encerramento) exige o GPS ligado e confere se não é GPS falso.
+    // 1º: algum app de GPS falso está ativado no celular? Então o registro é bloqueado.
+    const mock = await checkMockApps();
+    if (mock?.mock) {
+      blockFakeGps(null, "checkin", mock.mockApps);
+      return null;
+    }
+    // 2º: no APK, a posição vem do plugin nativo, que informa se ela é FALSA (app de GPS falso).
+    const fix = await nativeFix();
+    if (fix?.simulated) {
+      blockFakeGps(fix, "checkin");
+      return null; // registro bloqueado: não entra na fila nem vai para a Central
+    }
+    const position = fix ? { latitude: fix.latitude, longitude: fix.longitude, accuracy: fix.accuracy } : await currentPosition();
+    // 3º: sem posição (GPS desligado ou sem permissão), o ponto NÃO é registrado.
+    if (!position) {
+      askToTurnOnGps("unavailable");
+      return null;
     }
     const item = { clientId: uuid(), type, occurredAt, ...extra, ...(position || {}) };
     store.queue.push(item);
@@ -1273,12 +1318,14 @@
     if (!action) return;
     // Leitor de QR Code: início do expediente, chegada na unidade ou encerramento.
     if (["scan", "scan-vehicle", "scan-unit"].includes(action)) {
+      if (!(await gpsReady())) return; // GPS desligado: avisa e não abre a câmera
       scanMode = "registro";
       return go("scan");
     }
     if (action === "scan-departure") {
       const problem = localCheck("departure");
       if (problem) return toast(problem, "error");
+      if (!(await gpsReady())) return;
       scanMode = "encerrar";
       return go("scan");
     }
@@ -1306,6 +1353,8 @@
       return;
     }
     if (["break_start", "break_end"].includes(action)) {
+      if (localCheck(action)) return toast(localCheck(action), "error");
+      if (!(await gpsReady())) return; // GPS desligado: o almoço não é registrado
       const outcome = await record(action);
       if (outcome) {
         const sent = outcome.result && outcome.result.status !== "rejected";
