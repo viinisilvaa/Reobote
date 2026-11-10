@@ -398,6 +398,12 @@ $migrations[6] = static function (PDO $pdo): void {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 };
 
+// 7) Responsável da unidade: nome e WhatsApp para avisar a chegada dos técnicos.
+$migrations[7] = static function (PDO $pdo): void {
+    add_column($pdo, 'units', 'responsible_name', 'VARCHAR(120) NULL AFTER `address`');
+    add_column($pdo, 'units', 'responsible_phone', 'VARCHAR(20) NULL AFTER `responsible_name`');
+};
+
 $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
   version INT UNSIGNED NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
