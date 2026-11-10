@@ -9,8 +9,8 @@
   --m-red: #e5324b;
   --m-amber: #f2a516;
   --m-blue: #2f7de1;
-  --m-bg: #f3f1fb;
-  --m-surface: #ffffff;
+  --m-bg: #e4e2ed;   /* fundo cinza-lilás suave (menos brilho) */
+  --m-surface: #f7f6fb; /* cartões em branco gelo */
   --m-raised: #f4f0ff;
   --m-text: #1e1838;
   --m-muted: #5d5873;
