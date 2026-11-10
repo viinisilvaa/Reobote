@@ -127,6 +127,10 @@ route('POST', '/api/me/attendance', static function (PDO $db): void {
             if ($lat === null || $lng === null || $lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
                 $lat = $lng = $accuracy = null;
             }
+            // GPS obrigatorio: o ponto registrado pelo aplicativo precisa vir com a localizacao do celular.
+            if ($lat === null) {
+                throw new InvalidArgumentException('Ligue o GPS do celular para registrar o ponto. O aplicativo só registra o ponto com a localização ligada.');
+            }
             $prepared[] = ['index' => $index, 'at' => $at, 'type' => $type, 'qr' => $qr, 'clientId' => $clientId,
                 'lat' => $lat, 'lng' => $lng, 'accuracy' => $accuracy !== null ? min(100000, max(0, $accuracy)) : null,
                 'notes' => isset($item['notes']) ? (mb_substr(trim((string) $item['notes']), 0, 300) ?: null) : null];
