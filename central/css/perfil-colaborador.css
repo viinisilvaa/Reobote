@@ -134,3 +134,18 @@ html[data-theme="dark"] [data-page="profile"] .profile-event-list .event-tags em
 /* Etiqueta "justificado" na linha do dia (falta ou atraso justificado pela Central). */
 [data-page="profile"] .profile-day-numbers .justified { padding:1px 8px; border-radius:10px; background:#e2eeff; color:#1f5fb8; font-weight:700; }
 html[data-theme="dark"] [data-page="profile"] .profile-day-numbers .justified { background:#182c4a; color:#9cc6ff; }
+
+/* Valor ganho no período: resumo (salário, horas pagas, valor ganho) e uma linha por mês. */
+[data-page="profile"] .earnings-summary { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin:4px 0 12px; }
+[data-page="profile"] .earnings-summary span { display:flex; flex-direction:column; gap:4px; padding:10px 12px; border:1px solid #e5e0f2; border-radius:12px; color:#746b87; font-size:11px; }
+[data-page="profile"] .earnings-summary strong { color:#2b1c54; font-size:18px; }
+[data-page="profile"] .earnings-summary .earned { border-color:#b7e4c9; background:#ecf9f1; }
+[data-page="profile"] .earnings-summary .earned strong,
+[data-page="profile"] .profile-earnings .earnings-table td.earned { color:#0f7a41; font-weight:800; }
+[data-page="profile"] .earnings-table td small { display:block; color:#746b87; font-size:11px; }
+html[data-theme="dark"] [data-page="profile"] .earnings-summary span { border-color:#3a3152; color:#b9b0cc; }
+html[data-theme="dark"] [data-page="profile"] .earnings-summary strong { color:#f1ecfb; }
+html[data-theme="dark"] [data-page="profile"] .earnings-summary .earned { border-color:#1f5a3a; background:#12291d; }
+html[data-theme="dark"] [data-page="profile"] .earnings-summary .earned strong,
+html[data-theme="dark"] [data-page="profile"] .profile-earnings .earnings-table td.earned { color:#6fe0a0; }
+html[data-theme="dark"] [data-page="profile"] .earnings-table td small { color:#b9b0cc; }
