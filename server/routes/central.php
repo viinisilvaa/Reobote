@@ -367,6 +367,7 @@ route('GET', '/api/settings', static function (PDO $db): void {
         'requestGpsOnCheckin' => $settings['request_gps_on_checkin'] === '1',
         'shiftGapHours' => (int) $settings['shift_gap_hours'],
         'absenceAfterMinutes' => (int) $settings['absence_after_minutes'],
+        'lateAbsenceHours' => (int) $settings['late_absence_hours'],
         'apkDownloadUrl' => $settings['apk_download_url'],
     ]]);
 });
@@ -416,6 +417,10 @@ route('PUT', '/api/settings', static function (PDO $db): void {
     if (array_key_exists('absenceAfterMinutes', $body)) {
         // Minutos sem registro apos o inicio previsto para contar falta (de 16 min a 8 h).
         $values['absence_after_minutes'] = (string) reobote_int($body, 'absenceAfterMinutes', 16, 480, 60, 'Falta após');
+    }
+    if (array_key_exists('lateAbsenceHours', $body)) {
+        // Horas de atraso para o dia contar como falta (de 1 h a 12 h).
+        $values['late_absence_hours'] = (string) reobote_int($body, 'lateAbsenceHours', 1, 12, 5, 'Atraso que conta falta');
     }
     if (array_key_exists('shiftGapHours', $body)) {
         $values['shift_gap_hours'] = (string) reobote_int($body, 'shiftGapHours', 4, 24, 16, 'Intervalo entre turnos');
