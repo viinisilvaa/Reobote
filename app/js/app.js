@@ -62,6 +62,7 @@
   let scanner = null;          // câmera aberta pelo leitor de QR Code
   let historyRange = 7;        // período do histórico: 7 (dias), "month" (um mês), 365 (1 ano) ou "custom"
   let historyMonth = null;     // mês escolhido no período "month" (AAAA-MM)
+  let noticeLimit = 5;         // quantas notificações aparecem (5 por vez; "Ver mais" mostra outras 5)
   let customRange = { from: null, to: null };
   let openDay = null;          // dia aberto (detalhes) no histórico
   let photoInMemory = null;    // foto grande demais para guardar no celular
@@ -571,13 +572,13 @@
   // Etiqueta de cada dia do histórico: Normal, Atraso, Hora Extra, Falta, Folga...
   function dayBadge(day) {
     if (day.status === "absent") return ["bad", "fa-circle-xmark", "Falta"];
-    if (day.status === "justified") return ["info", "fa-comment-medical", "Justificada"]; // falta justificada pela Central
+    if (day.status === "justified") return ["info", "fa-comment-medical", day.justification?.kindLabel || "Falta justificada"]; // pela Central
     if (day.status === "in_progress") return ["info", "fa-clock", "Em andamento"];
     if (day.status === "holiday") return ["neutral", "fa-umbrella-beach", "Feriado"];
     if (day.status === "off") return ["neutral", "fa-mug-saucer", "Folga"];
     if (day.status === "not_arrived") return ["warn", "fa-hourglass-half", "Não iniciado"];
     if (day.status === "scheduled") return ["neutral", "fa-calendar", "Previsto"];
-    if (day.lateMinutes > 0 && day.justification) return ["info", "fa-comment-medical", "Atraso justificado"]; // não é descontado
+    if (day.justification) return ["info", "fa-comment-medical", day.justification.kindLabel]; // não é descontado
     if (day.lateMinutes > 0) return ["warn", "fa-clock", "Atraso"];
     if (day.overtimeMinutes > 0) return ["extra", "fa-star", "Hora Extra"];
     return ["good", "fa-circle-check", "Normal"];
@@ -610,6 +611,7 @@
           ${open ? `<div class="m-day-detail">
             <p>Trabalhadas <strong>${duration(day.workedMinutes)}</strong> • Almoço <strong>${duration(day.breakMinutes)}</strong>${day.lateMinutes ? ` • Atraso <strong class="bad">${duration(day.lateMinutes)}</strong>` : ""}${day.overtimeMinutes ? ` • Extra <strong class="good">${duration(day.overtimeMinutes)}</strong>` : ""}</p>
             ${day.events.length ? `<ul>${day.events.map(event => `<li><i class="fa-solid ${EVENT_ICONS[event.eventType] || "fa-clock"}"></i> ${time(event.occurredAt)} • ${esc(event.label)}${event.place ? ` • ${esc(event.place)}` : ""}</li>`).join("")}</ul>` : `<p>${day.holiday ? esc(day.holiday) : "Nenhum registro neste dia."}</p>`}
+            ${day.arrivalDelayMinutes ? `<p class="bad">Chegou ${duration(day.arrivalDelayMinutes)} depois do horário: conta como falta${day.justification ? "" : " até a Central justificar"}.</p>` : ""}
             ${day.flags.includes("missing_departure") ? '<p class="bad">Jornada sem encerramento registrado.</p>' : ""}
             ${day.justification ? `<p class="m-justified"><i class="fa-solid fa-comment-medical"></i> ${esc(day.justification.kindLabel)} pela Central: ${esc(day.justification.reason)}${day.justification.hasAttachment ? " • atestado anexado" : ""}. Não é descontado do seu valor ganho.</p>` : ""}
           </div>` : ""}
@@ -756,9 +758,14 @@
     store.rejected.forEach(item => items.push({ tone: "bad", icon: "fa-triangle-exclamation", title: `${EVENT_LABELS[item.type === "scan" ? (item.qr?.startsWith("REOBOTE:V") ? "vehicle_checkin" : "unit_checkin") : item.type]} recusado`, text: item.error, at: item.occurredAt }));
     predicted().pendingEvents.slice().reverse().forEach(event => items.push({ tone: "warn", icon: "fa-cloud-arrow-up", title: event.label, text: "Guardado no celular, aguardando envio à Central.", at: event.occurredAt }));
     (store.today?.shiftEvents || []).slice().reverse().forEach(event => items.push({ tone: "good", icon: EVENT_ICONS[event.eventType] || "fa-circle-check", title: event.label, text: `Enviado à Central${event.place ? ` • ${event.place}` : ""}`, at: event.occurredAt }));
+    // Uma lista só, da mais recente para a mais antiga (recusas, pendentes e enviados misturados pelo horário).
+    items.sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+    const visible = items.slice(0, noticeLimit);
+    const hidden = items.length - visible.length;
     return `<header class="m-page-header"><span></span><h1>Notificações</h1><span></span></header>
-      <div class="m-notice-list">${items.map(item => `<article class="m-notice ${item.tone}"><i class="fa-solid ${item.icon}"></i>
+      <div class="m-notice-list">${visible.map(item => `<article class="m-notice ${item.tone}"><i class="fa-solid ${item.icon}"></i>
         <span><strong>${esc(item.title)}</strong><small>${esc(item.text)}</small></span><time>${dateTime(item.at)}</time></article>`).join("") || '<p class="m-empty"><i class="fa-solid fa-bell-slash"></i><br>Nenhuma notificação hoje.</p>'}</div>
+      ${hidden > 0 ? `<button type="button" class="m-button ghost m-more-button" data-action="more-notices"><i class="fa-solid fa-plus"></i> Ver mais (${hidden})</button>` : ""}
       ${store.rejected.length ? '<button type="button" class="m-button ghost small" data-action="clear-rejected">Limpar avisos de recusa</button><p class="m-hint">Se algum registro estiver errado, avise a Central para um lançamento manual.</p>' : ""}`;
   }
 
@@ -806,6 +813,7 @@
       return;
     }
     if (next === "history") loadHistory();
+    if (next === "notifications") noticeLimit = 5; // ao abrir, mostra só as 5 mais recentes
     render();
     screen.focus({ preventScroll: true });
     window.scrollTo(0, 0);
@@ -1428,6 +1436,10 @@
       return go("scan");
     }
     if (action === "theme") return setTimeout(render, 0); // o theme.js troca o tema; aqui só redesenha
+    if (action === "more-notices") {
+      noticeLimit += 5;
+      return render();
+    }
     if (action === "clear-rejected") {
       store.rejected = [];
       saveStore();
