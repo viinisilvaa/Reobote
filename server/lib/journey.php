@@ -294,6 +294,9 @@ function reobote_schedule_description(array $schedule): string
 
 // Calculo diario ------------------------------------------------------------------------------
 
+// Atraso a partir do qual o dia conta como falta (5 horas depois do início previsto).
+const REOBOTE_LATE_ABSENCE_MINUTES = 300;
+
 // Calcula cada dia do intervalo para um colaborador, incluindo faltas e dias sem registro.
 function reobote_journey(PDO $db, array $employee, string $from, string $to, ?DateTimeImmutable $now = null): array
 {
@@ -346,6 +349,7 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
         $overtime = 0;
         $status = 'off';
         $flags = [];
+        $arrivalDelay = 0; // minutos depois do horário quando o atraso virou falta (5 h ou mais)
         foreach ($dayShifts as $shift) {
             $flags = array_merge($flags, $shift['flags']);
         }
@@ -358,6 +362,15 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
                 $late = $delay > $tolerance ? $delay : 0;
                 $extra = $worked - $expected;
                 $overtime = !$ongoing && $extra > $tolerance ? $extra : 0;
+                // Chegou 5 horas ou mais depois do horário: o dia conta como FALTA (não como atraso),
+                // até a Central justificar (ex.: foi ao médico ou fazer um exame).
+                if ($late >= REOBOTE_LATE_ABSENCE_MINUTES) {
+                    $flags[] = 'late_absence';
+                    $arrivalDelay = $late;
+                    $late = 0;
+                    $overtime = 0;
+                    $status = isset($justifications[$date]) ? 'justified' : 'absent';
+                }
             } elseif ($schedule === null || (int) $schedule['off_day_overtime'] === 1) {
                 $overtime = $ongoing ? 0 : $worked;
             }
@@ -407,6 +420,7 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
             'workedMinutes' => $worked,
             'breakMinutes' => $breaks,
             'lateMinutes' => $late,
+            'arrivalDelayMinutes' => $arrivalDelay, // > 0: chegou tão tarde que o dia conta como falta
             'overtimeMinutes' => $overtime,
             'flags' => array_values(array_unique($flags)),
             'justification' => $justifications[$date] ?? null, // { kind, kindLabel, reason, hasAttachment, author, createdAt }
