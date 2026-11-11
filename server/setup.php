@@ -453,6 +453,10 @@ try {
     exit(1);
 }
 
+// Identificador desta instalação do banco (o aplicativo usa para saber que o banco foi zerado).
+$pdo->prepare("INSERT INTO settings (name, value) VALUES ('install_id', ?) ON DUPLICATE KEY UPDATE value = IF(value = '', VALUES(value), value)")
+    ->execute([bin2hex(random_bytes(8))]);
+
 $storage = __DIR__ . '/storage/photos';
 if (!is_dir($storage) && !mkdir($storage, 0750, true) && !is_dir($storage)) {
     fwrite(STDERR, "Nao foi possivel criar $storage. Crie a pasta manualmente com permissao de escrita para o PHP.\n");
