@@ -226,24 +226,26 @@ function reobote_record_event(PDO $db, array $employee, string $type, DateTimeIm
     return ['status' => 'recorded', 'eventId' => $eventId, 'distanceM' => $distance, 'place' => $event['unitName'] ?? $event['qrLabel']];
 }
 
-// Fotos de identificacao: armazenadas fora da pasta publica e entregues somente a quem pode ver o colaborador.
-function reobote_photo_dir(): string
+// Fotos de identificacao (storage/photos) e de atestados (storage/atestados): armazenadas fora da pasta
+// publica e entregues somente a quem pode ver o colaborador.
+function reobote_photo_dir(string $folder = 'photos'): string
 {
-    $dir = __DIR__ . '/../storage/photos';
+    $dir = __DIR__ . '/../storage/' . $folder;
     if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
         throw new RuntimeException('Não foi possível criar a pasta de fotos.');
     }
     return realpath($dir);
 }
 
-// Valida e grava a foto enviada (JPG, PNG ou WEBP, até 5 MB) com nome aleatório; devolve o nome do arquivo.
-function reobote_store_photo(array $file): string
+// Valida e grava a foto enviada (JPG, PNG ou WEBP) com nome aleatório; devolve o nome do arquivo.
+// Foto de identificação: até 5 MB, reduzida para 600 px. Atestado: até 10 MB, até 1800 px (legível).
+function reobote_store_photo(array $file, string $folder = 'photos', int $maxSide = 600, int $maxMb = 5): string
 {
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
         reobote_fail('Envie uma imagem válida.');
     }
-    if ($file['size'] > 5 * 1024 * 1024) {
-        reobote_fail('A foto deve ter no máximo 5 MB.');
+    if ($file['size'] > $maxMb * 1024 * 1024) {
+        reobote_fail("A foto deve ter no máximo $maxMb MB.");
     }
     $info = @getimagesize($file['tmp_name']);
     $types = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
@@ -251,7 +253,7 @@ function reobote_store_photo(array $file): string
         reobote_fail('A foto deve estar em JPG, PNG ou WEBP.');
     }
     $name = bin2hex(random_bytes(12));
-    $dir = reobote_photo_dir();
+    $dir = reobote_photo_dir($folder);
 
     // Com a extensao GD, a imagem e redimensionada e regravada, descartando metadados (como localizacao da camera).
     if (function_exists('imagecreatefromstring') && function_exists('imagejpeg')) {
@@ -259,7 +261,7 @@ function reobote_store_photo(array $file): string
         if ($source !== false) {
             $width = imagesx($source);
             $height = imagesy($source);
-            $scale = min(1, 600 / max($width, $height));
+            $scale = min(1, $maxSide / max($width, $height));
             $target = imagecreatetruecolor(max(1, (int) round($width * $scale)), max(1, (int) round($height * $scale)));
             imagefill($target, 0, 0, imagecolorallocate($target, 255, 255, 255));
             imagecopyresampled($target, $source, 0, 0, 0, 0, imagesx($target), imagesy($target), $width, $height);
@@ -275,10 +277,10 @@ function reobote_store_photo(array $file): string
 }
 
 // Apaga do disco a foto anterior do colaborador (somente nomes gerados pelo sistema).
-function reobote_delete_photo(?string $fileName): void
+function reobote_delete_photo(?string $fileName, string $folder = 'photos'): void
 {
     if ($fileName && preg_match('/^[a-f0-9]{24}\.(jpg|png|webp)$/', $fileName)) {
-        $path = reobote_photo_dir() . '/' . $fileName;
+        $path = reobote_photo_dir($folder) . '/' . $fileName;
         if (is_file($path)) {
             unlink($path);
         }
