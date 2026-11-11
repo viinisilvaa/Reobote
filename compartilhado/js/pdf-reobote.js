@@ -11,6 +11,7 @@
  *   pdf.cards([["Faltas", "1", "bad"], ...]);   // totais em cartões
  *   pdf.table({ head: [...], body: [...] });
  *   pdf.earnings(pay);                    // quadro do valor ganho (salário)
+ *   pdf.attachment("Atestado • 05/11", { dataUrl, width, height });  // foto anexada numa página
  *   pdf.signatures("Nome do colaborador");
  *   pdf.save("arquivo.pdf");   // no APK, abre a janela do Android para salvar ou enviar o arquivo
  */
@@ -213,6 +214,29 @@
           }
         });
         this.note(`Horas extras pagas com adicional de ${pay.overtimePercent}%. Faltas e atrasos justificados pela Central são abonados. Valor bruto: não inclui descontos, impostos ou benefícios.`);
+      },
+      // Página de anexo: a foto de um atestado/comprovante, com legenda, ocupando o espaço livre da folha.
+      // image = { dataUrl, width, height } (de preferência JPEG; PNG também funciona).
+      attachment(caption, image) {
+        doc.addPage();
+        header();
+        const top = 24;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(...INK);
+        doc.text(doc.splitTextToSize(caption, PAGE_W - MARGIN * 2).slice(0, 2), MARGIN, top);
+        const boxTop = top + 8;
+        const boxW = PAGE_W - MARGIN * 2;
+        const boxH = PAGE_H - 10 - boxTop;
+        doc.setFillColor(...PANEL);
+        doc.setDrawColor(...LINE);
+        doc.roundedRect(MARGIN, boxTop, boxW, boxH, 2, 2, "FD");
+        const scale = Math.min((boxW - 6) / image.width, (boxH - 6) / image.height);
+        const w = image.width * scale;
+        const h = image.height * scale;
+        const format = /^data:image\/png/.test(image.dataUrl) ? "PNG" : "JPEG";
+        doc.addImage(image.dataUrl, format, MARGIN + (boxW - w) / 2, boxTop + (boxH - h) / 2, w, h);
+        y = PAGE_H;
       },
       // Nova página com o mesmo fundo e cabeçalho.
       newPage(newTitle, newSubtitle) {
