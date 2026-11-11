@@ -198,12 +198,12 @@ window.ReobotePage = {
       load();
     });
     // PDF do relatório -----------------------------------------------------------------------------
-    // Usa o visual padrão dos PDFs do REOBOTE (js/pdf-reobote.js): resumo geral em cartões, uma linha por
+    // Usa o visual padrão dos PDFs do REOBOTE (compartilhado/js/pdf-reobote.js): resumo geral em cartões, uma linha por
     // colaborador e, quando um colaborador está selecionado, o espelho de ponto dele com assinaturas.
     async function exportPdf() {
       if (!window.ReobotePdf) await new Promise((resolve, reject) => {
         const script = document.createElement("script");
-        script.src = "js/pdf-reobote.js";
+        script.src = "../compartilhado/js/pdf-reobote.js";
         script.onload = resolve;
         script.onerror = () => reject(new Error("gerador de PDF não carregou"));
         document.head.append(script);
@@ -272,7 +272,7 @@ window.ReobotePage = {
         pdf.signatures(person.name);
       }
 
-      pdf.save(`relatorio-reobote-${report.from}-a-${report.to}.pdf`);
+      await pdf.save(`relatorio-reobote-${report.from}-a-${report.to}.pdf`);
       R.toast("PDF baixado.");
     }
 
