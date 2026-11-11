@@ -8,7 +8,7 @@ declare(strict_types=1);
 function api_active_employees(PDO $db, ?string $jobId = null, ?string $unitId = null, ?string $employeeId = null, bool $includeInactive = false): array
 {
     // Só técnicos (perfil Colaborador): Administrador e Gestor não batem ponto e ficam fora do painel, mapa e relatórios.
-    $sql = REOBOTE_EMPLOYEE_SELECT . ($includeInactive ? ' WHERE 1 = 1' : ' WHERE e.active = 1') . " AND (u.role IS NULL OR u.role = 'employee')";
+    $sql = REOBOTE_EMPLOYEE_SELECT . ($includeInactive ? ' WHERE 1 = 1' : ' WHERE e.active = 1') . " AND (u.role IS NULL OR u.role = 'employee') AND e.deleted_at IS NULL";
     $params = [];
     if ($jobId !== null) {
         $sql .= ' AND e.job_id = ?';
@@ -122,7 +122,7 @@ route('GET', '/api/dashboard', static function (PDO $db): void {
          LEFT JOIN jobs j ON j.id = e.job_id
          LEFT JOIN units un ON un.id = a.unit_id
          LEFT JOIN qr_codes q ON q.id = a.qr_code_id
-         WHERE a.voided_at IS NULL
+         WHERE a.voided_at IS NULL AND e.deleted_at IS NULL -- colaboradores excluídos não aparecem
          ORDER BY a.occurred_at DESC, a.id DESC LIMIT 12'
     );
     $recent = array_map(static fn ($row) => reobote_event_public(reobote_event_from_row($row)) + [
@@ -150,7 +150,7 @@ route('GET', '/api/map', static function (PDO $db): void {
     foreach ($query->fetchAll() as $row) {
         $locations[(string) $row['employee_id']] = $row;
     }
-    $units = array_map('api_unit_public', $db->query(API_UNIT_SELECT . ' WHERE un.active = 1 ORDER BY un.name')->fetchAll());
+    $units = array_map('api_unit_public', $db->query(API_UNIT_SELECT . ' WHERE un.active = 1 AND un.deleted_at IS NULL ORDER BY un.name')->fetchAll());
     $unitsById = array_column($units, null, 'id');
 
     $team = [];
@@ -210,7 +210,8 @@ function api_unread_count(PDO $db, array $user): int
     $query = $db->prepare(
         'SELECT COUNT(*) FROM notifications n
          LEFT JOIN notification_reads r ON r.notification_id = n.id AND r.user_id = ?
-         WHERE r.user_id IS NULL AND n.created_at >= UTC_TIMESTAMP() - INTERVAL 30 DAY'
+         LEFT JOIN employees e ON e.id = n.employee_id
+         WHERE r.user_id IS NULL AND n.created_at >= UTC_TIMESTAMP() - INTERVAL 30 DAY AND e.deleted_at IS NULL'
     );
     $query->execute([$user['id']]);
     return (int) $query->fetchColumn();
@@ -255,7 +256,7 @@ route('GET', '/api/notifications', static function (PDO $db): void {
             LEFT JOIN employees e ON e.id = n.employee_id
             LEFT JOIN attendance_events ev ON ev.id = n.event_id
             LEFT JOIN units un ON un.id = ev.unit_id
-            WHERE n.created_at >= UTC_TIMESTAMP() - INTERVAL 90 DAY';
+            WHERE n.created_at >= UTC_TIMESTAMP() - INTERVAL 90 DAY AND e.deleted_at IS NULL';
     $params = [$user['id']];
     if ($filter === 'unread') {
         $sql .= ' AND r.user_id IS NULL';
@@ -450,7 +451,7 @@ const API_AUDIT_LABELS = [
     'holiday_saved' => 'Feriado salvo', 'holiday_deleted' => 'Feriado excluído', 'unit_created' => 'Unidade criada', 'unit_updated' => 'Unidade alterada',
     'unit_deleted' => 'Unidade excluída', 'qr_created' => 'QR Code criado', 'qr_updated' => 'QR Code alterado', 'qr_deactivated' => 'QR Code desativado',
     'qr_regenerated' => 'QR Code substituído', 'settings_updated' => 'Configurações alteradas',
-    'location_consent_given' => 'Localização autorizada', 'fake_gps_detected' => 'GPS falso detectado', 'app_diagnostic' => 'Diagnóstico do aplicativo', 'absence_justified' => 'Falta/atraso justificado', 'justification_attachment' => 'Atestado anexado', 'absence_justification_removed' => 'Justificativa removida', 'location_consent_revoked' => 'Localização revogada',
+    'location_consent_given' => 'Localização autorizada', 'fake_gps_detected' => 'GPS falso detectado', 'app_diagnostic' => 'Diagnóstico do aplicativo', 'absence_justified' => 'Falta/atraso justificado', 'justification_attachment' => 'Atestado anexado', 'employee_deleted' => 'Colaborador excluído', 'qr_deleted' => 'QR Code excluído', 'absence_justification_removed' => 'Justificativa removida', 'location_consent_revoked' => 'Localização revogada',
 ];
 
 // Histórico de alterações administrativas (quem fez, o quê e quando).
