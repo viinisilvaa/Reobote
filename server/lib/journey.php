@@ -294,8 +294,12 @@ function reobote_schedule_description(array $schedule): string
 
 // Calculo diario ------------------------------------------------------------------------------
 
-// Atraso a partir do qual o dia conta como falta (5 horas depois do início previsto).
-const REOBOTE_LATE_ABSENCE_MINUTES = 300;
+// Atraso (em minutos) a partir do qual o dia conta como falta. Vem de Configurações ("Chegou atrasado,
+// conta falta após", em horas; padrão 5 h).
+function reobote_late_absence_minutes(): int
+{
+    return 60 * min(12, max(1, (int) (reobote_settings()['late_absence_hours'] ?? 5)));
+}
 
 // Calcula cada dia do intervalo para um colaborador, incluindo faltas e dias sem registro.
 function reobote_journey(PDO $db, array $employee, string $from, string $to, ?DateTimeImmutable $now = null): array
@@ -315,6 +319,7 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
     // Justificativas lancadas pela Central e limite (em minutos) para o dia sem registro virar falta.
     $justifications = reobote_load_justifications($db, (string) $employee['id'], $from, $to);
     $absenceAfter = max(16, (int) (reobote_settings()['absence_after_minutes'] ?? 60));
+    $lateAbsence = reobote_late_absence_minutes(); // atraso que já conta como falta
 
     $byDate = [];
     foreach ($shifts as $shift) {
@@ -349,7 +354,7 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
         $overtime = 0;
         $status = 'off';
         $flags = [];
-        $arrivalDelay = 0; // minutos depois do horário quando o atraso virou falta (5 h ou mais)
+        $arrivalDelay = 0; // minutos depois do horário quando o atraso virou falta
         foreach ($dayShifts as $shift) {
             $flags = array_merge($flags, $shift['flags']);
         }
@@ -362,9 +367,9 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
                 $late = $delay > $tolerance ? $delay : 0;
                 $extra = $worked - $expected;
                 $overtime = !$ongoing && $extra > $tolerance ? $extra : 0;
-                // Chegou 5 horas ou mais depois do horário: o dia conta como FALTA (não como atraso),
+                // Chegou muito depois do horário (5 h por padrão, em Configurações): o dia conta como FALTA (não como atraso),
                 // até a Central justificar (ex.: foi ao médico ou fazer um exame).
-                if ($late >= REOBOTE_LATE_ABSENCE_MINUTES) {
+                if ($late >= $lateAbsence) {
                     $flags[] = 'late_absence';
                     $arrivalDelay = $late;
                     $late = 0;
