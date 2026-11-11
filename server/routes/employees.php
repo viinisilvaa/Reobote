@@ -415,11 +415,62 @@ route('POST', '/api/employees/(\d+)/justifications', static function (PDO $db, s
         reobote_fail('Informe o dia da justificativa.');
     }
     $reason = reobote_str($body, 'reason', 300, true, 'Motivo');
-    $db->prepare('INSERT INTO attendance_justifications (employee_id, day, reason, created_by_user_id) VALUES (?, ?, ?, ?)
-                  ON DUPLICATE KEY UPDATE reason = VALUES(reason), created_by_user_id = VALUES(created_by_user_id), created_at = CURRENT_TIMESTAMP')
-        ->execute([$id, $day, $reason, $user['id']]);
-    reobote_audit($db, $user, 'absence_justified', 'employee', $id, ['date' => $day, 'reason' => $reason, 'name' => $employee['name']]);
+    // Tipo: "absence" (faltou o dia) ou "late" (chegou atrasado).
+    $kind = (string) ($body['kind'] ?? 'absence');
+    if (!in_array($kind, ['absence', 'late'], true)) {
+        reobote_fail('Escolha se a justificativa é de falta ou de atraso.');
+    }
+    $db->prepare('INSERT INTO attendance_justifications (employee_id, day, kind, reason, created_by_user_id) VALUES (?, ?, ?, ?, ?)
+                  ON DUPLICATE KEY UPDATE kind = VALUES(kind), reason = VALUES(reason), created_by_user_id = VALUES(created_by_user_id), created_at = CURRENT_TIMESTAMP')
+        ->execute([$id, $day, $kind, $reason, $user['id']]);
+    reobote_audit($db, $user, 'absence_justified', 'employee', $id, ['date' => $day, 'tipo' => $kind === 'late' ? 'atraso' : 'falta', 'reason' => $reason, 'name' => $employee['name']]);
     reobote_json(['justification' => reobote_load_justifications($db, $id, $day, $day)[$day] ?? null]);
+});
+
+// Nome do arquivo da foto do atestado de uma justificativa (null quando não há).
+function api_justification_attachment(PDO $db, string $employeeId, string $day): ?string
+{
+    $query = $db->prepare('SELECT attachment_path FROM attendance_justifications WHERE employee_id = ? AND day = ?');
+    $query->execute([$employeeId, $day]);
+    $path = $query->fetchColumn();
+    return $path ? (string) $path : null;
+}
+
+// Envia ou troca a foto do atestado/comprovante de uma justificativa (JPG, PNG ou WEBP, até 10 MB).
+route('POST', '/api/employees/(\d+)/justifications/(\d{4}-\d{2}-\d{2})/attachment', static function (PDO $db, string $id, string $day): void {
+    $user = reobote_user();
+    reobote_require($user, 'employees');
+    $employee = reobote_require_employee($db, $id);
+    $query = $db->prepare('SELECT id, attachment_path FROM attendance_justifications WHERE employee_id = ? AND day = ?');
+    $query->execute([$id, $day]);
+    $justification = $query->fetch();
+    if (!$justification) {
+        reobote_fail('Justifique o dia antes de anexar o atestado.', 404);
+    }
+    $fileName = reobote_store_photo($_FILES['attachment'] ?? [], 'atestados', 1800, 10);
+    $db->prepare('UPDATE attendance_justifications SET attachment_path = ? WHERE id = ?')->execute([$fileName, $justification['id']]);
+    reobote_delete_photo($justification['attachment_path'], 'atestados');
+    reobote_audit($db, $user, 'justification_attachment', 'employee', $id, ['date' => $day, 'name' => $employee['name']]);
+    reobote_json(['justification' => reobote_load_justifications($db, $id, $day, $day)[$day] ?? null]);
+});
+
+// Entrega a foto do atestado à Central e ao próprio técnico.
+route('GET', '/api/employees/(\d+)/justifications/(\d{4}-\d{2}-\d{2})/attachment', static function (PDO $db, string $id, string $day): void {
+    $user = reobote_user();
+    if (!reobote_can_view_employee($user, $id)) {
+        reobote_fail('Sem permissão para ver este atestado.', 403);
+    }
+    $fileName = (string) api_justification_attachment($db, $id, $day);
+    $path = preg_match('/^[a-f0-9]{24}\.(jpg|png|webp)$/', $fileName, $match) ? reobote_photo_dir('atestados') . '/' . $fileName : null;
+    if ($path === null || !is_file($path)) {
+        reobote_fail('Atestado não encontrado.', 404);
+    }
+    $types = ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+    header('Content-Type: ' . $types[$match[1]]);
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: private, no-cache');
+    readfile($path);
+    exit;
 });
 
 // Remove a justificativa de um dia (a falta volta a contar).
@@ -427,6 +478,7 @@ route('DELETE', '/api/employees/(\d+)/justifications/(\d{4}-\d{2}-\d{2})', stati
     $user = reobote_user();
     reobote_require($user, 'employees');
     $employee = reobote_require_employee($db, $id);
+    reobote_delete_photo(api_justification_attachment($db, $id, $day), 'atestados');
     $db->prepare('DELETE FROM attendance_justifications WHERE employee_id = ? AND day = ?')->execute([$id, $day]);
     reobote_audit($db, $user, 'absence_justification_removed', 'employee', $id, ['date' => $day, 'name' => $employee['name']]);
     reobote_json(['removed' => true]);
