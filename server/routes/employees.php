@@ -20,6 +20,33 @@ function api_validate_reference(PDO $db, string $table, ?string $id, string $lab
     return $id;
 }
 
+// Converte o salário digitado em centavos: aceita 2500, "2500.50", "2.500,50" ou "R$ 2.500,50".
+// Vazio = sem salário informado.
+function reobote_money_cents($value): ?int
+{
+    if ($value === null || $value === '') {
+        return null;
+    }
+    if (is_int($value) || is_float($value)) {
+        $number = (float) $value;
+    } else {
+        $text = preg_replace('/[^\d,.]/', '', (string) $value);
+        if (str_contains($text, ',')) {
+            $text = str_replace(['.', ','], ['', '.'], $text); // formato brasileiro: 2.500,50
+        } elseif (preg_match('/^\d{1,3}(\.\d{3})+$/', $text)) {
+            $text = str_replace('.', '', $text);               // só milhar: 1.500 = mil e quinhentos
+        }
+        if ($text === '' || !is_numeric($text)) {
+            reobote_fail('Informe o salário em reais, por exemplo 2.500,00.');
+        }
+        $number = (float) $text;
+    }
+    if ($number <= 0 || $number > 1000000) {
+        reobote_fail('Informe um salário entre R$ 0,01 e R$ 1.000.000,00.');
+    }
+    return (int) round($number * 100);
+}
+
 // Valida e normaliza os dados do formulario de colaborador.
 function api_employee_input(PDO $db, array $user, array $body, ?array $current): array
 {
@@ -69,9 +96,12 @@ function api_employee_input(PDO $db, array $user, array $body, ?array $current):
     if ($role !== $currentRole && ($role !== 'employee' || $currentRole !== 'employee') && $user['role'] !== 'admin') {
         reobote_fail('Somente administradores podem alterar perfis de administrador ou gestor.', 403);
     }
+    // Salário mensal (opcional). Quando o campo não vem (ex.: ativar/desativar), mantém o atual.
+    $salary = array_key_exists('salary', $body) ? reobote_money_cents($body['salary']) : ($current['salary_cents'] ?? null);
     return [
         'name' => $name,
         'registration' => $registration,
+        'salary_cents' => $salary === null ? null : (int) $salary,
         'email' => $email,
         'phone' => $phone,
         'job_id' => $jobId,
@@ -150,8 +180,8 @@ route('POST', '/api/employees', static function (PDO $db): void {
 
     $db->beginTransaction();
     try {
-        $db->prepare('INSERT INTO employees (name, registration, email, phone, job_id, schedule_id, unit_id, active, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, \'Offline\')')
-            ->execute([$data['name'], $data['registration'], $data['email'], $data['phone'], $data['job_id'], $data['schedule_id'], $data['unit_id'], $data['active'] ? 1 : 0]);
+        $db->prepare('INSERT INTO employees (name, registration, email, phone, job_id, schedule_id, unit_id, salary_cents, active, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, \'Offline\')')
+            ->execute([$data['name'], $data['registration'], $data['email'], $data['phone'], $data['job_id'], $data['schedule_id'], $data['unit_id'], $data['salary_cents'], $data['active'] ? 1 : 0]);
         $employeeId = (string) $db->lastInsertId();
         $db->prepare('INSERT INTO users (employee_id, email, password_hash, role, active, must_change_password) VALUES (?, ?, ?, ?, 1, 1)')
             ->execute([$employeeId, $data['email'], password_hash($password, PASSWORD_DEFAULT), $data['role']]);
@@ -190,15 +220,15 @@ route('PUT', '/api/employees/(\d+)', static function (PDO $db, string $id): void
     }
     $db->beginTransaction();
     try {
-        $db->prepare('UPDATE employees SET name = ?, registration = ?, email = ?, phone = ?, job_id = ?, schedule_id = ?, unit_id = ?, active = ? WHERE id = ?')
-            ->execute([$data['name'], $data['registration'], $data['email'], $data['phone'], $data['job_id'], $data['schedule_id'], $data['unit_id'], $data['active'] ? 1 : 0, $id]);
+        $db->prepare('UPDATE employees SET name = ?, registration = ?, email = ?, phone = ?, job_id = ?, schedule_id = ?, unit_id = ?, salary_cents = ?, active = ? WHERE id = ?')
+            ->execute([$data['name'], $data['registration'], $data['email'], $data['phone'], $data['job_id'], $data['schedule_id'], $data['unit_id'], $data['salary_cents'], $data['active'] ? 1 : 0, $id]);
         if ($current['user_id'] !== null) {
             $db->prepare('UPDATE users SET email = ?, role = ?, active = ? WHERE id = ?')
                 ->execute([$data['email'], $data['role'], $data['active'] ? 1 : 0, $current['user_id']]);
         }
         api_record_assignment($db, $user, $id, $data['job_id'], $data['schedule_id']);
         $changes = [];
-        foreach (['name', 'email', 'phone', 'job_id', 'schedule_id', 'unit_id', 'role', 'active'] as $field) {
+        foreach (['name', 'email', 'phone', 'job_id', 'schedule_id', 'unit_id', 'salary_cents', 'role', 'active'] as $field) {
             $before = $current[$field] ?? null;
             $after = $data[$field];
             if ((string) ($before ?? '') !== (string) (is_bool($after) ? (int) $after : ($after ?? ''))) {
@@ -308,10 +338,12 @@ route('GET', '/api/employees/(\d+)/profile', static function (PDO $db, string $i
         'latitude' => (float) $l['latitude'], 'longitude' => (float) $l['longitude'],
         'accuracyM' => $l['accuracy_m'] === null ? null : (float) $l['accuracy_m'], 'recordedAt' => reobote_iso($l['recorded_at']),
     ], $query->fetchAll());
+    $journey = reobote_journey($db, $row, $from, $to);
     reobote_json([
         'employee' => reobote_employee_public($db, $row, $states[$id]),
         'jobs' => $jobs,
-        'journey' => reobote_journey($db, $row, $from, $to),
+        'journey' => $journey,
+        'pay' => reobote_journey_pay($db, $row, $journey, $from, $to), // valor ganho no período (null sem salário)
         'from' => $from,
         'to' => $to,
         'locations' => $locations,
