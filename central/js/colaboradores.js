@@ -42,7 +42,8 @@ window.ReobotePage = {
           <a class="icon-button" href="perfil-colaborador.html?id=${encodeURIComponent(person.id)}" aria-label="Ver perfil de ${esc(person.name)}" title="Ver perfil"><i class="fa-solid fa-id-card"></i></a>
           ${R.has("employees") ? `<button type="button" class="icon-button" data-action="edit" data-id="${esc(person.id)}" aria-label="Editar ${esc(person.name)}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
           <button type="button" class="icon-button" data-action="reset" data-id="${esc(person.id)}" aria-label="Gerar senha temporária para ${esc(person.name)}" title="Gerar senha temporária"><i class="fa-solid fa-key"></i></button>
-          <button type="button" class="icon-button ${person.active ? "danger" : ""}" data-action="toggle" data-id="${esc(person.id)}" aria-label="${person.active ? "Desativar" : "Reativar"} ${esc(person.name)}" title="${person.active ? "Desativar cadastro" : "Reativar cadastro"}"><i class="fa-solid ${person.active ? "fa-user-slash" : "fa-user-check"}"></i></button>` : ""}
+          <button type="button" class="icon-button ${person.active ? "danger" : ""}" data-action="toggle" data-id="${esc(person.id)}" aria-label="${person.active ? "Desativar" : "Reativar"} ${esc(person.name)}" title="${person.active ? "Desativar cadastro" : "Reativar cadastro"}"><i class="fa-solid ${person.active ? "fa-user-slash" : "fa-user-check"}"></i></button>
+          ${person.id !== R.user.employeeId ? `<button type="button" class="icon-button danger" data-action="delete" data-id="${esc(person.id)}" aria-label="Excluir ${esc(person.name)}" title="Excluir colaborador"><i class="fa-solid fa-trash-can"></i></button>` : ""}` : ""}
         </td></tr>`).join("") || `<tr><td colspan="6">${R.emptyState("fa-users", employees.length ? "Nenhum colaborador corresponde aos filtros." : "Nenhum colaborador cadastrado.", "", R.has("employees") && !employees.length ? '<button type="button" class="button-primary" data-action="new"><i class="fa-solid fa-user-plus"></i> Cadastrar o primeiro</button>' : "")}</td></tr>`;
     }
 
@@ -155,6 +156,18 @@ window.ReobotePage = {
           if (!(await R.confirm({ title: "Gerar nova senha temporária?", message: `A senha atual de ${person.name} deixará de funcionar. No próximo acesso será obrigatório criar uma senha definitiva.`, confirmLabel: "Gerar senha" }))) return;
           const { temporaryPassword } = await api.post(`/api/employees/${person.id}/reset-password`, {});
           await R.showTemporaryPassword(person.name, person.email, temporaryPassword);
+          load();
+        }
+        // Excluir: some da lista, do painel, do mapa e dos relatórios, e perde o acesso na hora.
+        // Os registros de ponto continuam guardados no banco (a lei exige), mas não aparecem mais.
+        if (action === "delete" && person) {
+          if (!(await R.confirm({
+            title: "Excluir colaborador?",
+            message: `${person.name} sairá da lista de colaboradores, do painel, do mapa e dos relatórios, e perderá o acesso ao aplicativo na hora. Os registros de ponto ficam guardados no banco de dados, como exige a lei, mas não aparecem mais. Esta ação não pode ser desfeita pela Central.`,
+            confirmLabel: "Excluir", danger: true
+          }))) return;
+          await api.del(`/api/employees/${person.id}`);
+          R.toast("Colaborador excluído.");
           load();
         }
         if (action === "toggle" && person) {
