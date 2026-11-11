@@ -610,6 +610,7 @@
             <p>Trabalhadas <strong>${duration(day.workedMinutes)}</strong> • Almoço <strong>${duration(day.breakMinutes)}</strong>${day.lateMinutes ? ` • Atraso <strong class="bad">${duration(day.lateMinutes)}</strong>` : ""}${day.overtimeMinutes ? ` • Extra <strong class="good">${duration(day.overtimeMinutes)}</strong>` : ""}</p>
             ${day.events.length ? `<ul>${day.events.map(event => `<li><i class="fa-solid ${EVENT_ICONS[event.eventType] || "fa-clock"}"></i> ${time(event.occurredAt)} • ${esc(event.label)}${event.place ? ` • ${esc(event.place)}` : ""}</li>`).join("")}</ul>` : `<p>${day.holiday ? esc(day.holiday) : "Nenhum registro neste dia."}</p>`}
             ${day.flags.includes("missing_departure") ? '<p class="bad">Jornada sem encerramento registrado.</p>' : ""}
+            ${day.justification ? `<p class="m-justified"><i class="fa-solid fa-comment-medical"></i> Justificado pela Central: ${esc(day.justification.reason)}</p>` : ""}
           </div>` : ""}
         </article>`;
       }).join("") || '<p class="m-empty">Nenhum registro no período.</p>';
