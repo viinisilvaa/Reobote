@@ -65,6 +65,7 @@ window.ReobotePage = {
           <button type="button" class="button-secondary small-button" data-action="rename" data-id="${esc(code.id)}"><i class="fa-solid fa-pen"></i></button>
           ${code.active ? `<button type="button" class="button-secondary small-button" data-action="regenerate" data-id="${esc(code.id)}" title="Gerar novo código e invalidar o anterior"><i class="fa-solid fa-rotate"></i> Substituir</button>` : ""}
           <button type="button" class="icon-button ${code.active ? "danger" : ""}" data-action="toggle-qr" data-id="${esc(code.id)}" aria-label="${code.active ? "Desativar" : "Reativar"} QR Code"><i class="fa-solid ${code.active ? "fa-ban" : "fa-rotate-left"}"></i></button>
+          <button type="button" class="icon-button danger" data-action="delete-qr" data-id="${esc(code.id)}" aria-label="Excluir QR Code" title="Excluir QR Code"><i class="fa-solid fa-trash-can"></i></button>
         </footer>
       </article>`).join("") || R.emptyState("fa-qrcode", "Nenhum QR Code gerado", "Cadastre unidades ou gere QR Codes para os veículos da empresa.");
     }
@@ -161,7 +162,7 @@ window.ReobotePage = {
         if (action === "new-unit" && await unitForm()) { R.toast("Unidade cadastrada com QR Code."); load(); }
         if (action === "edit-unit" && unit && await unitForm(unit)) { R.toast("Unidade atualizada."); load(); }
         if (action === "delete-unit" && unit) {
-          if (!(await R.confirm({ title: "Excluir unidade?", message: `${unit.name} e seus QR Codes serão removidos. Unidades com registros devem ser desativadas, não excluídas.`, confirmLabel: "Excluir", danger: true }))) return;
+          if (!(await R.confirm({ title: "Excluir unidade?", message: `${unit.name} e os QR Codes dela serão excluídos e param de funcionar na hora. Os colaboradores desta unidade ficam "Sem unidade fixa". Registros de ponto antigos continuam no histórico com o nome da unidade.`, confirmLabel: "Excluir", danger: true }))) return;
           await api.del(`/api/units/${unit.id}`);
           R.toast("Unidade excluída.");
           load();
@@ -186,6 +187,12 @@ window.ReobotePage = {
           if (!(await R.confirm({ title: "Substituir QR Code?", message: `O código atual de “${code.label}” deixará de funcionar imediatamente. Imprima e cole a nova etiqueta no local.`, confirmLabel: "Substituir" }))) return;
           await api.post(`/api/qr-codes/${code.id}/regenerate`, {});
           R.toast("Novo QR Code gerado. Imprima a nova etiqueta.");
+          load();
+        }
+        if (action === "delete-qr" && code) {
+          if (!(await R.confirm({ title: "Excluir QR Code?", message: `“${code.label}” para de funcionar na hora e sai da lista. Registros de ponto antigos continuam no histórico.`, confirmLabel: "Excluir", danger: true }))) return;
+          await api.del(`/api/qr-codes/${code.id}`);
+          R.toast("QR Code excluído.");
           load();
         }
         if (action === "toggle-qr" && code) {
