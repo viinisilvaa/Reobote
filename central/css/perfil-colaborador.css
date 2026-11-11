@@ -149,3 +149,20 @@ html[data-theme="dark"] [data-page="profile"] .earnings-summary .earned { border
 html[data-theme="dark"] [data-page="profile"] .earnings-summary .earned strong,
 html[data-theme="dark"] [data-page="profile"] .profile-earnings .earnings-table td.earned { color:#6fe0a0; }
 html[data-theme="dark"] [data-page="profile"] .earnings-table td small { color:#b9b0cc; }
+
+/* Janela "Justificar falta ou atraso": dois cartões para escolher o tipo e atalhos de motivo. */
+.justify-kinds { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.justify-kind { display:flex; align-items:center; gap:10px; padding:12px; border:2px solid #e5e0f2; border-radius:12px; cursor:pointer; background:#fff; }
+.justify-kind input { accent-color:#5423bd; }
+.justify-kind > i { font-size:20px; color:#5423bd; }
+.justify-kind span { display:flex; flex-direction:column; gap:2px; }
+.justify-kind small { color:#746b87; font-size:11px; }
+.justify-kind:has(input:checked) { border-color:#5423bd; background:#f3eefe; }
+.justify-reasons { margin-top:-4px; }
+.justify-reasons .chip { cursor:pointer; border:1px solid #d9d0f0; }
+[data-page="profile"] .profile-justification .link-button { margin-left:6px; }
+html[data-theme="dark"] .justify-kind { border-color:#3a3152; background:#1d1730; }
+html[data-theme="dark"] .justify-kind:has(input:checked) { border-color:#9c78e0; background:#2a2045; }
+html[data-theme="dark"] .justify-kind > i { color:#b99cf2; }
+html[data-theme="dark"] .justify-kind small { color:#b9b0cc; }
+@media (max-width: 560px) { .justify-kinds { grid-template-columns:1fr; } }
