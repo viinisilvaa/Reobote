@@ -173,7 +173,9 @@ route('GET', '/api/me/history', static function (PDO $db): void {
     $user = reobote_user();
     $employee = api_me_employee($db, $user);
     [$from, $to] = reobote_date_range(367, 30);
-    reobote_json(reobote_journey($db, $employee, $from, $to) + ['from' => $from, 'to' => $to]);
+    $journey = reobote_journey($db, $employee, $from, $to);
+    // Inclui o valor ganho no período, calculado pelo salário que a Central cadastrou.
+    reobote_json($journey + ['from' => $from, 'to' => $to, 'pay' => reobote_journey_pay($db, $employee, $journey, $from, $to)]);
 });
 
 // Consentimento de localizacao (LGPD): somente o proprio colaborador autoriza ou revoga.
