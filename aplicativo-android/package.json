@@ -17,7 +17,7 @@
     "@capacitor/core": "6.2.0",
     "@capacitor/filesystem": "6.0.3",
     "@capacitor/share": "6.0.3",
-    "@capgo/capacitor-updater": "6.53.0"
+    "@capgo/capacitor-updater": "6.2.6"
   },
   "devDependencies": {
     "@capacitor/cli": "6.2.0"
