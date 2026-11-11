@@ -409,7 +409,7 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
             'lateMinutes' => $late,
             'overtimeMinutes' => $overtime,
             'flags' => array_values(array_unique($flags)),
-            'justification' => $justifications[$date] ?? null, // { reason, author, createdAt } quando a Central justificou
+            'justification' => $justifications[$date] ?? null, // { kind, kindLabel, reason, hasAttachment, author, createdAt }
             'firstRecord' => $dayShifts ? $dayShifts[0]['start']->format('Y-m-d\TH:i:s\Z') : null,
             'lastRecord' => $dayShifts ? end($dayShifts)['lastEvent']['at']->format('Y-m-d\TH:i:s\Z') : null,
             'events' => array_map('reobote_event_public', array_merge(...array_map(static fn ($s) => $s['events'], $dayShifts ?: [['events' => []]]))),
@@ -467,10 +467,15 @@ function reobote_journey_pay(PDO $db, array $employee, array $journey, string $f
             $overtime = (int) $day['overtimeMinutes'];
             $item['overtimeMinutes'] += $overtime;
             $item['normalMinutes'] += max(0, (int) $day['workedMinutes'] - $overtime);
-            if ($day['status'] === 'justified') {
-                $item['justifiedMinutes'] += (int) $day['expectedMinutes']; // falta justificada: dia abonado
-            } elseif ($day['justification'] !== null && $day['lateMinutes'] > 0) {
-                $item['justifiedMinutes'] += (int) $day['lateMinutes'];     // atraso justificado: minutos abonados
+            // Justificativas da Central (ex.: atestado médico) não descontam do salário:
+            //   falta justificada  -> paga as horas previstas do dia que não foram trabalhadas;
+            //   atraso justificado -> paga os minutos de atraso.
+            $justification = $day['justification'];
+            if ($justification !== null && $day['workday']) {
+                $normal = max(0, (int) $day['workedMinutes'] - $overtime);
+                $item['justifiedMinutes'] += $justification['kind'] === 'late'
+                    ? (int) $day['lateMinutes']
+                    : max(0, (int) $day['expectedMinutes'] - $normal);
             }
         }
         $item['normalValue'] = (int) round($item['normalMinutes'] * $perMinute);
@@ -507,14 +512,21 @@ function reobote_journey_pay(PDO $db, array $employee, array $journey, string $f
 function reobote_load_justifications(PDO $db, string $employeeId, string $from, string $to): array
 {
     $query = $db->prepare(
-        'SELECT j.day, j.reason, j.created_at, e.name AS author FROM attendance_justifications j
+        'SELECT j.day, j.kind, j.reason, j.attachment_path, j.created_at, e.name AS author FROM attendance_justifications j
          LEFT JOIN users u ON u.id = j.created_by_user_id LEFT JOIN employees e ON e.id = u.employee_id
          WHERE j.employee_id = ? AND j.day BETWEEN ? AND ?'
     );
     $query->execute([$employeeId, $from, $to]);
     $list = [];
     foreach ($query->fetchAll() as $row) {
-        $list[$row['day']] = ['reason' => $row['reason'], 'author' => $row['author'], 'createdAt' => reobote_iso($row['created_at'])];
+        $list[$row['day']] = [
+            'kind' => $row['kind'] === 'late' ? 'late' : 'absence', // falta ou atraso
+            'kindLabel' => $row['kind'] === 'late' ? 'Atraso justificado' : 'Falta justificada',
+            'reason' => $row['reason'],
+            'hasAttachment' => !empty($row['attachment_path']),   // foto do atestado/comprovante
+            'author' => $row['author'],
+            'createdAt' => reobote_iso($row['created_at']),
+        ];
     }
     return $list;
 }
