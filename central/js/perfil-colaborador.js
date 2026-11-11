@@ -80,6 +80,38 @@ window.ReobotePage = {
       return `<div class="table-wrap"><table class="data-table location-stops"><thead><tr><th>Horário</th><th>Local</th><th>Precisão</th><th>Posições</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     }
 
+    // Valor ganho no período: salário cadastrado ÷ horas previstas no mês = valor da hora; extras com
+    // adicional; faltas e atrasos justificados abonados. Calculado pelo servidor (campo "pay").
+    function earningsSection() {
+      const pay = data.pay;
+      if (!pay) {
+        return data.canManage && !data.employee.centralStaff ? `<section class="profile-card profile-section profile-earnings"><h2><i class="fa-solid fa-sack-dollar"></i> Valor ganho no período</h2>
+          <p class="profile-empty">Salário não cadastrado. Informe o salário mensal em <a href="colaboradores.html">Colaboradores</a> › Editar para ver quanto o técnico ganhou.</p></section>` : "";
+      }
+      const part = (minutes, value) => minutes ? `${fmt.duration(minutes)}<small>${money(value)}</small>` : "—";
+      const rows = pay.months.map(item => `<tr>
+          <td><strong>${esc(monthName(item.month))}</strong>${item.partial ? "<small>parcial</small>" : ""}</td>
+          <td>${money(item.hourlyRate)}<small>${fmt.duration(item.expectedMinutes)} ${item.standardDivisor ? "(padrão 220 h)" : "previstas"}</small></td>
+          <td>${part(item.normalMinutes, item.normalValue)}</td>
+          <td>${part(item.overtimeMinutes, item.overtimeValue)}</td>
+          <td>${part(item.justifiedMinutes, item.justifiedValue)}</td>
+          <td class="earned">${money(item.total)}</td></tr>`).join("");
+      return `<section class="profile-card profile-section profile-earnings"><h2><i class="fa-solid fa-sack-dollar"></i> Valor ganho no período</h2>
+        <div class="earnings-summary">
+          <span>Salário mensal<strong>${money(pay.salary)}</strong></span>
+          <span>Horas pagas<strong>${fmt.duration(pay.totals.normalMinutes + pay.totals.overtimeMinutes + pay.totals.justifiedMinutes)}</strong></span>
+          <span class="earned">Valor ganho<strong>${money(pay.totals.total)}</strong></span>
+        </div>
+        <div class="table-wrap"><table class="data-table earnings-table"><thead><tr><th>Mês</th><th>Valor da hora</th><th>Horas normais</th><th>Extras (+${pay.overtimePercent}%)</th><th>Abonadas</th><th>Valor ganho</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <p class="panel-description">Valor da hora = salário ÷ horas previstas no mês. Faltas e atrasos justificados são abonados. Valor bruto, sem descontos, impostos ou benefícios.</p>
+      </section>`;
+    }
+
+    // Valor em reais: 2500 -> "R$ 2.500,00".
+    function money(value) {
+      return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
+    }
+
     // Desenha dados, indicadores do período, histórico de jornada, cargos e localizações.
     function render() {
       const person = data.employee;
@@ -113,6 +145,8 @@ window.ReobotePage = {
           <article class="profile-stat"><span>Trabalhadas</span><strong>${fmt.duration(t.workedMinutes)}</strong></article>
           <article class="profile-stat"><span>Intervalos</span><strong>${fmt.duration(t.breakMinutes)}</strong></article>
         </div>
+
+        ${earningsSection()}
 
         <section class="profile-card profile-section"><h2><i class="fa-solid fa-clock-rotate-left"></i> Histórico de jornada</h2>
           <div class="profile-history">${days.map((day, index) => `${index === 0 || day.date.slice(0, 7) !== days[index - 1].date.slice(0, 7) ? `<h3 class="profile-month">${monthName(day.date.slice(0, 7))}</h3>` : ""}
@@ -177,12 +211,12 @@ window.ReobotePage = {
     }
 
     // PDF do perfil (espelho de ponto) ------------------------------------------------------------
-    // Usa o visual padrão dos PDFs do REOBOTE (js/pdf-reobote.js, carregado no primeiro clique) e baixa
+    // Usa o visual padrão dos PDFs do REOBOTE (compartilhado/js/pdf-reobote.js, carregado no primeiro clique) e baixa
     // o arquivo direto, sem passar pela página de Relatórios.
     async function downloadPdf() {
       if (!window.ReobotePdf) await new Promise((resolve, reject) => {
         const script = document.createElement("script");
-        script.src = "js/pdf-reobote.js";
+        script.src = "../compartilhado/js/pdf-reobote.js";
         script.onload = resolve;
         script.onerror = () => reject(new Error("gerador de PDF não carregou"));
         document.head.append(script);
@@ -200,7 +234,8 @@ window.ReobotePage = {
       });
       pdf.cards([
         ["Dias trabalhados", t.daysWorked], ["Faltas", t.absences, t.absences ? "bad" : ""], ["Atrasos", fmt.duration(t.lateMinutes), t.lateMinutes ? "bad" : ""],
-        ["Horas extras", fmt.duration(t.overtimeMinutes), t.overtimeMinutes ? "good" : ""], ["Trabalhadas", fmt.duration(t.workedMinutes)], ["Intervalos", fmt.duration(t.breakMinutes)]
+        ["Horas extras", fmt.duration(t.overtimeMinutes), t.overtimeMinutes ? "good" : ""], ["Trabalhadas", fmt.duration(t.workedMinutes)], ["Intervalos", fmt.duration(t.breakMinutes)],
+        ...(data.pay ? [["Valor ganho", money(data.pay.totals.total), "good"]] : [])
       ]);
       // Um dia por linha, do mais antigo para o mais recente.
       const days = data.journey.days.filter(day => day.status !== "off" || day.events.length).slice().sort((a, b) => a.date.localeCompare(b.date));
@@ -222,6 +257,8 @@ window.ReobotePage = {
           if (cell.column.index === 7) cell.cell.styles.textColor = [15, 122, 65];
         }
       });
+      // Valor ganho no período (só quando o salário está cadastrado).
+      if (data.pay) pdf.earnings(data.pay);
       // Justificativas lançadas pela Central no período (motivo, quem justificou e quando).
       const justified = days.filter(day => day.justification);
       if (justified.length) {
@@ -235,7 +272,7 @@ window.ReobotePage = {
       }
       pdf.signatures(person.name);
       const slug = person.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      pdf.save(`ponto-${slug}-${period.from}-a-${period.to}.pdf`);
+      await pdf.save(`ponto-${slug}-${period.from}-a-${period.to}.pdf`);
       R.toast("PDF baixado.");
     }
 
