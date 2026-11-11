@@ -409,6 +409,11 @@ $migrations[8] = static function (PDO $pdo): void {
     add_column($pdo, 'users', 'last_seen_at', 'DATETIME NULL AFTER `last_login_at`');
 };
 
+// 9) Salário mensal do técnico (em centavos): base do cálculo do valor ganho no mês.
+$migrations[9] = static function (PDO $pdo): void {
+    add_column($pdo, 'employees', 'salary_cents', 'INT UNSIGNED NULL AFTER `unit_id`');
+};
+
 $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
   version INT UNSIGNED NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
