@@ -250,7 +250,7 @@ window.ReobotePage = {
           head: [["Dia", "Situação", "Entrada", "Saída", "Almoço", "Trabalhadas", "Atraso", "Extra", "Registros"]],
           body: days.map(day => {
             const end = [...day.events].reverse().find(event => event.eventType === "departure");
-            return [fmt.day(day.date), R.dayLabel(day.status) + (day.justification ? `\n(${day.justification.reason})` : ""),
+            return [fmt.day(day.date), (day.justification ? (day.lateMinutes && day.events.length ? "Atraso justificado" : "Falta justificada") : R.dayLabel(day.status)),
               day.events[0] ? fmt.time(day.events[0].occurredAt) : "-", end ? fmt.time(end.occurredAt) : "-",
               day.events.length ? fmt.duration(day.breakMinutes) : "-", day.events.length ? fmt.duration(day.workedMinutes) : "-",
               day.lateMinutes ? fmt.duration(day.lateMinutes) : "-", day.overtimeMinutes ? fmt.duration(day.overtimeMinutes) : "-",
@@ -258,6 +258,17 @@ window.ReobotePage = {
           }),
           columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 30 }, 2: { cellWidth: 15 }, 3: { cellWidth: 15 }, 4: { cellWidth: 15 }, 5: { cellWidth: 22 }, 6: { cellWidth: 15 }, 7: { cellWidth: 15 } }
         });
+        // Justificativas lançadas pela Central no período (motivo, quem justificou e quando).
+        const justified = days.filter(day => day.justification);
+        if (justified.length) {
+          pdf.note("Justificativas registradas pela Central no período:");
+          pdf.table({
+            head: [["Dia", "Ocorrência", "Motivo", "Justificado por", "Em"]],
+            body: justified.map(day => [fmt.day(day.date), day.lateMinutes && day.events.length ? `Atraso de ${fmt.duration(day.lateMinutes)}` : "Falta",
+              day.justification.reason, day.justification.author || "-", day.justification.createdAt ? fmt.dateTime(day.justification.createdAt) : "-"]),
+            columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 32 }, 3: { cellWidth: 40 }, 4: { cellWidth: 34 } }
+          });
+        }
         pdf.signatures(person.name);
       }
 
