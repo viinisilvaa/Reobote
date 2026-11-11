@@ -333,12 +333,12 @@ function api_unit_input(PDO $db, array $body, ?string $id): array
 }
 
 const API_UNIT_SELECT = 'SELECT un.*, (SELECT COUNT(*) FROM employees e WHERE e.unit_id = un.id AND e.active = 1) AS employee_count,
-        (SELECT COUNT(*) FROM qr_codes q WHERE q.unit_id = un.id AND q.active = 1) AS qr_count FROM units un';
+        (SELECT COUNT(*) FROM qr_codes q WHERE q.unit_id = un.id AND q.active = 1 AND q.deleted_at IS NULL) AS qr_count FROM units un';
 
 // Lista as unidades de atendimento.
 route('GET', '/api/units', static function (PDO $db): void {
     api_can_read_catalog(reobote_user());
-    reobote_json(['units' => array_map('api_unit_public', $db->query(API_UNIT_SELECT . ' ORDER BY un.active DESC, un.name')->fetchAll())]);
+    reobote_json(['units' => array_map('api_unit_public', $db->query(API_UNIT_SELECT . ' WHERE un.deleted_at IS NULL ORDER BY un.active DESC, un.name')->fetchAll())]);
 });
 
 // Cria uma unidade e o QR Code de chegada dela.
@@ -373,17 +373,36 @@ route('PUT', '/api/units/(\d+)', static function (PDO $db, string $id): void {
     reobote_json(['unit' => api_unit_public($row)]);
 });
 
-// Exclui uma unidade sem histórico; com histórico, ela deve ser desativada.
+// Exclui a unidade e os QR Codes dela. Sem histórico, apaga de vez; com registros de ponto, some de todas as
+// telas (os QR Codes param de funcionar na hora) e o histórico antigo continua mostrando o nome da unidade.
+// Os colaboradores que trabalhavam nela ficam "Sem unidade fixa".
 route('DELETE', '/api/units/(\d+)', static function (PDO $db, string $id): void {
     $user = reobote_user();
     reobote_require($user, 'units');
-    $query = $db->prepare('SELECT (SELECT COUNT(*) FROM attendance_events WHERE unit_id = ?) + (SELECT COUNT(*) FROM employees WHERE unit_id = ?)');
-    $query->execute([$id, $id]);
-    if ((int) $query->fetchColumn()) {
-        reobote_fail('A unidade possui registros ou colaboradores vinculados. Desative-a para preservar o histórico.');
+    $query = $db->prepare('SELECT name FROM units WHERE id = ? AND deleted_at IS NULL');
+    $query->execute([$id]);
+    $name = $query->fetchColumn();
+    if ($name === false) {
+        reobote_fail('Unidade não encontrada.', 404);
     }
-    $db->prepare('DELETE FROM units WHERE id = ?')->execute([$id]);
-    reobote_audit($db, $user, 'unit_deleted', 'unit', $id);
+    $query = $db->prepare('SELECT COUNT(*) FROM attendance_events WHERE unit_id = ?');
+    $query->execute([$id]);
+    $hasHistory = (int) $query->fetchColumn() > 0;
+    $db->beginTransaction();
+    try {
+        $db->prepare('UPDATE employees SET unit_id = NULL WHERE unit_id = ?')->execute([$id]);
+        if ($hasHistory) {
+            $db->prepare('UPDATE qr_codes SET active = 0, deleted_at = UTC_TIMESTAMP() WHERE unit_id = ?')->execute([$id]);
+            $db->prepare('UPDATE units SET active = 0, deleted_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$id]);
+        } else {
+            $db->prepare('DELETE FROM units WHERE id = ?')->execute([$id]); // os QR Codes saem junto (ON DELETE CASCADE)
+        }
+        reobote_audit($db, $user, 'unit_deleted', 'unit', $id, ['name' => $name]);
+        $db->commit();
+    } catch (Throwable $error) {
+        $db->rollBack();
+        throw $error;
+    }
     reobote_json(['deleted' => true]);
 });
 
@@ -423,7 +442,7 @@ function api_qr_find(PDO $db, string $id): array
 // Lista os QR Codes de veículos e unidades, com o conteúdo a ser impresso.
 route('GET', '/api/qr-codes', static function (PDO $db): void {
     reobote_require(reobote_user(), 'units');
-    reobote_json(['qrCodes' => array_map('api_qr_public', $db->query(API_QR_SELECT . ' ORDER BY q.kind, q.active DESC, q.label')->fetchAll())]);
+    reobote_json(['qrCodes' => array_map('api_qr_public', $db->query(API_QR_SELECT . ' WHERE q.deleted_at IS NULL AND (q.unit_id IS NULL OR u.deleted_at IS NULL) ORDER BY q.kind, q.active DESC, q.label')->fetchAll())]);
 });
 
 // Cria um QR Code de veículo ou um QR Code adicional de unidade (ex.: outra entrada).
@@ -461,6 +480,28 @@ route('PUT', '/api/qr-codes/(\d+)', static function (PDO $db, string $id): void 
 });
 
 // Gera um novo codigo (por exemplo, se a etiqueta foi fotografada ou danificada); o anterior deixa de funcionar.
+// Exclui um QR Code: para de funcionar na hora e some da lista. Se já foi usado em registros de ponto,
+// fica guardado (sem aparecer) para o histórico continuar mostrando o local.
+route('DELETE', '/api/qr-codes/(\d+)', static function (PDO $db, string $id): void {
+    $user = reobote_user();
+    reobote_require($user, 'units');
+    $query = $db->prepare('SELECT label FROM qr_codes WHERE id = ? AND deleted_at IS NULL');
+    $query->execute([$id]);
+    $label = $query->fetchColumn();
+    if ($label === false) {
+        reobote_fail('QR Code não encontrado.', 404);
+    }
+    $query = $db->prepare('SELECT COUNT(*) FROM attendance_events WHERE qr_code_id = ?');
+    $query->execute([$id]);
+    if ((int) $query->fetchColumn() > 0) {
+        $db->prepare('UPDATE qr_codes SET active = 0, deleted_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$id]);
+    } else {
+        $db->prepare('DELETE FROM qr_codes WHERE id = ?')->execute([$id]);
+    }
+    reobote_audit($db, $user, 'qr_deleted', 'qr_code', $id, ['label' => $label]);
+    reobote_json(['deleted' => true]);
+});
+
 route('POST', '/api/qr-codes/(\d+)/regenerate', static function (PDO $db, string $id): void {
     $user = reobote_user();
     reobote_require($user, 'units');
