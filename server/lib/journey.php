@@ -419,6 +419,90 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
     return ['schedule' => reobote_schedule_public($schedule), 'days' => array_reverse($days), 'totals' => $totals];
 }
 
+// Adicional das horas extras sobre o valor da hora (50% = mínimo da CLT).
+const REOBOTE_OVERTIME_PERCENT = 50;
+
+// Valor ganho no período, a partir do salário mensal cadastrado pela Central:
+//   valor da hora  = salário ÷ horas previstas no mês (pela jornada do técnico; sem jornada, 220 h);
+//   horas normais  = trabalhadas - extras, pagas pelo valor da hora;
+//   horas extras   = pagas com o adicional de 50%;
+//   horas abonadas = faltas e atrasos justificados pela Central (pagos como trabalhados).
+// Faltas sem justificativa simplesmente não somam. Não inclui descontos, impostos nem benefícios.
+// Devolve null quando o técnico não tem salário cadastrado.
+function reobote_journey_pay(PDO $db, array $employee, array $journey, string $from, string $to): ?array
+{
+    $salaryCents = (int) ($employee['salary_cents'] ?? 0);
+    if ($salaryCents <= 0 || in_array($employee['role'] ?? '', ['admin', 'dispatcher'], true)) {
+        return null;
+    }
+    $schedule = reobote_employee_schedule($db, $employee);
+    $byMonth = [];
+    foreach ($journey['days'] as $day) {
+        $byMonth[substr($day['date'], 0, 7)][] = $day;
+    }
+    ksort($byMonth);
+    $keys = ['normalMinutes', 'overtimeMinutes', 'justifiedMinutes', 'normalValue', 'overtimeValue', 'justifiedValue', 'total'];
+    $totals = array_fill_keys($keys, 0);
+    $months = [];
+    foreach ($byMonth as $month => $days) {
+        // Horas previstas no mês inteiro (dias de trabalho da jornada, sem feriados).
+        $first = "$month-01";
+        $last = (new DateTimeImmutable($first))->format('Y-m-t');
+        $holidays = reobote_load_holidays($db, $first, $last);
+        $expected = 0;
+        if ($schedule !== null) {
+            for ($cursor = new DateTimeImmutable($first); $cursor->format('Y-m-d') <= $last; $cursor = $cursor->modify('+1 day')) {
+                $date = $cursor->format('Y-m-d');
+                if (!isset($holidays[$date]) && reobote_schedule_is_workday($schedule, $date)) {
+                    $expected += reobote_schedule_expected_minutes($schedule);
+                }
+            }
+        }
+        $standard = $expected <= 0; // sem jornada: divisor padrão de 220 horas
+        $basis = $standard ? 220 * 60 : $expected;
+        $perMinute = $salaryCents / $basis; // centavos por minuto
+
+        $item = array_fill_keys($keys, 0);
+        foreach ($days as $day) {
+            $overtime = (int) $day['overtimeMinutes'];
+            $item['overtimeMinutes'] += $overtime;
+            $item['normalMinutes'] += max(0, (int) $day['workedMinutes'] - $overtime);
+            if ($day['status'] === 'justified') {
+                $item['justifiedMinutes'] += (int) $day['expectedMinutes']; // falta justificada: dia abonado
+            } elseif ($day['justification'] !== null && $day['lateMinutes'] > 0) {
+                $item['justifiedMinutes'] += (int) $day['lateMinutes'];     // atraso justificado: minutos abonados
+            }
+        }
+        $item['normalValue'] = (int) round($item['normalMinutes'] * $perMinute);
+        $item['overtimeValue'] = (int) round($item['overtimeMinutes'] * $perMinute * (1 + REOBOTE_OVERTIME_PERCENT / 100));
+        $item['justifiedValue'] = (int) round($item['justifiedMinutes'] * $perMinute);
+        $item['total'] = $item['normalValue'] + $item['overtimeValue'] + $item['justifiedValue'];
+        foreach ($keys as $key) {
+            $totals[$key] += $item[$key];
+        }
+        $months[] = [
+            'month' => $month,
+            'partial' => $from > $first || $to < $last,   // período não cobre o mês inteiro
+            'expectedMinutes' => $basis,
+            'standardDivisor' => $standard,              // true = 220 h (técnico sem jornada definida)
+            'hourlyRate' => round($salaryCents / $basis * 60 / 100, 2),
+        ] + $item;
+    }
+    // Valores em reais (os cálculos foram feitos em centavos).
+    $toReais = static function (array $row): array {
+        foreach (['normalValue', 'overtimeValue', 'justifiedValue', 'total'] as $key) {
+            $row[$key] = $row[$key] / 100;
+        }
+        return $row;
+    };
+    return [
+        'salary' => $salaryCents / 100,
+        'overtimePercent' => REOBOTE_OVERTIME_PERCENT,
+        'months' => array_map($toReais, $months),
+        'totals' => $toReais($totals),
+    ];
+}
+
 // Justificativas de falta/atraso lancadas pela Central, por dia (AAAA-MM-DD).
 function reobote_load_justifications(PDO $db, string $employeeId, string $from, string $to): array
 {
