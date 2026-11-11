@@ -639,9 +639,87 @@
         <div class="m-stat"><i class="fa-solid fa-calendar-xmark purple"></i><span><small>Faltas</small><strong>${t ? t.absences : "—"}</strong></span></div>
         <div class="m-stat"><i class="fa-solid fa-star amber"></i><span><small>Horas Extras</small><strong>${t ? duration(t.overtimeMinutes) : "—"}</strong></span></div>
       </section>
+      ${earningsCard(history?.pay)}
+      ${history ? `<button type="button" class="m-button ghost m-pdf-button" data-action="history-pdf"><i class="fa-solid fa-file-pdf"></i> Baixar PDF do período</button>` : ""}
       <div class="m-day-list">${list}</div>
       ${history ? `<p class="m-info"><i class="fa-solid fa-circle-info"></i><span><strong>Período selecionado: ${esc(rangeText)}</strong>Total de registros: ${records}${!navigator.onLine ? " • sem internet, exibindo o último histórico baixado" : ""}</span></p>` : ""}
     </section>`;
+  }
+
+  // Valor em reais: 2500 -> "R$ 2.500,00".
+  const money = value => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
+
+  // Meu Histórico: quanto o técnico ganhou no período, pelo salário cadastrado na Central
+  // (valor da hora = salário ÷ horas previstas no mês; extras com adicional; justificativas abonadas).
+  function earningsCard(pay) {
+    if (!pay) return "";
+    const t = pay.totals;
+    const rate = pay.months[pay.months.length - 1];
+    const line = (label, minutes, value) => minutes ? `<li><span>${label} <small>${duration(minutes)}</small></span><strong>${money(value)}</strong></li>` : "";
+    return `<section class="m-earnings">
+      <header><i class="fa-solid fa-sack-dollar"></i><span><small>Valor ganho no período</small><strong>${money(t.total)}</strong></span></header>
+      <ul>
+        ${line("Horas normais", t.normalMinutes, t.normalValue)}
+        ${line(`Horas extras (+${pay.overtimePercent}%)`, t.overtimeMinutes, t.overtimeValue)}
+        ${line("Abonadas pela Central", t.justifiedMinutes, t.justifiedValue)}
+      </ul>
+      <p>Salário ${money(pay.salary)} • valor da hora ${money(rate.hourlyRate)}. Valor bruto, sem descontos.</p>
+    </section>`;
+  }
+
+  // PDF do período escolhido no Meu Histórico (mesmo visual dos PDFs da Central).
+  // No APK, o Android abre a janela para salvar o arquivo ou enviar pelo WhatsApp/e-mail.
+  async function downloadHistoryPdf() {
+    const history = store.history;
+    if (!history) return;
+    if (!window.ReobotePdf) await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "../compartilhado/js/pdf-reobote.js";
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("gerador de PDF não carregou"));
+      document.head.append(script);
+    });
+    const employee = store.today?.employee;
+    const name = employee?.name || session.user.name;
+    const t = history.totals;
+    const brDate = iso => iso.split("-").reverse().join("/");
+    const hm = value => value ? time(value) : "-";
+    const pdf = await window.ReobotePdf.create({
+      title: "Meu histórico de ponto",
+      company: session.company.name,
+      generated: `Gerado em ${new Date().toLocaleString("pt-BR")}`,
+      subtitle: [name, [`Matrícula ${registration()}`, employee?.job, employee?.unit].filter(Boolean).join("   •   "), `Período: ${brDate(history.from)} a ${brDate(history.to)}`]
+    });
+    pdf.cards([
+      ["Dias trabalhados", t.daysWorked], ["Faltas", t.absences, t.absences ? "bad" : ""], ["Atrasos", duration(t.lateMinutes), t.lateMinutes ? "bad" : ""],
+      ["Horas extras", duration(t.overtimeMinutes), t.overtimeMinutes ? "good" : ""], ["Trabalhadas", duration(t.workedMinutes)],
+      ...(history.pay ? [["Valor ganho", money(history.pay.totals.total), "good"]] : [])
+    ]);
+    const days = history.days.filter(day => day.status !== "off" || day.events.length).slice().sort((a, b) => a.date.localeCompare(b.date));
+    pdf.table({
+      head: [["Dia", "Situação", "Entrada", "Saída", "Almoço", "Trabalhadas", "Atraso", "Extra", "Registros"]],
+      body: days.length ? days.map(day => {
+        const end = [...day.events].reverse().find(event => event.eventType === "departure");
+        return [dayLabel(day.date), day.justification ? (day.lateMinutes && day.events.length ? "Atraso justificado" : "Falta justificada") : dayBadge(day)[2],
+          hm(day.events[0]?.occurredAt), hm(end?.occurredAt), day.events.length ? duration(day.breakMinutes) : "-", day.events.length ? duration(day.workedMinutes) : "-",
+          day.lateMinutes ? duration(day.lateMinutes) : "-", day.overtimeMinutes ? duration(day.overtimeMinutes) : "-",
+          day.events.map(event => `${hm(event.occurredAt)}  ${event.label}${event.place ? ` - ${event.place}` : ""}`).join("\n") || "-"];
+      }) : [["Nenhum registro no período.", "", "", "", "", "", "", "", ""]],
+      columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 30 }, 2: { cellWidth: 15 }, 3: { cellWidth: 15 }, 4: { cellWidth: 15 }, 5: { cellWidth: 22 }, 6: { cellWidth: 15 }, 7: { cellWidth: 15 } }
+    });
+    if (history.pay) pdf.earnings(history.pay);
+    const justified = days.filter(day => day.justification);
+    if (justified.length) {
+      pdf.note("Justificativas registradas pela Central no período:");
+      pdf.table({
+        head: [["Dia", "Ocorrência", "Motivo"]],
+        body: justified.map(day => [dayLabel(day.date), day.lateMinutes && day.events.length ? `Atraso de ${duration(day.lateMinutes)}` : "Falta", day.justification.reason]),
+        columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 36 } }
+      });
+    }
+    pdf.signatures(name);
+    await pdf.save(`meu-ponto-${history.from}-a-${history.to}.pdf`);
+    toast("PDF pronto.");
   }
 
   // Perfil: dados do colaborador, jornada prevista e aviso sobre a localização durante a jornada.
@@ -698,6 +776,8 @@
         ${session.company.email ? `<div><i class="fa-solid fa-envelope"></i><span><small>E-mail</small><strong>${esc(session.company.email)}</strong></span></div>` : ""}
       </section>
       <p class="m-hint">Versão do aplicativo: <strong>${esc(window.REOBOTE_VERSAO || "web")}</strong></p>
+      ${appUpdate?.ready ? `<button type="button" class="m-button primary" data-action="apply-update"><i class="fa-solid fa-rotate"></i> Usar a versão ${esc(appUpdate.version)} agora</button>` : ""}
+      ${appUpdate?.needsApk ? `<p class="m-info"><i class="fa-solid fa-circle-info"></i><span><strong>Versão ${esc(appUpdate.version)} disponível</strong>Esta atualização precisa do APK novo. Peça o link à Central ou baixe em github.com/viinisilvaa/Reobote.</span></p>` : ""}
       <p class="m-hint">Registros feitos sem internet ficam guardados neste celular até serem enviados. Não desinstale o aplicativo nem limpe os dados dele com registros pendentes.</p>
       <button type="button" class="m-button danger" data-action="logout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</button>`;
   }
@@ -1284,6 +1364,22 @@
       deferredInstall = null;
       return;
     }
+    // Tela Mais: aplicar a atualização já baixada (o app recarrega com as telas novas).
+    if (event.target.closest('[data-action="apply-update"]') && appUpdate?.id) {
+      if (store?.queue?.length) toast("Registros pendentes continuam guardados e serão enviados depois.");
+      Updater.set({ id: appUpdate.id }).catch(error => toast(`Não foi possível atualizar: ${error.message}`, "error"));
+      return;
+    }
+    // Histórico: baixar o PDF do período.
+    if (event.target.closest('[data-action="history-pdf"]')) {
+      if (!navigator.onLine && !window.ReobotePdf && !isNative) {
+        toast("Conecte-se à internet para gerar o PDF.", "error");
+        return;
+      }
+      toast("Gerando o PDF...");
+      downloadHistoryPdf().catch(error => toast(`Não foi possível gerar o PDF: ${error.message}`, "error"));
+      return;
+    }
     // Histórico: troca de período e abertura dos detalhes de um dia.
     const range = event.target.closest("[data-range]");
     if (range) {
@@ -1443,8 +1539,47 @@
     if (tab === "more") render();
   });
 
-  // Inicialização -----------------------------------------------------------------------------
+  // Atualização automática (só no APK) ---------------------------------------------------------
+  // A cada geração do APK, o GitHub publica também as telas do app num zip (atualizacao.zip) e a
+  // descrição da versão (atualizacao.json). Ao abrir, o app confere a versão: se houver uma mais nova
+  // do mesmo "nível nativo", baixa o zip em segundo plano e passa a usar as telas novas na próxima vez
+  // que for aberto (ou na hora, pelo botão da tela Mais). Sem internet, continua com a versão atual.
+  // Quando a novidade exige um APK novo (plugins/permissões), mostra o aviso para baixar o APK.
+  const Updater = isNative ? window.Capacitor?.registerPlugin?.("CapacitorUpdater") : null;
+  let appUpdate = null; // { ready: true, version, id } ou { needsApk: true, version }
 
+  // "1.0.57" -> 57 (número da geração no GitHub).
+  const buildNumber = version => Number(String(version || "").split(".").pop()) || 0;
+
+  async function checkAppUpdate() {
+    if (!Updater) return;
+    // Confirma que esta versão abriu bem (sem isso, o atualizador volta para a versão anterior).
+    await Updater.notifyAppReady().catch(() => {});
+    const url = window.REOBOTE_CONFIG?.atualizacao;
+    if (!url || !navigator.onLine) return;
+    try {
+      const response = await fetch(`${url}?t=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const info = await response.json();
+      if (!info?.version || !info.url || buildNumber(info.version) <= buildNumber(window.REOBOTE_VERSAO)) return;
+      if (Number(info.nativo) !== Number(window.REOBOTE_NATIVO || 1)) {
+        appUpdate = { needsApk: true, version: info.version }; // precisa instalar o APK novo
+      } else {
+        // Já baixada antes? Só marca para usar. Senão, baixa agora (em segundo plano).
+        const { bundles = [] } = await Updater.list().catch(() => ({}));
+        const bundle = bundles.find(item => item.version === info.version && item.status === "success")
+          || await Updater.download({ url: info.url, version: info.version });
+        await Updater.next({ id: bundle.id });
+        appUpdate = { ready: true, version: info.version, id: bundle.id };
+        toast("Nova versão do aplicativo baixada. Ela entra na próxima vez que o app for aberto.");
+      }
+      if (tab === "more") render();
+    } catch {
+      /* sem internet ou GitHub fora do ar: tenta de novo na próxima abertura */
+    }
+  }
+
+  // Inicialização -----------------------------------------------------------------------------
   async function start() {
     // No navegador, o service worker guarda as telas para abrir sem internet.
     // No APK isso não é necessário: os arquivos já estão dentro do aplicativo.
@@ -1452,6 +1587,7 @@
       navigator.serviceWorker.register("/app/sw.js", { scope: "/app/" }).catch(() => {});
     }
     if (isNative) {
+      checkAppUpdate(); // em paralelo: não atrasa a abertura do app
       await discoverServer(); // endereço atual publicado no GitHub
       await chooseServer();   // usa o primeiro endereço que responder (GitHub ou o embutido no APK)
       if (!api.baseUrl) return showLogin();
