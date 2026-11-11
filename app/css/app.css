@@ -327,3 +327,20 @@ html[data-theme="dark"] .m-month-title { color: #c9a8ff; }
 /* Meu Histórico: justificativa da Central no detalhe do dia. */
 .m-justified { margin: 6px 0 0; padding: 8px 10px; border-radius: 10px; background: #e2eeff; color: #1f5fb8 !important; font-weight: 600; }
 html[data-theme="dark"] .m-justified { background: #182c4a; color: #9cc6ff !important; }
+
+/* Meu Histórico: valor ganho no período (salário cadastrado pela Central) e botão do PDF. */
+.m-earnings { padding: 14px; border: 1px solid #b7e4c9; border-radius: 20px; background: linear-gradient(135deg, #effbf3, #e3f6ea); box-shadow: var(--m-shadow); }
+.m-earnings header { display: flex; align-items: center; gap: 12px; }
+.m-earnings header > i { font-size: 30px; color: #13874a; }
+.m-earnings header span { display: flex; flex-direction: column; gap: 2px; }
+.m-earnings header small { color: #3d6b51; font-size: 12px; font-weight: 700; }
+.m-earnings header strong { color: #0c6a39; font-size: 26px; font-weight: 800; }
+.m-earnings ul { margin: 10px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.m-earnings li { display: flex; justify-content: space-between; gap: 10px; padding-top: 6px; border-top: 1px dashed #b7e4c9; color: #20402e; font-size: 14px; }
+.m-earnings li small { color: #4f7a61; font-weight: 600; }
+.m-earnings p { margin: 10px 0 0; color: #4f7a61; font-size: 12px; }
+.m-pdf-button { width: 100%; }
+html[data-theme="dark"] .m-earnings { border-color: #1f5a3a; background: linear-gradient(135deg, #12291d, #0f2218); }
+html[data-theme="dark"] .m-earnings header > i, html[data-theme="dark"] .m-earnings header strong { color: #6fe0a0; }
+html[data-theme="dark"] .m-earnings header small, html[data-theme="dark"] .m-earnings li small, html[data-theme="dark"] .m-earnings p { color: #9cc9ad; }
+html[data-theme="dark"] .m-earnings li { border-color: #1f5a3a; color: #dff5e7; }
