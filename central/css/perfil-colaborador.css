@@ -131,3 +131,6 @@ html[data-theme="dark"] [data-page="profile"] .profile-event-list .event-tags em
   [data-page="profile"] .profile-event-list .event-place { grid-column:3 / -1; }
   [data-page="profile"] .profile-event-list .event-tags { grid-column:3 / -1; }
 }
+/* Etiqueta "justificado" na linha do dia (falta ou atraso justificado pela Central). */
+[data-page="profile"] .profile-day-numbers .justified { padding:1px 8px; border-radius:10px; background:#e2eeff; color:#1f5fb8; font-weight:700; }
+html[data-theme="dark"] [data-page="profile"] .profile-day-numbers .justified { background:#182c4a; color:#9cc6ff; }
