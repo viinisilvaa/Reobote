@@ -36,3 +36,19 @@ Para testes, dá para trocar o endereço no próprio celular: na tela de login, 
 ## Localização em segundo plano
 
 O plugin `@capacitor-community/background-geolocation` (em `package.json`) acompanha o técnico durante a jornada mesmo com a tela apagada. Ele acrescenta sozinho ao Android o serviço de localização e as permissões `FOREGROUND_SERVICE_LOCATION` e `POST_NOTIFICATIONS`. O script `configurar-android.mjs` dá o nome em português ao canal da notificação ("Localização da jornada"). O app liga o acompanhamento no primeiro QR Code do dia e desliga no encerramento da jornada ou ao sair da conta.
+
+## Salvar PDF no celular
+
+Os plugins `@capacitor/filesystem` e `@capacitor/share` permitem baixar o PDF do "Meu Histórico" dentro do APK: o arquivo é gravado no celular e o Android abre a janela para salvar em Arquivos ou enviar pelo WhatsApp, Drive ou e-mail.
+
+## Atualização automática (sem reinstalar o APK)
+
+O plugin `@capgo/capacitor-updater` é usado só no modo manual, sem serviço externo (`plugins.CapacitorUpdater` em `capacitor.config.json`: `autoUpdate` desligado e sem estatísticas).
+
+1. A cada geração, o GitHub publica em Releases, junto com o `reobote.apk`:
+   - `atualizacao.zip`: as telas do app (pasta `www`);
+   - `atualizacao.json`: a versão, o nível nativo e o link do zip.
+2. Ao abrir, o APK lê o `atualizacao.json` da versão mais recente. Se a versão for mais nova, baixa o zip em segundo plano e usa as telas novas na próxima abertura. Na tela **Mais**, também dá para usar a versão nova na hora.
+3. Se a versão nova não abrir direito, o plugin volta sozinho para a anterior.
+
+O campo **`reoboteNativo`** do `package.json` é o "nível nativo". **Aumente esse número sempre que mudar algo que só um APK novo traz**: plugin novo, permissão nova ou código Java em `nativo/`. Celulares com outro nível não aplicam a atualização automática; eles mostram o aviso para instalar o APK novo.
