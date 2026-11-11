@@ -414,6 +414,16 @@ $migrations[9] = static function (PDO $pdo): void {
     add_column($pdo, 'employees', 'salary_cents', 'INT UNSIGNED NULL AFTER `unit_id`');
 };
 
+// 10) Justificativa com tipo (falta ou atraso) e foto do comprovante (ex.: atestado médico).
+$migrations[10] = static function (PDO $pdo): void {
+    add_column($pdo, 'attendance_justifications', 'kind', "VARCHAR(10) NOT NULL DEFAULT 'absence' AFTER `day`");
+    add_column($pdo, 'attendance_justifications', 'attachment_path', 'VARCHAR(64) NULL AFTER `reason`');
+    // Justificativas antigas: se o técnico registrou ponto naquele dia, era atraso (horário de Brasília, UTC-3).
+    $pdo->exec("UPDATE attendance_justifications j SET j.kind = 'late' WHERE EXISTS (
+        SELECT 1 FROM attendance_events a WHERE a.employee_id = j.employee_id AND a.voided_at IS NULL
+          AND a.occurred_at >= j.day + INTERVAL 3 HOUR AND a.occurred_at < j.day + INTERVAL 27 HOUR)");
+};
+
 $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
   version INT UNSIGNED NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
