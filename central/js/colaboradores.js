@@ -89,6 +89,7 @@ window.ReobotePage = {
           <label class="field"><span>Cargo *</span><select class="text-control" name="jobId" required>${options(jobs, person?.jobId, jobs.length ? "Selecione" : "Cadastre um cargo primeiro")}</select></label>
           <label class="field"><span>Unidade de trabalho</span><select class="text-control" name="unitId">${options(units.filter(unit => unit.active || unit.id === person?.unitId), person?.unitId, "Sem unidade fixa")}</select></label>
           <label class="field"><span>Jornada</span><select class="text-control" name="scheduleId">${options(schedules, person?.scheduleId, "Usar a jornada padrão do cargo")}</select></label>
+          <label class="field"><span>Salário mensal (R$)</span><input class="text-control" name="salary" inputmode="decimal" maxlength="15" autocomplete="off" placeholder="Ex.: 2.500,00" value="${person?.salary ? esc(person.salary.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : ""}"></label>
           <label class="field"><span>Perfil de acesso</span><select class="text-control" name="role">${roleOptions}</select></label>
           ${!isNew ? `<label class="checkbox-line span-2"><input type="checkbox" name="active" ${person.active ? "checked" : ""}> Cadastro ativo (desmarque para bloquear o acesso sem apagar o histórico)</label>` : ""}
           <p class="form-hint span-2"><i class="fa-solid fa-circle-info"></i> Colaborador: usa só o aplicativo. Gestor da Central e Administrador: acessam tudo na Central. Só o Administrador pode dar perfis de Gestor ou Administrador.</p>
@@ -117,7 +118,8 @@ window.ReobotePage = {
           const payload = {
             name: data.get("name"), registration: data.get("registration"), email: data.get("email"), phone: data.get("phone"),
             jobId: data.get("jobId"), unitId: data.get("unitId") || null, scheduleId: data.get("scheduleId") || null,
-            role: data.get("role") || "employee", active: isNew ? true : form.elements.active.checked
+            role: data.get("role") || "employee", active: isNew ? true : form.elements.active.checked,
+            salary: data.get("salary").trim() || null // base do "valor ganho" no perfil e no app do técnico
           };
           const response = isNew ? await api.post("/api/employees", payload) : await api.put(`/api/employees/${person.id}`, payload);
           const id = response.employee.id;
