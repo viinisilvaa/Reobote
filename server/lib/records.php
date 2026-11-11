@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 // Consultas e gravacoes compartilhadas entre as rotas: cadastro de colaboradores e registros de jornada.
 
-const REOBOTE_EMPLOYEE_SELECT = 'SELECT e.id, e.name, e.registration, e.email, e.phone, e.photo_path, e.job_id, e.schedule_id, e.unit_id, e.active,
+const REOBOTE_EMPLOYEE_SELECT = 'SELECT e.id, e.name, e.registration, e.email, e.phone, e.photo_path, e.job_id, e.schedule_id, e.unit_id, e.salary_cents, e.active,
         e.tracking_enabled, e.created_at, j.name AS job_name, j.default_schedule_id AS job_schedule_id,
         un.name AS unit_name, s.name AS schedule_name,
         u.id AS user_id, u.role, u.must_change_password, u.last_login_at, u.last_seen_at
@@ -63,6 +63,8 @@ function reobote_employee_public(PDO $db, array $row, ?array $state = null): arr
         'mustChangePassword' => (bool) ($row['must_change_password'] ?? false),
         'lastLoginAt' => reobote_iso($row['last_login_at'] ?? null),
         'trackingEnabled' => (bool) $row['tracking_enabled'],
+        // Salário mensal em reais (null = não informado). Só a Central e o próprio técnico veem.
+        'salary' => isset($row['salary_cents']) ? (int) $row['salary_cents'] / 100 : null,
         'createdAt' => reobote_iso($row['created_at']),
     ];
     // Administrador e Gestor: não batem ponto. Ficam "Online" enquanto usam a Central (últimos 5 minutos).
