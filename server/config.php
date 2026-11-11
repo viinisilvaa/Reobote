@@ -220,6 +220,8 @@ const REOBOTE_SETTING_DEFAULTS = [
     'shift_gap_hours' => '16',
     // Minutos depois do inicio previsto sem registro para o dia contar como FALTA (e o app bloquear o inicio).
     'absence_after_minutes' => '60',
+    // Horas de atraso a partir das quais o dia conta como FALTA (até a Central justificar). De 1 a 12.
+    'late_absence_hours' => '5',
     // Link de download do APK. Vazio = versão mais nova publicada no GitHub (REOBOTE_APK_URL_PADRAO).
     'apk_download_url' => '',
 ];
