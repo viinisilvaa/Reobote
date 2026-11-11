@@ -577,6 +577,7 @@
     if (day.status === "off") return ["neutral", "fa-mug-saucer", "Folga"];
     if (day.status === "not_arrived") return ["warn", "fa-hourglass-half", "Não iniciado"];
     if (day.status === "scheduled") return ["neutral", "fa-calendar", "Previsto"];
+    if (day.lateMinutes > 0 && day.justification) return ["info", "fa-comment-medical", "Atraso justificado"]; // não é descontado
     if (day.lateMinutes > 0) return ["warn", "fa-clock", "Atraso"];
     if (day.overtimeMinutes > 0) return ["extra", "fa-star", "Hora Extra"];
     return ["good", "fa-circle-check", "Normal"];
@@ -610,7 +611,7 @@
             <p>Trabalhadas <strong>${duration(day.workedMinutes)}</strong> • Almoço <strong>${duration(day.breakMinutes)}</strong>${day.lateMinutes ? ` • Atraso <strong class="bad">${duration(day.lateMinutes)}</strong>` : ""}${day.overtimeMinutes ? ` • Extra <strong class="good">${duration(day.overtimeMinutes)}</strong>` : ""}</p>
             ${day.events.length ? `<ul>${day.events.map(event => `<li><i class="fa-solid ${EVENT_ICONS[event.eventType] || "fa-clock"}"></i> ${time(event.occurredAt)} • ${esc(event.label)}${event.place ? ` • ${esc(event.place)}` : ""}</li>`).join("")}</ul>` : `<p>${day.holiday ? esc(day.holiday) : "Nenhum registro neste dia."}</p>`}
             ${day.flags.includes("missing_departure") ? '<p class="bad">Jornada sem encerramento registrado.</p>' : ""}
-            ${day.justification ? `<p class="m-justified"><i class="fa-solid fa-comment-medical"></i> Justificado pela Central: ${esc(day.justification.reason)}</p>` : ""}
+            ${day.justification ? `<p class="m-justified"><i class="fa-solid fa-comment-medical"></i> ${esc(day.justification.kindLabel)} pela Central: ${esc(day.justification.reason)}${day.justification.hasAttachment ? " • atestado anexado" : ""}. Não é descontado do seu valor ganho.</p>` : ""}
           </div>` : ""}
         </article>`;
       }).join("") || '<p class="m-empty">Nenhum registro no período.</p>';
@@ -700,7 +701,7 @@
       head: [["Dia", "Situação", "Entrada", "Saída", "Almoço", "Trabalhadas", "Atraso", "Extra", "Registros"]],
       body: days.length ? days.map(day => {
         const end = [...day.events].reverse().find(event => event.eventType === "departure");
-        return [dayLabel(day.date), day.justification ? (day.lateMinutes && day.events.length ? "Atraso justificado" : "Falta justificada") : dayBadge(day)[2],
+        return [dayLabel(day.date), day.justification ? day.justification.kindLabel : dayBadge(day)[2],
           hm(day.events[0]?.occurredAt), hm(end?.occurredAt), day.events.length ? duration(day.breakMinutes) : "-", day.events.length ? duration(day.workedMinutes) : "-",
           day.lateMinutes ? duration(day.lateMinutes) : "-", day.overtimeMinutes ? duration(day.overtimeMinutes) : "-",
           day.events.map(event => `${hm(event.occurredAt)}  ${event.label}${event.place ? ` - ${event.place}` : ""}`).join("\n") || "-"];
@@ -713,7 +714,7 @@
       pdf.note("Justificativas registradas pela Central no período:");
       pdf.table({
         head: [["Dia", "Ocorrência", "Motivo"]],
-        body: justified.map(day => [dayLabel(day.date), day.lateMinutes && day.events.length ? `Atraso de ${duration(day.lateMinutes)}` : "Falta", day.justification.reason]),
+        body: justified.map(day => [dayLabel(day.date), day.justification.kind === "late" ? `Atraso de ${duration(day.lateMinutes)}` : "Falta", day.justification.reason + (day.justification.hasAttachment ? " (atestado anexado)" : "")]),
         columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 36 } }
       });
     }
