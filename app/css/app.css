@@ -344,3 +344,6 @@ html[data-theme="dark"] .m-earnings { border-color: #1f5a3a; background: linear-
 html[data-theme="dark"] .m-earnings header > i, html[data-theme="dark"] .m-earnings header strong { color: #6fe0a0; }
 html[data-theme="dark"] .m-earnings header small, html[data-theme="dark"] .m-earnings li small, html[data-theme="dark"] .m-earnings p { color: #9cc9ad; }
 html[data-theme="dark"] .m-earnings li { border-color: #1f5a3a; color: #dff5e7; }
+
+/* Notificações: botão "Ver mais" (mostra mais 5 por vez). */
+.m-more-button { width: 100%; margin-top: 10px; }
