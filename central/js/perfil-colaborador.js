@@ -159,6 +159,7 @@ window.ReobotePage = {
                 ${day.events.length ? `<span>${fmt.duration(day.workedMinutes)} trabalhadas</span>` : day.expectedMinutes ? `<span>${fmt.duration(day.expectedMinutes)} previstas</span>` : ""}
                 ${day.breakMinutes ? `<span>almoço ${fmt.duration(day.breakMinutes)}</span>` : ""}
                 ${day.lateMinutes ? `<span class="late">atraso ${fmt.duration(day.lateMinutes)}</span>` : ""}
+                ${day.arrivalDelayMinutes ? `<span class="late" title="Chegou 5 horas ou mais depois do horário">chegou ${fmt.duration(day.arrivalDelayMinutes)} depois: falta</span>` : ""}
                 ${day.overtimeMinutes ? `<span class="overtime">extra ${fmt.duration(day.overtimeMinutes)}</span>` : ""}
                 ${day.flags.includes("missing_departure") ? '<span class="late">sem encerramento</span>' : ""}
                 ${day.flags.includes("missing_start") ? '<span class="late">sem início</span>' : ""}
@@ -329,7 +330,8 @@ window.ReobotePage = {
 
     async function justify(date) {
       const day = data.journey.days.find(item => item.date === date);
-      const late = Boolean(day?.events.length); // registrou ponto no dia: o mais provável é atraso
+      // Registrou ponto no dia (e não chegou 5 h ou mais depois): o mais provável é atraso.
+      const late = Boolean(day?.events.length) && !day.arrivalDelayMinutes;
       const saved = await R.openDialog({
         title: "Justificar falta ou atraso",
         subtitle: `${data.employee.name} • ${fmt.day(date)}`,
