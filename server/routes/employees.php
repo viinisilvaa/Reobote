@@ -138,7 +138,7 @@ route('GET', '/api/employees', static function (PDO $db): void {
     if (!reobote_can_view_team($user)) {
         reobote_require($user, 'employees');
     }
-    $sql = REOBOTE_EMPLOYEE_SELECT . ' WHERE 1 = 1';
+    $sql = REOBOTE_EMPLOYEE_SELECT . ' WHERE e.deleted_at IS NULL'; // excluídos não aparecem
     $params = [];
     $search = trim((string) ($_GET['search'] ?? ''));
     if ($search !== '') {
@@ -264,6 +264,37 @@ route('POST', '/api/employees/(\d+)/reset-password', static function (PDO $db, s
     }
     reobote_audit($db, $user, 'password_reset', 'employee', $id);
     reobote_json(['temporaryPassword' => $password]);
+});
+
+// Exclui o colaborador: some da lista, do painel, do mapa, dos relatórios e das notificações, e perde o
+// acesso na hora. Os registros de ponto ficam guardados no banco (sem aparecer), como exige a lei.
+// O e-mail e a matrícula ficam livres para um novo cadastro.
+route('DELETE', '/api/employees/(\d+)', static function (PDO $db, string $id): void {
+    $user = reobote_user();
+    reobote_require($user, 'employees');
+    $employee = reobote_require_employee($db, $id);
+    if ((string) $user['employeeId'] === $id) {
+        reobote_fail('Você não pode excluir o próprio cadastro.');
+    }
+    if (($employee['role'] ?? 'employee') !== 'employee' && $user['role'] !== 'admin') {
+        reobote_fail('Somente administradores podem excluir contas de administrador ou gestor.', 403);
+    }
+    $freed = static fn (string $email): string => mb_substr('excluido-' . $id . '-' . time() . '-' . $email, 0, 190);
+    $db->beginTransaction();
+    try {
+        $db->prepare('UPDATE employees SET deleted_at = UTC_TIMESTAMP(), active = 0, email = ?, registration = NULL WHERE id = ?')
+            ->execute([$freed((string) $employee['email']), $id]);
+        if ($employee['user_id'] !== null) {
+            $db->prepare('UPDATE users SET active = 0, email = ?, last_seen_at = NULL WHERE id = ?')
+                ->execute([$freed((string) $employee['email']), $employee['user_id']]);
+        }
+        reobote_audit($db, $user, 'employee_deleted', 'employee', $id, ['name' => $employee['name'], 'email' => $employee['email'], 'matricula' => $employee['registration']]);
+        $db->commit();
+    } catch (Throwable $error) {
+        $db->rollBack();
+        throw $error;
+    }
+    reobote_json(['deleted' => true]);
 });
 
 // Envia ou troca a foto de identificação.
