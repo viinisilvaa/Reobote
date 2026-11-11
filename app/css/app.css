@@ -323,3 +323,7 @@ html[data-theme="dark"] .m-month-title { color: #c9a8ff; }
 .m-segment { grid-template-columns: repeat(4, 1fr); }
 .m-segment button { font-size: 13px; }
 
+
+/* Meu Histórico: justificativa da Central no detalhe do dia. */
+.m-justified { margin: 6px 0 0; padding: 8px 10px; border-radius: 10px; background: #e2eeff; color: #1f5fb8 !important; font-weight: 600; }
+html[data-theme="dark"] .m-justified { background: #182c4a; color: #9cc6ff !important; }
