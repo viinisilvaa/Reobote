@@ -52,6 +52,7 @@
   const DISCOVERED_KEY = "reobote-app:server-auto"; // endereço lido do servidor.json no GitHub (somente APK)
   const SESSION_KEY = "reobote-app:session";        // última sessão, para abrir o app sem internet
   const LOGGED_OUT_KEY = "reobote-app:logged-out";  // o colaborador tocou em Sair: não entra sozinho de novo
+  const INSTALL_KEY = "reobote-app:install";        // identificador do banco do servidor (muda quando o banco é zerado)
 
   let session = null;          // conta autenticada: { user, company, rules }
   let store = null;            // dados locais da conta: fila, recusados, último "hoje", histórico, foto, ajuste de relógio
@@ -167,7 +168,7 @@
       api.baseUrl = address;
       try {
         const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("tempo esgotado")), 6000));
-        await Promise.race([api.get("/api/config", { handleAuth: false }), timeout]);
+        checkInstall(await Promise.race([api.get("/api/config", { handleAuth: false }), timeout]));
         return true;
       } catch {
         /* não respondeu: tenta o próximo */
@@ -175,6 +176,27 @@
     }
     api.baseUrl = candidates[0] || "";
     return false;
+  }
+
+  // Banco do servidor zerado: o identificador da instalação ("install" em /api/config) mudou. Apaga deste
+  // celular a sessão, a fila de registros não enviados e o histórico guardados da instalação antiga
+  // (mantém só o endereço do servidor; o tema fica em outra chave). Celulares com dados de antes deste
+  // controle existir também são limpos uma vez.
+  function checkInstall(config) {
+    const install = config?.install;
+    if (!install) return;
+    try {
+      const previous = localStorage.getItem(INSTALL_KEY);
+      const oldData = Object.keys(localStorage).filter(key => key.startsWith("reobote-app:") && ![DISCOVERED_KEY, INSTALL_KEY].includes(key));
+      if (previous !== install && (previous || oldData.length)) {
+        oldData.forEach(key => localStorage.removeItem(key));
+        store = null;
+        session = null;
+      }
+      localStorage.setItem(INSTALL_KEY, install);
+    } catch {
+      /* sem armazenamento: nada a limpar */
+    }
   }
 
   // Remove espaços e a barra final do endereço e acrescenta "http://" se faltar.
@@ -1604,6 +1626,9 @@
       await discoverServer(); // endereço atual publicado no GitHub
       await chooseServer();   // usa o primeiro endereço que responder (GitHub ou o embutido no APK)
       if (!api.baseUrl) return showLogin();
+    } else {
+      // Navegador: confere se o banco do servidor foi zerado (limpa os dados antigos guardados).
+      try { checkInstall(await api.get("/api/config", { handleAuth: false })); } catch { /* sem internet */ }
     }
     // Depois de tocar em Sair, o app sempre abre na tela de login.
     let loggedOut = false;
