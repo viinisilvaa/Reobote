@@ -128,6 +128,7 @@ window.ReobotePage = {
                 ${day.overtimeMinutes ? `<span class="overtime">extra ${fmt.duration(day.overtimeMinutes)}</span>` : ""}
                 ${day.flags.includes("missing_departure") ? '<span class="late">sem encerramento</span>' : ""}
                 ${day.flags.includes("missing_start") ? '<span class="late">sem início</span>' : ""}
+                ${day.justification ? '<span class="justified"><i class="fa-solid fa-comment-medical"></i> justificado</span>' : ""}
               </span>
               ${day.events.length ? `<span class="profile-day-count">${day.events.length} registro${day.events.length === 1 ? "" : "s"}</span>` : ""}
             </summary>
@@ -207,7 +208,7 @@ window.ReobotePage = {
         head: [["Dia", "Situação", "Entrada", "Saída", "Almoço", "Trabalhadas", "Atraso", "Extra", "Registros"]],
         body: days.length ? days.map(day => {
           const end = [...day.events].reverse().find(event => event.eventType === "departure");
-          return [fmt.day(day.date), R.dayLabel(day.status) + (day.justification ? `\n(${day.justification.reason})` : ""),
+          return [fmt.day(day.date), (day.justification ? (day.lateMinutes && day.events.length ? "Atraso justificado" : "Falta justificada") : R.dayLabel(day.status)),
             time(day.events[0]?.occurredAt), time(end?.occurredAt),
             day.events.length ? fmt.duration(day.breakMinutes) : "-", day.events.length ? fmt.duration(day.workedMinutes) : "-",
             day.lateMinutes ? fmt.duration(day.lateMinutes) : "-", day.overtimeMinutes ? fmt.duration(day.overtimeMinutes) : "-",
@@ -221,6 +222,17 @@ window.ReobotePage = {
           if (cell.column.index === 7) cell.cell.styles.textColor = [15, 122, 65];
         }
       });
+      // Justificativas lançadas pela Central no período (motivo, quem justificou e quando).
+      const justified = days.filter(day => day.justification);
+      if (justified.length) {
+        pdf.note("Justificativas registradas pela Central no período:");
+        pdf.table({
+          head: [["Dia", "Ocorrência", "Motivo", "Justificado por", "Em"]],
+          body: justified.map(day => [fmt.day(day.date), day.lateMinutes && day.events.length ? `Atraso de ${fmt.duration(day.lateMinutes)}` : "Falta",
+            day.justification.reason, day.justification.author || "-", day.justification.createdAt ? fmt.dateTime(day.justification.createdAt) : "-"]),
+          columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 32 }, 3: { cellWidth: 40 }, 4: { cellWidth: 34 } }
+        });
+      }
       pdf.signatures(person.name);
       const slug = person.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       pdf.save(`ponto-${slug}-${period.from}-a-${period.to}.pdf`);
