@@ -45,8 +45,8 @@ if (servidor && !/^https?:\/\/[^\s"'\\]+$/i.test(servidor)) {
 }
 if (servidor) {
   // A variável do GitHub tem prioridade sobre o endereço escrito em app/js/config.js.
-  writeFileSync(join(www, "app", "js", "config.js"), `// Gerado automaticamente por preparar-www.mjs (veja app/js/config.js para a explicação).
-window.REOBOTE_CONFIG = { servidor: ${JSON.stringify(servidor)} };
+  // Só troca o endereço: a "descoberta" e a "atualizacao" de app/js/config.js continuam valendo.
+  appendFileSync(join(www, "app", "js", "config.js"), `window.REOBOTE_CONFIG.servidor = ${JSON.stringify(servidor)}; // variável SERVIDOR_APP
 `);
   console.log(`Servidor embutido no APK (variável SERVIDOR_APP): ${servidor}`);
 } else {
@@ -57,8 +57,23 @@ window.REOBOTE_CONFIG = { servidor: ${JSON.stringify(servidor)} };
 // Versão do APK (o GitHub passa VERSAO_APP = número da execução): aparece na tela Mais e no diagnóstico,
 // para conferir qual APK está instalado no celular.
 const versao = `1.0.${Number.parseInt(process.env.VERSAO_APP || "0", 10) || 0}`;
+// "Nível nativo" (campo reoboteNativo do package.json): sobe de número quando muda algo que só um APK
+// novo traz (plugins, permissões, código Java). O app só aplica atualizações automáticas do mesmo nível.
+const nativo = Number(JSON.parse(readFileSync(join(project, "package.json"), "utf8")).reoboteNativo) || 1;
 appendFileSync(join(www, "app", "js", "config.js"), `window.REOBOTE_VERSAO = ${JSON.stringify(versao)};
+window.REOBOTE_NATIVO = ${nativo};
 `);
+
+// Descrição da atualização automática (vai para Releases junto com o APK e o atualizacao.zip).
+// O app lê este arquivo ao abrir; se a versão for mais nova, baixa o zip e troca as telas sozinho.
+const repositorio = process.env.GITHUB_REPOSITORY || "viinisilvaa/Reobote";
+const tag = `apk-${Number.parseInt(process.env.VERSAO_APP || "0", 10) || 0}`;
+writeFileSync(join(project, "atualizacao.json"), JSON.stringify({
+  version: versao,
+  nativo,
+  url: `https://github.com/${repositorio}/releases/download/${tag}/atualizacao.zip`
+}, null, 2) + "\n");
+console.log(`Atualização automática: versão ${versao}, nível nativo ${nativo}.`);
 
 // Ponte JavaScript do Capacitor (@capacitor/core): sem ela, o app não enxerga os plugins nativos
 // (detector de GPS falso e localização em segundo plano). O arquivo vai para www/app/js/vendor e é
