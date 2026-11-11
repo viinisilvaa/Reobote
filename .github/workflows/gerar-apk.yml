@@ -7,6 +7,8 @@
 #
 # Resultado:
 #   - o arquivo reobote.apk fica publicado em "Releases" do repositório;
+#   - junto vão atualizacao.zip e atualizacao.json: os celulares que já têm o APK baixam as telas
+#     novas sozinhos ao abrir o app (só é preciso reinstalar o APK quando muda algo nativo);
 #   - o link fixo para a versão mais recente é:
 #       https://github.com/USUARIO/REPOSITORIO/releases/latest/download/reobote.apk
 #     (cole esse link em Central > Configurações > "Link de download do APK").
@@ -57,6 +59,11 @@ jobs:
           VERSAO_APP: ${{ github.run_number }}   # número da versão mostrado no app (tela Mais)
         run: npm run preparar
 
+      # Atualização automática: as telas do app (pasta www) num zip. Os celulares com o APK instalado
+      # baixam este zip sozinhos ao abrir o app, sem reinstalar (veja atualizacao.json).
+      - name: Empacotar a atualização automática das telas
+        run: cd www && zip -qr ../atualizacao.zip .
+
       - name: Criar o projeto Android
         run: npx cap add android
 
@@ -91,5 +98,8 @@ jobs:
           body: |
             APK do aplicativo REOBOTE gerado automaticamente.
             Para instalar: baixe reobote.apk no celular Android e permita a instalação de apps desta fonte.
-          files: aplicativo-android/reobote.apk
+          files: |
+            aplicativo-android/reobote.apk
+            aplicativo-android/atualizacao.zip
+            aplicativo-android/atualizacao.json
           make_latest: true
