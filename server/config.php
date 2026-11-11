@@ -224,6 +224,9 @@ const REOBOTE_SETTING_DEFAULTS = [
     'late_absence_hours' => '5',
     // Link de download do APK. Vazio = versão mais nova publicada no GitHub (REOBOTE_APK_URL_PADRAO).
     'apk_download_url' => '',
+    // Identificador desta instalação do banco (gerado pelo setup.php). Quando o banco é zerado, muda, e o
+    // aplicativo apaga do celular a sessão e os registros guardados da instalação antiga.
+    'install_id' => '',
 ];
 
 // Devolve as configurações do sistema (tabela settings), com os valores padrão para o que não foi configurado. Fica em memória durante a requisição.
