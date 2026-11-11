@@ -55,9 +55,16 @@ try {
     $path = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/');
     api_require_same_origin($method);
 
-    // Identifica o servidor REOBOTE (o aplicativo usa para testar o endereço configurado); nao depende do banco.
+    // Identifica o servidor REOBOTE (o aplicativo usa para testar o endereço configurado). "install" é o
+    // identificador do banco: quando muda (banco zerado), o app apaga os dados antigos guardados no celular.
     if ($path === '/api/config' && $method === 'GET') {
-        reobote_json(['app' => 'REOBOTE']);
+        $install = null;
+        try {
+            $install = reobote_settings()['install_id'] ?: null;
+        } catch (Throwable) {
+            $install = null; // banco fora do ar: responde mesmo assim
+        }
+        reobote_json(['app' => 'REOBOTE', 'install' => $install]);
     }
     // Limpeza ÚNICA do cache do navegador: versões antigas das páginas da Central ficaram guardadas antes
     // do controle de cache existir (cada perfil ?id=N guardava a sua cópia). Na primeira consulta da sessão
