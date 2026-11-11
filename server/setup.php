@@ -424,6 +424,14 @@ $migrations[10] = static function (PDO $pdo): void {
           AND a.occurred_at >= j.day + INTERVAL 3 HOUR AND a.occurred_at < j.day + INTERVAL 27 HOUR)");
 };
 
+// 11) Exclusão pela Central: o colaborador, a unidade ou o QR Code some de todas as telas e relatórios,
+//     mas os registros de ponto continuam guardados no banco (a lei exige guardar o histórico de jornada).
+$migrations[11] = static function (PDO $pdo): void {
+    add_column($pdo, 'employees', 'deleted_at', 'DATETIME NULL');
+    add_column($pdo, 'units', 'deleted_at', 'DATETIME NULL');
+    add_column($pdo, 'qr_codes', 'deleted_at', 'DATETIME NULL');
+};
+
 $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
   version INT UNSIGNED NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
