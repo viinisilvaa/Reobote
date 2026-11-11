@@ -162,12 +162,15 @@ window.ReobotePage = {
                 ${day.overtimeMinutes ? `<span class="overtime">extra ${fmt.duration(day.overtimeMinutes)}</span>` : ""}
                 ${day.flags.includes("missing_departure") ? '<span class="late">sem encerramento</span>' : ""}
                 ${day.flags.includes("missing_start") ? '<span class="late">sem início</span>' : ""}
-                ${day.justification ? '<span class="justified"><i class="fa-solid fa-comment-medical"></i> justificado</span>' : ""}
+                ${day.justification ? `<span class="justified"><i class="fa-solid fa-comment-medical"></i> ${esc(day.justification.kindLabel.toLowerCase())}${day.justification.hasAttachment ? ' <i class="fa-solid fa-paperclip" title="Atestado anexado"></i>' : ""}</span>` : ""}
               </span>
               ${day.events.length ? `<span class="profile-day-count">${day.events.length} registro${day.events.length === 1 ? "" : "s"}</span>` : ""}
             </summary>
-            ${day.justification ? `<p class="profile-justification"><i class="fa-solid fa-circle-check"></i> Justificado: ${esc(day.justification.reason)}${day.justification.author ? ` • por ${esc(day.justification.author)}` : ""}${data.canManage ? ` <button type="button" class="link-button" data-unjustify="${esc(day.date)}">remover</button>` : ""}</p>` : ""}
-            ${data.canManage && !day.justification && day.workday && (day.status === "absent" || day.status === "not_arrived" || day.lateMinutes > 0) ? `<button type="button" class="link-button profile-justify" data-justify="${esc(day.date)}"><i class="fa-solid fa-comment-medical"></i> Justificar ${day.status === "absent" || day.status === "not_arrived" ? "falta" : "atraso"} e liberar o registro</button>` : ""}
+            ${day.justification ? `<p class="profile-justification"><i class="fa-solid fa-circle-check"></i> <strong>${esc(day.justification.kindLabel)}:</strong> ${esc(day.justification.reason)}${day.justification.author ? ` • por ${esc(day.justification.author)}` : ""}
+              ${day.justification.hasAttachment ? `<a class="link-button" href="${attachmentUrl(day.date)}" target="_blank" rel="noopener"><i class="fa-solid fa-file-medical"></i> ver atestado</a>` : ""}
+              ${data.canManage ? `<button type="button" class="link-button" data-attach="${esc(day.date)}"><i class="fa-solid fa-paperclip"></i> ${day.justification.hasAttachment ? "trocar atestado" : "anexar atestado"}</button>
+              <button type="button" class="link-button" data-unjustify="${esc(day.date)}">remover</button>` : ""}</p>` : ""}
+            ${data.canManage && !day.justification && day.workday && (day.status === "absent" || day.status === "not_arrived" || day.lateMinutes > 0) ? `<button type="button" class="link-button profile-justify" data-justify="${esc(day.date)}"><i class="fa-solid fa-comment-medical"></i> Justificar falta ou atraso (ex.: atestado médico)</button>` : ""}
             <!-- Registros do dia: um por linha, alinhados em colunas (horário, o que foi, local, marcas e anular). -->
             ${day.events.length ? `<ul class="profile-event-list">${day.events.map(event => `<li>
               <time>${fmt.time(event.occurredAt)}</time>
@@ -243,7 +246,7 @@ window.ReobotePage = {
         head: [["Dia", "Situação", "Entrada", "Saída", "Almoço", "Trabalhadas", "Atraso", "Extra", "Registros"]],
         body: days.length ? days.map(day => {
           const end = [...day.events].reverse().find(event => event.eventType === "departure");
-          return [fmt.day(day.date), (day.justification ? (day.lateMinutes && day.events.length ? "Atraso justificado" : "Falta justificada") : R.dayLabel(day.status)),
+          return [fmt.day(day.date), (day.justification ? day.justification.kindLabel : R.dayLabel(day.status)),
             time(day.events[0]?.occurredAt), time(end?.occurredAt),
             day.events.length ? fmt.duration(day.breakMinutes) : "-", day.events.length ? fmt.duration(day.workedMinutes) : "-",
             day.lateMinutes ? fmt.duration(day.lateMinutes) : "-", day.overtimeMinutes ? fmt.duration(day.overtimeMinutes) : "-",
@@ -264,16 +267,101 @@ window.ReobotePage = {
       if (justified.length) {
         pdf.note("Justificativas registradas pela Central no período:");
         pdf.table({
-          head: [["Dia", "Ocorrência", "Motivo", "Justificado por", "Em"]],
-          body: justified.map(day => [fmt.day(day.date), day.lateMinutes && day.events.length ? `Atraso de ${fmt.duration(day.lateMinutes)}` : "Falta",
-            day.justification.reason, day.justification.author || "-", day.justification.createdAt ? fmt.dateTime(day.justification.createdAt) : "-"]),
-          columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 32 }, 3: { cellWidth: 40 }, 4: { cellWidth: 34 } }
+          head: [["Dia", "Ocorrência", "Motivo", "Atestado", "Justificado por", "Em"]],
+          body: justified.map(day => [fmt.day(day.date), day.justification.kind === "late" ? `Atraso de ${fmt.duration(day.lateMinutes)}` : "Falta",
+            day.justification.reason, day.justification.hasAttachment ? "Anexado (ver anexos)" : "-", day.justification.author || "-", day.justification.createdAt ? fmt.dateTime(day.justification.createdAt) : "-"]),
+          columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 32 }, 3: { cellWidth: 36 }, 4: { cellWidth: 40 }, 5: { cellWidth: 34 } }
         });
       }
       pdf.signatures(person.name);
+      // Anexos: a foto de cada atestado numa página, depois das assinaturas.
+      for (const day of justified.filter(item => item.justification.hasAttachment)) {
+        const image = await loadAttachment(day.date).catch(() => null);
+        if (image) pdf.attachment(`Atestado • ${fmt.day(day.date)} • ${day.justification.kindLabel}: ${day.justification.reason}`, image);
+      }
       const slug = person.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       await pdf.save(`ponto-${slug}-${period.from}-a-${period.to}.pdf`);
       R.toast("PDF baixado.");
+    }
+
+    // Justificativas e atestados ------------------------------------------------------------------
+    // A Central escolhe se foi FALTA (não trabalhou o dia) ou ATRASO (chegou depois do horário), escreve o
+    // motivo e pode anexar a foto do atestado que o técnico mandou. O dia justificado não é descontado do
+    // valor ganho, e o técnico volta a conseguir registrar o ponto naquele dia.
+    const REASONS = ["Atestado médico", "Consulta médica", "Exame médico", "Acompanhou familiar ao médico", "Problema no transporte"];
+
+    function attachmentUrl(date) {
+      return `/api/employees/${encodeURIComponent(id)}/justifications/${encodeURIComponent(date)}/attachment`;
+    }
+
+    function uploadAttachment(date, file) {
+      const form = new FormData();
+      form.append("attachment", file);
+      return api.upload(`${attachmentUrl(date)}`, form);
+    }
+
+    // Foto do atestado como imagem para o PDF ({ dataUrl, width, height }).
+    async function loadAttachment(date) {
+      const response = await fetch(attachmentUrl(date), { credentials: "same-origin", cache: "no-store" });
+      if (!response.ok) throw new Error("atestado não encontrado");
+      const url = URL.createObjectURL(await response.blob());
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const element = new Image();
+          element.onload = () => resolve(element);
+          element.onerror = reject;
+          element.src = url;
+        });
+        // Converte para JPEG (até 1600 px): funciona com qualquer foto e deixa o PDF leve.
+        const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        const context = canvas.getContext("2d");
+        context.fillStyle = "#fff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(img, 0, 0, canvas.width, canvas.height);
+        return { dataUrl: canvas.toDataURL("image/jpeg", 0.85), width: canvas.width, height: canvas.height };
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    async function justify(date) {
+      const day = data.journey.days.find(item => item.date === date);
+      const late = Boolean(day?.events.length); // registrou ponto no dia: o mais provável é atraso
+      const saved = await R.openDialog({
+        title: "Justificar falta ou atraso",
+        subtitle: `${data.employee.name} • ${fmt.day(date)}`,
+        submitLabel: "Justificar",
+        body: `<div class="field"><span>O que aconteceu? *</span>
+            <div class="justify-kinds">
+              <label class="justify-kind"><input type="radio" name="kind" value="absence" ${late ? "" : "checked"}><i class="fa-solid fa-user-xmark"></i><span><strong>Falta</strong><small>Não trabalhou no dia (ex.: foi ao médico)</small></span></label>
+              <label class="justify-kind"><input type="radio" name="kind" value="late" ${late ? "checked" : ""}><i class="fa-solid fa-clock"></i><span><strong>Atraso</strong><small>Chegou depois do horário${day?.lateMinutes ? ` (${fmt.duration(day.lateMinutes)})` : ""}</small></span></label>
+            </div></div>
+          <label class="field"><span>Motivo *</span><textarea class="text-control" name="reason" rows="2" required maxlength="300" placeholder="Ex.: consulta médica, com atestado"></textarea></label>
+          <div class="chip-list justify-reasons">${REASONS.map(text => `<button type="button" class="chip" data-reason="${esc(text)}">${esc(text)}</button>`).join("")}</div>
+          <label class="field"><span>Foto do atestado ou comprovante</span><input class="text-control" type="file" name="attachment" accept="image/jpeg,image/png,image/webp"></label>
+          <p class="form-hint"><i class="fa-solid fa-circle-info"></i> Falta ou atraso justificado não é descontado do valor ganho, e o técnico volta a conseguir registrar o ponto neste dia.</p>`,
+        onOpen: form => {
+          form.addEventListener("click", event => {
+            const chip = event.target.closest("[data-reason]");
+            if (chip) form.elements.reason.value = chip.dataset.reason;
+          });
+        },
+        onSubmit: async values => {
+          await api.post(`/api/employees/${id}/justifications`, { date, kind: values.get("kind"), reason: values.get("reason") });
+          const file = values.get("attachment");
+          if (file && file.size) {
+            await uploadAttachment(date, file).catch(error => R.toast(`Justificado, mas o atestado não foi enviado: ${error.message}`, "error"));
+          }
+          return true;
+        }
+      });
+      if (saved) {
+        R.toast("Justificado. Não será descontado e o técnico já pode registrar o ponto.");
+        load();
+      }
     }
 
     // Lançamento manual de registro esquecido, com justificativa obrigatória (fica na auditoria).
@@ -305,15 +393,26 @@ window.ReobotePage = {
       // técnico volta a conseguir registrar o ponto naquele dia.
       const justifyButton = event.target.closest("[data-justify]");
       if (justifyButton) {
-        const reason = await R.askReason({ title: "Justificar e liberar", message: `${data.employee.name} • ${fmt.day(justifyButton.dataset.justify)}. A falta deixa de contar e o técnico volta a conseguir registrar o ponto neste dia.`, label: "Motivo (ex.: avisou pelo WhatsApp que o pneu furou)", confirmLabel: "Justificar" });
-        if (!reason) return;
-        try {
-          await api.post(`/api/employees/${id}/justifications`, { date: justifyButton.dataset.justify, reason });
-          R.toast("Justificado. O técnico já pode registrar o ponto.");
-          load();
-        } catch (error) {
-          R.toast(error.message, "error");
-        }
+        justify(justifyButton.dataset.justify);
+        return;
+      }
+      // Anexar ou trocar a foto do atestado de um dia já justificado.
+      const attachButton = event.target.closest("[data-attach]");
+      if (attachButton) {
+        const picker = document.createElement("input");
+        picker.type = "file";
+        picker.accept = "image/jpeg,image/png,image/webp";
+        picker.addEventListener("change", async () => {
+          if (!picker.files[0]) return;
+          try {
+            await uploadAttachment(attachButton.dataset.attach, picker.files[0]);
+            R.toast("Atestado anexado.");
+            load();
+          } catch (error) {
+            R.toast(error.message, "error");
+          }
+        });
+        picker.click();
         return;
       }
       const unjustifyButton = event.target.closest("[data-unjustify]");
