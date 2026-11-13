@@ -1,0 +1,76 @@
+# REOBOTE | .github/workflows/publicar-central.yml — Automação do GitHub que publica a Central no GitHub Pages
+# Publica as páginas da Central REOBOTE em https://viinisilvaa.github.io/Reobote/ (gratuito no GitHub).
+#
+# Como funciona:
+#   - o GitHub Pages guarda só as páginas (HTML, CSS, JS e imagens das pastas central/ e compartilhado/);
+#   - o servidor (PHP + MySQL) continua no computador, ligado na internet pelo túnel
+#     ("Ligar REOBOTE na internet.bat"); a Central descobre o endereço atual do túnel lendo o servidor.json;
+#   - por isso a Central online só funciona enquanto o computador do servidor estiver ligado com o túnel.
+#
+# Quando roda:
+#   - automaticamente, a cada envio (push) que altere a Central (pastas central/ ou compartilhado/);
+#   - manualmente, na aba "Actions" do repositório > "Publicar a Central no GitHub Pages" > "Run workflow".
+
+name: Publicar a Central no GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "central/**"
+      - "compartilhado/**"
+      - ".github/workflows/publicar-central.yml"
+
+# Permissões mínimas para publicar no GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Uma publicação por vez; a mais nova substitui a que estiver na fila.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}central/entrar.html
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      # Monta a pasta do site só com a Central e os arquivos compartilhados (nada do servidor vai junto).
+      - name: Montar o site
+        run: |
+          mkdir -p site
+          cp -r central compartilhado site/
+          # Endereço principal (https://viinisilvaa.github.io/Reobote/) abre o login da Central.
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="pt-BR">
+          <head>
+            <meta charset="utf-8">
+            <title>Central REOBOTE</title>
+            <meta http-equiv="refresh" content="0; url=central/entrar.html">
+          </head>
+          <body><a href="central/entrar.html">Abrir a Central REOBOTE</a></body>
+          </html>
+          HTML
+          # Sem o processamento Jekyll do GitHub: publica os arquivos exatamente como estão.
+          touch site/.nojekyll
+
+      - name: Preparar o GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Enviar o site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Publicar
+        id: deploy
+        uses: actions/deploy-pages@v4
