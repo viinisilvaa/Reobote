@@ -253,7 +253,7 @@ route('GET', '/api/notifications', static function (PDO $db): void {
     $type = (string) ($_GET['type'] ?? '');
     $limit = max(1, min(200, (int) ($_GET['limit'] ?? 50)));
     // Para chegadas à unidade, traz também o responsável da unidade (botão "Avisar no WhatsApp").
-    $sql = 'SELECT n.id, n.type, n.title, n.detail, n.employee_id, n.created_at, r.read_at, e.photo_path, e.name AS employee_name,
+    $sql = 'SELECT n.id, n.type, n.title, n.detail, n.employee_id, n.created_at, n.dedupe_key, n.resolution, r.read_at, e.photo_path, e.name AS employee_name,
                    ev.occurred_at AS event_at, COALESCE(un.name, ev.unit_name) AS unit_name, un.responsible_name, un.responsible_phone
             FROM notifications n
             LEFT JOIN notification_reads r ON r.notification_id = n.id AND r.user_id = ?
@@ -293,8 +293,80 @@ route('GET', '/api/notifications', static function (PDO $db): void {
         'createdAt' => reobote_iso($row['created_at']),
         'read' => $row['read_at'] !== null,
         'whatsapp' => api_unit_whatsapp($row),
+        'release' => api_notification_release($db, $row),
     ], $query->fetchAll());
     reobote_json(['notifications' => $items, 'unread' => api_unread_count($db, $user), 'hasMore' => count($items) === $limit]);
+});
+
+/**
+ * Pedido de liberação: notificação de registro recusado por falta ("tentou registrar o ponto, mas o dia está
+ * como falta"). Devolve { date, status } — status "pending" (aguardando decisão), "released" (justificada e
+ * liberada) ou "denied" (não liberada) — ou null para as demais notificações.
+ */
+function api_notification_release(PDO $db, array $row): ?array
+{
+    if (!preg_match('/^absence-blocked:\d+:(\d{4}-\d{2}-\d{2})$/', (string) ($row['dedupe_key'] ?? ''), $match)) {
+        return null;
+    }
+    $date = $match[1];
+    $status = $row['resolution'] ?: null;
+    if ($status === null && $row['employee_id'] !== null && reobote_load_justifications($db, (string) $row['employee_id'], $date, $date)) {
+        $status = 'released'; // justificada pelo perfil do colaborador
+    }
+    return ['date' => $date, 'status' => $status ?? 'pending'];
+}
+
+// Busca o pedido de liberação de uma notificação; responde 404 quando não é um pedido.
+function api_release_request(PDO $db, string $id): array
+{
+    $query = $db->prepare('SELECT n.id, n.employee_id, n.dedupe_key, n.resolution, e.name FROM notifications n
+                           JOIN employees e ON e.id = n.employee_id WHERE n.id = ? AND e.deleted_at IS NULL');
+    $query->execute([$id]);
+    $row = $query->fetch();
+    $release = $row ? api_notification_release($db, $row) : null;
+    if ($release === null) {
+        reobote_fail('Pedido de liberação não encontrado.', 404);
+    }
+    return $row + ['release' => $release];
+}
+
+// Justifica o dia e LIBERA o técnico para registrar o ponto (o aplicativo deixa de recusar na hora).
+route('POST', '/api/notifications/(\d+)/release', static function (PDO $db, string $id): void {
+    $user = reobote_user();
+    reobote_require($user, 'employees');
+    $request = api_release_request($db, $id);
+    $reason = reobote_str(reobote_body(), 'reason', 300, true, 'Motivo');
+    $date = $request['release']['date'];
+    $db->beginTransaction();
+    try {
+        // Ele vai trabalhar no dia: a justificativa é de atraso (se chegou tarde demais, o dia fica como falta justificada).
+        $db->prepare('INSERT INTO attendance_justifications (employee_id, day, kind, reason, created_by_user_id) VALUES (?, ?, \'late\', ?, ?)
+                      ON DUPLICATE KEY UPDATE reason = VALUES(reason), created_by_user_id = VALUES(created_by_user_id), created_at = CURRENT_TIMESTAMP')
+            ->execute([$request['employee_id'], $date, $reason, $user['id']]);
+        $db->prepare("UPDATE notifications SET resolution = 'released' WHERE id = ?")->execute([$id]);
+        $db->prepare('INSERT IGNORE INTO notification_reads (user_id, notification_id, read_at) VALUES (?, ?, UTC_TIMESTAMP())')->execute([$user['id'], $id]);
+        reobote_audit($db, $user, 'absence_justified', 'employee', (string) $request['employee_id'],
+            ['date' => $date, 'tipo' => 'atraso', 'reason' => $reason, 'name' => $request['name'], 'liberado' => true]);
+        $db->commit();
+    } catch (Throwable $error) {
+        $db->rollBack();
+        throw $error;
+    }
+    reobote_json(['release' => ['date' => $date, 'status' => 'released']]);
+});
+
+// NÃO libera: o dia continua como falta e o aplicativo continua recusando o registro.
+route('POST', '/api/notifications/(\d+)/deny', static function (PDO $db, string $id): void {
+    $user = reobote_user();
+    reobote_require($user, 'employees');
+    $request = api_release_request($db, $id);
+    if ($request['release']['status'] === 'released') {
+        reobote_fail('Este registro já foi liberado. Para voltar atrás, remova a justificativa no perfil do colaborador.');
+    }
+    $db->prepare("UPDATE notifications SET resolution = 'denied' WHERE id = ?")->execute([$id]);
+    $db->prepare('INSERT IGNORE INTO notification_reads (user_id, notification_id, read_at) VALUES (?, ?, UTC_TIMESTAMP())')->execute([$user['id'], $id]);
+    reobote_audit($db, $user, 'release_denied', 'employee', (string) $request['employee_id'], ['date' => $request['release']['date'], 'name' => $request['name']]);
+    reobote_json(['release' => ['date' => $request['release']['date'], 'status' => 'denied']]);
 });
 
 // Marca notificações como lidas (algumas ou todas) para o usuário atual.
@@ -455,7 +527,7 @@ const API_AUDIT_LABELS = [
     'holiday_saved' => 'Feriado salvo', 'holiday_deleted' => 'Feriado excluído', 'unit_created' => 'Unidade criada', 'unit_updated' => 'Unidade alterada',
     'unit_deleted' => 'Unidade excluída', 'qr_created' => 'QR Code criado', 'qr_updated' => 'QR Code alterado', 'qr_deactivated' => 'QR Code desativado',
     'qr_regenerated' => 'QR Code substituído', 'settings_updated' => 'Configurações alteradas',
-    'location_consent_given' => 'Localização autorizada', 'fake_gps_detected' => 'GPS falso detectado', 'app_diagnostic' => 'Diagnóstico do aplicativo', 'absence_justified' => 'Falta/atraso justificado', 'justification_attachment' => 'Atestado anexado', 'employee_deleted' => 'Colaborador excluído', 'qr_deleted' => 'QR Code excluído', 'absence_justification_removed' => 'Justificativa removida', 'location_consent_revoked' => 'Localização revogada',
+    'location_consent_given' => 'Localização autorizada', 'fake_gps_detected' => 'GPS falso detectado', 'app_diagnostic' => 'Diagnóstico do aplicativo', 'absence_justified' => 'Falta/atraso justificado', 'justification_attachment' => 'Atestado anexado', 'employee_deleted' => 'Colaborador excluído', 'qr_deleted' => 'QR Code excluído', 'absence_justification_removed' => 'Justificativa removida', 'location_consent_revoked' => 'Localização revogada', 'release_denied' => 'Registro não liberado (falta mantida)',
 ];
 
 // Histórico de alterações administrativas (quem fez, o quê e quando).
