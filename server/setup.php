@@ -453,6 +453,13 @@ $migrations[13] = static function (PDO $pdo): void {
     add_column($pdo, 'notifications', 'resolution', 'VARCHAR(20) NULL AFTER `dedupe_key`');
 };
 
+// 14) Saída da unidade: em atendimento, ler de novo o QR Code da mesma unidade (ex.: vai embora de ônibus)
+//     registra a saída e o técnico passa para "Em deslocamento".
+$migrations[14] = static function (PDO $pdo): void {
+    $pdo->exec("ALTER TABLE attendance_events MODIFY event_type
+      ENUM('arrival', 'departure', 'break_start', 'break_end', 'vehicle_checkin', 'unit_checkin', 'unit_checkout') NOT NULL");
+};
+
 $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
   version INT UNSIGNED NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
