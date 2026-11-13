@@ -80,7 +80,7 @@ function reobote_event_public(array $event): array
 function reobote_load_events(PDO $db, string $employeeId, ?string $fromUtc = null, ?string $toUtc = null, int $limit = 5000): array
 {
     $sql = 'SELECT a.id, a.event_type, a.occurred_at, a.received_at, a.unit_id, a.qr_code_id, a.source, a.notes, a.distance_m,
-                   u.name AS unit_name, q.label AS qr_label
+                   COALESCE(u.name, a.unit_name) AS unit_name, COALESCE(q.label, a.qr_label) AS qr_label
             FROM attendance_events a
             LEFT JOIN units u ON u.id = a.unit_id
             LEFT JOIN qr_codes q ON q.id = a.qr_code_id
@@ -630,7 +630,7 @@ function reobote_current_states(PDO $db, array $employeeIds, ?DateTimeImmutable 
     $since = $now->modify('-36 hours')->format('Y-m-d H:i:s');
     $query = $db->prepare(
         "SELECT a.id, a.employee_id, a.event_type, a.occurred_at, a.received_at, a.unit_id, a.qr_code_id, a.source, a.notes, a.distance_m,
-                u.name AS unit_name, q.label AS qr_label
+                COALESCE(u.name, a.unit_name) AS unit_name, COALESCE(q.label, a.qr_label) AS qr_label
          FROM attendance_events a
          LEFT JOIN units u ON u.id = a.unit_id
          LEFT JOIN qr_codes q ON q.id = a.qr_code_id
