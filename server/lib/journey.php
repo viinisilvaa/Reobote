@@ -8,6 +8,7 @@ declare(strict_types=1);
 const REOBOTE_EVENT_TYPES = [
     'vehicle_checkin' => 'Chegada ao veículo',
     'unit_checkin' => 'Chegada à unidade',
+    'unit_checkout' => 'Saída da unidade', // leu de novo o QR Code da unidade ao sair (ex.: vai de ônibus)
     'arrival' => 'Entrada',
     'break_start' => 'Início do almoço',
     'break_end' => 'Retorno do almoço',
@@ -48,8 +49,11 @@ function reobote_event_from_row(array $row): array
         'id' => (string) $row['id'],
         'type' => (string) $row['event_type'],
         'at' => new DateTimeImmutable((string) $row['occurred_at'], new DateTimeZone('UTC')),
-        // Unidade só quando a presença nela é confirmada (fixo na unidade, GPS dentro do raio ou lançado pela Central).
-        'unitId' => $atUnit ? $unitId : null,
+        // unitId: unidade do QR Code lido (usada nas regras de sequência, ex.: saída da mesma unidade).
+        // atUnit: presença confirmada nela (fixo na unidade, GPS dentro do raio ou lançado pela Central);
+        // sem confirmação, o nome da unidade não aparece nas telas.
+        'unitId' => $unitId,
+        'atUnit' => $atUnit,
         'unitName' => $atUnit ? ($row['unit_name'] ?? null) : null,
         'qrCodeId' => isset($row['qr_code_id']) && $row['qr_code_id'] !== null ? (string) $row['qr_code_id'] : null,
         'qrLabel' => $unitBased && !$atUnit ? null : ($row['qr_label'] ?? null),
@@ -91,7 +95,7 @@ function reobote_event_public(array $event): array
         'eventType' => $event['type'],
         'label' => REOBOTE_EVENT_TYPES[$event['type']] ?? 'Registro',
         'occurredAt' => $event['at']->format('Y-m-d\TH:i:s\Z'),
-        'unitId' => $event['unitId'],
+        'unitId' => ($event['atUnit'] ?? true) ? $event['unitId'] : null, // só com presença confirmada
         'place' => $event['unitName'] ?? $event['qrLabel'],
         'source' => $event['source'],
         'notes' => $event['notes'],
@@ -629,7 +633,8 @@ function reobote_state_from_events(array $events, DateTimeImmutable $now): array
     $state = 'waiting';
     if ($last !== null && $last['ongoing']) {
         $type = $last['lastEvent']['type'];
-        $state = $type === 'break_start' ? 'on_break' : ($type === 'vehicle_checkin' ? 'in_transit' : 'working');
+        // Chegou ao veículo ou saiu da unidade: em deslocamento.
+        $state = $type === 'break_start' ? 'on_break' : (in_array($type, ['vehicle_checkin', 'unit_checkout'], true) ? 'in_transit' : 'working');
     } elseif ($last !== null && $last['end'] !== null
         && $last['start']->setTimezone($tz)->format('Y-m-d') === $now->setTimezone($tz)->format('Y-m-d')) {
         $state = 'finished';
@@ -674,6 +679,24 @@ function reobote_current_states(PDO $db, array $employeeIds, ?DateTimeImmutable 
     return $result;
 }
 
+// Unidade onde o técnico está agora: a da última chegada à unidade, se ele está "Em atendimento" e ainda não
+// saiu (sem leitura de veículo ou saída depois). Devolve ['unitId' => ..., 'qrCodeId' => ...] ou nulos.
+function reobote_current_unit_checkin(array $stateInfo): array
+{
+    if ($stateInfo['state'] !== 'working') {
+        return ['unitId' => null, 'qrCodeId' => null];
+    }
+    foreach (array_reverse($stateInfo['shift']['events'] ?? []) as $event) {
+        if (in_array($event['type'], ['vehicle_checkin', 'unit_checkout', 'arrival'], true)) {
+            break;
+        }
+        if ($event['type'] === 'unit_checkin') {
+            return ['unitId' => $event['unitId'], 'qrCodeId' => $event['qrCodeId']];
+        }
+    }
+    return ['unitId' => null, 'qrCodeId' => null];
+}
+
 // Regras de sequencia: impedem registros duplicados ou fora da ordem esperada.
 // Retorna null quando o registro e permitido, 'duplicate' para repeticoes ou a mensagem de erro.
 function reobote_check_transition(array $stateInfo, string $type, ?string $unitId, ?string $qrCodeId, DateTimeImmutable $at): ?string
@@ -708,6 +731,15 @@ function reobote_check_transition(array $stateInfo, string $type, ?string $unitI
             }
             if ($state === 'working' && $lastCheckin !== null && $lastCheckin['type'] === $type && $lastCheckin['unitId'] === $unitId) {
                 return 'A chegada a esta unidade já foi registrada.';
+            }
+            return null;
+        case 'unit_checkout':
+            if ($state !== 'working') {
+                return 'Não há chegada a esta unidade para registrar a saída.';
+            }
+            // Leitura repetida logo depois da chegada (menos de 2 minutos) é engano, não saída.
+            if ($lastCheckin !== null && abs($at->getTimestamp() - $lastCheckin['at']->getTimestamp()) < 120) {
+                return 'duplicate';
             }
             return null;
         case 'break_start':
