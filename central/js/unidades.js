@@ -118,7 +118,7 @@ window.ReobotePage = {
           <label class="field"><span>Longitude</span><input class="text-control" name="longitude" inputmode="decimal" value="${unit?.longitude ?? ""}" placeholder="-43.1729"></label>
           <button type="button" class="button-secondary small-button span-2" data-use-location><i class="fa-solid fa-location-crosshairs"></i> Usar minha localização atual (estando na unidade)</button>
           ${unit ? `<label class="checkbox-line span-2"><input type="checkbox" name="active" ${unit.active ? "checked" : ""}> Unidade ativa (desativar bloqueia os QR Codes dela)</label>` : ""}
-          <p class="form-hint span-2"><i class="fa-solid fa-circle-info"></i> Com a localização, o mapa mostra a unidade e a Central é avisada quando uma chegada é registrada fora do raio.</p>
+          <p class="form-hint span-2"><i class="fa-solid fa-circle-info"></i> Com a localização, o mapa mostra a unidade e a Central é avisada quando uma chegada é registrada fora do raio. Deixe latitude e longitude em branco para o sistema encontrar a localização pelo endereço.</p>
         </div>`,
         onOpen: form => form.querySelector("[data-use-location]").addEventListener("click", () => {
           if (!navigator.geolocation) return R.toast("Este navegador não oferece localização.", "error");
