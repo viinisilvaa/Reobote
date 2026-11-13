@@ -168,10 +168,10 @@ route('GET', '/api/map', static function (PDO $db): void {
         $shift = $states[$id]['shift'];
         if ($shift !== null && $shift['ongoing'] && in_array($item['state'], ['working', 'on_break'], true)) {
             foreach ($shift['events'] as $event) {
-                if ($event['type'] === 'vehicle_checkin') {
+                if (in_array($event['type'], ['vehicle_checkin', 'unit_checkout'], true)) { // saiu da unidade
                     $attendanceUnitId = null;
                 } elseif ($event['type'] === 'unit_checkin') {
-                    $attendanceUnitId = $event['unitId'];
+                    $attendanceUnitId = ($event['atUnit'] ?? true) ? $event['unitId'] : null; // só com presença confirmada
                 }
             }
         }
