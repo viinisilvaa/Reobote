@@ -7,16 +7,24 @@
   const forgotMessage = document.querySelector("#forgot-message");
 
   // Para onde ir após o login: página pedida (se for da Central), criação de senha, aplicativo (sem acesso à Central) ou painel.
+  // api.page() acrescenta o começo do site quando a Central está no GitHub Pages ("/Reobote/central/...").
   function destination(session) {
+    const api = window.ReoboteApi;
     const requested = new URLSearchParams(location.search).get("return");
     if (session.user.mustChangePassword) {
-      return `/central/trocar-senha.html${requested ? `?return=${encodeURIComponent(requested)}` : ""}`;
+      return `${api.page("/central/trocar-senha.html")}${requested ? `?return=${encodeURIComponent(requested)}` : ""}`;
     }
     // Quem não tem acesso à Central usa o aplicativo, que fica em uma pasta separada.
-    if (!session.user.centralAccess) return "/app/";
-    if (requested && /^\/central\/[a-z-]+\.html(\?[\w=&%-]*)?$/.test(requested) && !/entrar|trocar-senha/.test(requested)) return requested;
-    return session.user.permissions.includes("dashboard") ? "/central/painel-principal.html" : "/central/configuracoes.html";
+    if (!session.user.centralAccess) return api.appUrl();
+    if (requested && /^\/central\/[a-z-]+\.html(\?[\w=&%-]*)?$/.test(requested) && !/entrar|trocar-senha/.test(requested)) return api.page(requested);
+    return api.page(session.user.permissions.includes("dashboard") ? "/central/painel-principal.html" : "/central/configuracoes.html");
   }
+
+  // No GitHub Pages, o link do aplicativo aponta para o servidor (o aplicativo não fica no GitHub).
+  window.ReoboteApi.ready.then(() => {
+    const appLink = document.querySelector("#app-link");
+    if (appLink && window.ReoboteApi.remote) appLink.href = window.ReoboteApi.appUrl();
+  });
 
   // Quem já está conectado segue direto.
   window.ReoboteApi.get("/api/auth/me", { handleAuth: false })
