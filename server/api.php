@@ -34,9 +34,27 @@ function api_require_same_origin(string $method): void
         // Origens aceitas: o próprio site e o aplicativo Android (Capacitor usa https://localhost internamente).
         // Outras origens podem ser liberadas em APP_ALLOWED_ORIGINS (separadas por vírgula) no server/.env.
         $extra = array_filter(array_map('trim', explode(',', (string) reobote_env('APP_ALLOWED_ORIGINS', 'https://localhost,capacitor://localhost'))));
+        // A Central publicada no GitHub Pages (https://viinisilvaa.github.io/Reobote/) sempre é aceita.
+        $extra[] = 'https://viinisilvaa.github.io';
         $allowed = array_merge(['http://' . $host, 'https://' . $host], $extra);
         if ($host === '' || !in_array($origin, $allowed, true)) {
             reobote_fail('Origem da requisição não autorizada.', 403);
+        }
+        // Origem de outro site já autorizada (GitHub Pages, aplicativo): cabeçalhos CORS para o navegador
+        // liberar a resposta, inclusive o token de sessão (X-Reobote-Session).
+        if (in_array($origin, $extra, true)) {
+            header('Access-Control-Allow-Origin: ' . $origin);
+            header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+            header('Access-Control-Allow-Headers: Accept, Content-Type, X-Reobote, X-Reobote-Session');
+            header('Access-Control-Expose-Headers: X-Reobote-Session');
+            header('Access-Control-Max-Age: 600');
+            header('Vary: Origin');
+            // Pergunta prévia do navegador (preflight): basta responder com os cabeçalhos acima.
+            if ($method === 'OPTIONS') {
+                http_response_code(204);
+                exit;
+            }
         }
     }
     if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true) && ($_SERVER['HTTP_X_REOBOTE'] ?? '') !== '1') {
