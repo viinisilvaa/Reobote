@@ -85,7 +85,7 @@
   function avatar(person, className = "avatar") {
     const id = person?.employeeId ?? person?.id;
     if (person?.hasPhoto && id) {
-      return `<span class="${className}"><img src="/api/employees/${encodeURIComponent(id)}/photo?v=${esc(person.photoVersion || "1")}" alt="" loading="lazy" data-fallback="${esc(initials(person.name || person.employeeName))}"></span>`;
+      return `<span class="${className}"><img ${api.imageAttr(`/api/employees/${encodeURIComponent(id)}/photo?v=${esc(person.photoVersion || "1")}`)} alt="" loading="lazy" data-fallback="${esc(initials(person.name || person.employeeName))}"></span>`;
     }
     return `<span class="${className}">${esc(initials(person?.name || person?.employeeName))}</span>`;
   }
@@ -479,7 +479,7 @@
   document.addEventListener("click", event => {
     if (event.target.closest("[data-action=\"reload\"]")) location.reload();
     if (event.target.closest('[data-action="logout"]')) {
-      api.post("/api/auth/logout", {}).finally(() => location.assign("/central/entrar.html"));
+      api.post("/api/auth/logout", {}).finally(() => location.assign(api.page("/central/entrar.html")));
     }
   });
 
@@ -504,11 +504,11 @@
       return;
     }
     if (session.user.mustChangePassword) {
-      location.assign(`/central/trocar-senha.html?return=${encodeURIComponent(location.pathname + location.search)}`);
+      location.assign(`${api.page("/central/trocar-senha.html")}?return=${encodeURIComponent(location.pathname.slice(api.sitePrefix.length) + location.search)}`);
       return;
     }
     if (!session.user.centralAccess) {
-      location.replace("/app/");
+      location.replace(api.appUrl());
       return;
     }
     timezone = session.rules.timezone || timezone;
