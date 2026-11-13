@@ -447,6 +447,12 @@ $migrations[12] = static function (PDO $pdo): void {
     $pdo->exec('DELETE FROM units WHERE deleted_at IS NOT NULL');
 };
 
+// 13) Pedido de liberação: quando o aplicativo recusa o ponto por falta, a Central decide na própria
+//     notificação se justifica e libera ("released") ou não libera ("denied") o técnico.
+$migrations[13] = static function (PDO $pdo): void {
+    add_column($pdo, 'notifications', 'resolution', 'VARCHAR(20) NULL AFTER `dedupe_key`');
+};
+
 $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
   version INT UNSIGNED NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
