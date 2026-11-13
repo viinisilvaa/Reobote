@@ -39,19 +39,43 @@ function reobote_gap_seconds(): int
 // Converte uma linha de attendance_events no formato usado pelo motor.
 function reobote_event_from_row(array $row): array
 {
+    $unitId = isset($row['unit_id']) && $row['unit_id'] !== null ? (string) $row['unit_id'] : null;
+    $distance = isset($row['distance_m']) && $row['distance_m'] !== null ? (int) $row['distance_m'] : null;
+    $source = $row['source'] ?? 'mobile';
+    $atUnit = reobote_event_at_unit($unitId, $row['employee_unit_id'] ?? null, $distance, $row['unit_radius'] ?? null, $source);
+    $unitBased = $unitId !== null || ($row['unit_name'] ?? null) !== null; // QR Code de unidade (não de veículo)
     return [
         'id' => (string) $row['id'],
         'type' => (string) $row['event_type'],
         'at' => new DateTimeImmutable((string) $row['occurred_at'], new DateTimeZone('UTC')),
-        'unitId' => isset($row['unit_id']) && $row['unit_id'] !== null ? (string) $row['unit_id'] : null,
-        'unitName' => $row['unit_name'] ?? null,
+        // Unidade só quando a presença nela é confirmada (fixo na unidade, GPS dentro do raio ou lançado pela Central).
+        'unitId' => $atUnit ? $unitId : null,
+        'unitName' => $atUnit ? ($row['unit_name'] ?? null) : null,
         'qrCodeId' => isset($row['qr_code_id']) && $row['qr_code_id'] !== null ? (string) $row['qr_code_id'] : null,
-        'qrLabel' => $row['qr_label'] ?? null,
-        'source' => $row['source'] ?? 'mobile',
+        'qrLabel' => $unitBased && !$atUnit ? null : ($row['qr_label'] ?? null),
+        'source' => $source,
         'notes' => $row['notes'] ?? null,
-        'distanceM' => isset($row['distance_m']) && $row['distance_m'] !== null ? (int) $row['distance_m'] : null,
+        'distanceM' => $distance,
         'receivedAt' => $row['received_at'] ?? null,
     ];
+}
+
+/**
+ * O registro de QR Code de unidade conta como presença NA unidade (e mostra o nome dela) somente quando:
+ *   - o colaborador é fixo nessa unidade (cadastro); ou
+ *   - o GPS do celular, no momento da leitura, estava dentro do raio de chegada da unidade; ou
+ *   - o registro foi lançado pela Central (que escolheu a unidade).
+ * Um volante que lê o QR Code longe da unidade (ou sem GPS para conferir) não aparece "na unidade".
+ */
+function reobote_event_at_unit(?string $unitId, $employeeUnitId, ?int $distanceM, $radiusM, string $source): bool
+{
+    if ($unitId === null) {
+        return false;
+    }
+    if ($source === 'admin' || ($employeeUnitId !== null && (string) $employeeUnitId === $unitId)) {
+        return true;
+    }
+    return $distanceM !== null && $radiusM !== null && $distanceM <= (int) $radiusM;
 }
 
 // Formato publico de um registro para a API.
@@ -80,7 +104,8 @@ function reobote_event_public(array $event): array
 function reobote_load_events(PDO $db, string $employeeId, ?string $fromUtc = null, ?string $toUtc = null, int $limit = 5000): array
 {
     $sql = 'SELECT a.id, a.event_type, a.occurred_at, a.received_at, a.unit_id, a.qr_code_id, a.source, a.notes, a.distance_m,
-                   COALESCE(u.name, a.unit_name) AS unit_name, COALESCE(q.label, a.qr_label) AS qr_label
+                   COALESCE(u.name, a.unit_name) AS unit_name, COALESCE(q.label, a.qr_label) AS qr_label,
+                   u.radius_m AS unit_radius, (SELECT emp.unit_id FROM employees emp WHERE emp.id = a.employee_id) AS employee_unit_id
             FROM attendance_events a
             LEFT JOIN units u ON u.id = a.unit_id
             LEFT JOIN qr_codes q ON q.id = a.qr_code_id
@@ -630,7 +655,8 @@ function reobote_current_states(PDO $db, array $employeeIds, ?DateTimeImmutable 
     $since = $now->modify('-36 hours')->format('Y-m-d H:i:s');
     $query = $db->prepare(
         "SELECT a.id, a.employee_id, a.event_type, a.occurred_at, a.received_at, a.unit_id, a.qr_code_id, a.source, a.notes, a.distance_m,
-                COALESCE(u.name, a.unit_name) AS unit_name, COALESCE(q.label, a.qr_label) AS qr_label
+                COALESCE(u.name, a.unit_name) AS unit_name, COALESCE(q.label, a.qr_label) AS qr_label,
+                u.radius_m AS unit_radius, (SELECT emp.unit_id FROM employees emp WHERE emp.id = a.employee_id) AS employee_unit_id
          FROM attendance_events a
          LEFT JOIN units u ON u.id = a.unit_id
          LEFT JOIN qr_codes q ON q.id = a.qr_code_id
