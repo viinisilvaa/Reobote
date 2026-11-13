@@ -221,6 +221,12 @@ function reobote_record_event(PDO $db, array $employee, string $type, DateTimeIm
         $query->execute([$unitId]);
         $event['unitName'] = $query->fetchColumn() ?: null;
     }
+    // Aviso da Central: o nome da unidade só aparece com a presença confirmada (fixo nela, GPS dentro do raio
+    // ou lançado pela Central). Volante longe da unidade aparece sem o nome (e com o aviso "fora do raio").
+    if ($unitId !== null && !reobote_event_at_unit($unitId, $employee['unit_id'] ?? null, $distance, $radius, $event['source'])) {
+        $event['unitName'] = null;
+        $event['qrLabel'] = null;
+    }
     reobote_notify_event($db, $employee, $event, $journeyDay);
 
     return ['status' => 'recorded', 'eventId' => $eventId, 'distanceM' => $distance, 'place' => $event['unitName'] ?? $event['qrLabel']];
