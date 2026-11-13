@@ -16,8 +16,10 @@ window.ReobotePage = {
   async mount(root, R) {
     const { esc } = R;
     // Endereços completos (com https), necessários para os QR Codes funcionarem no celular.
-    const apkUrl = new URL(R.session.downloads?.apkUrl || "/downloads/reobote.apk", location.origin).href;
-    const webAppUrl = `${location.origin}/app/`;
+    // No GitHub Pages, o APK e o aplicativo web ficam no servidor (R.api.baseUrl), não no GitHub.
+    const serverOrigin = R.api.remote ? R.api.baseUrl : location.origin;
+    const apkUrl = new URL(R.session.downloads?.apkUrl || "/downloads/reobote.apk", serverOrigin).href;
+    const webAppUrl = `${serverOrigin}/app/`;
     const isLocalServer = /^(localhost|127\.)/.test(location.hostname);
 
     // Gera um QR Code como imagem (biblioteca qrcode-generator, em js/vendor).
@@ -85,7 +87,7 @@ window.ReobotePage = {
           ${isLocalServer ? "" : `<div class="download-qr">${qrImage(webAppUrl, "QR Code para abrir o aplicativo no navegador")}</div>`}
           <div class="download-copy">
             <p>O mesmo aplicativo funciona pelo navegador do celular, inclusive no iPhone, e pode ser adicionado à tela inicial.</p>
-            <a class="button-secondary" href="/app/" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir o aplicativo web</a>
+            <a class="button-secondary" href="${esc(webAppUrl)}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir o aplicativo web</a>
           </div>
         </div>
       </section>`;
