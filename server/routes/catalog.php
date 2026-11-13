@@ -307,6 +307,36 @@ function reobote_whatsapp_number($value): ?string
     return $digits;
 }
 
+/**
+ * Procura a latitude e a longitude de um endereço no OpenStreetMap (serviço Nominatim, gratuito; o mesmo
+ * mapa usado na Central). Tenta o endereço completo e, se não achar, sem o CEP. Devolve [lat, lng] ou null.
+ */
+function api_geocode_address(string $address): ?array
+{
+    $attempts = array_unique([$address, trim((string) preg_replace('/[,\s-]*\d{5}-?\d{3}\s*$/', '', $address))]);
+    $context = stream_context_create(['http' => [
+        'timeout' => 6,
+        'ignore_errors' => true,
+        // A política do Nominatim pede que cada sistema se identifique.
+        'header' => "User-Agent: REOBOTE/1.0 (localizacao de unidades)\r\nAccept-Language: pt-BR\r\n",
+    ]]);
+    foreach ($attempts as $index => $query) {
+        if ($query === '') {
+            continue;
+        }
+        if ($index > 0) {
+            sleep(1); // o Nominatim aceita no máximo 1 consulta por segundo
+        }
+        $url = 'https://nominatim.openstreetmap.org/search?' . http_build_query(['q' => $query, 'format' => 'json', 'limit' => 1, 'countrycodes' => 'br']);
+        $response = @file_get_contents($url, false, $context);
+        $found = $response === false ? null : (json_decode($response, true)[0] ?? null);
+        if (is_array($found) && isset($found['lat'], $found['lon'])) {
+            return [round((float) $found['lat'], 7), round((float) $found['lon'], 7)];
+        }
+    }
+    return null;
+}
+
 // Valida os dados do formulário de unidade (nome, endereço, coordenadas e raio de chegada).
 function api_unit_input(PDO $db, array $body, ?string $id): array
 {
@@ -318,6 +348,12 @@ function api_unit_input(PDO $db, array $body, ?string $id): array
     $lng = $lng === null || $lng === '' ? null : filter_var($lng, FILTER_VALIDATE_FLOAT);
     if ($lat === false || $lng === false || ($lat !== null && ($lat < -90 || $lat > 90)) || ($lng !== null && ($lng < -180 || $lng > 180)) || (($lat === null) !== ($lng === null))) {
         reobote_fail('Informe latitude e longitude válidas (ou deixe as duas em branco).');
+    }
+    // Sem coordenadas, mas com endereço: o servidor procura a localização pelo endereço, para a unidade
+    // aparecer no mapa e o raio de chegada funcionar. Se não encontrar, a unidade é salva sem localização.
+    $address = reobote_str($body, 'address', 300, false, 'Endereço');
+    if ($lat === null && $address !== null) {
+        [$lat, $lng] = api_geocode_address($address) ?? [null, null];
     }
     return [
         'name' => $name,
