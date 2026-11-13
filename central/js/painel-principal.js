@@ -54,7 +54,18 @@ window.ReobotePage = {
     // Desenha o painel completo a partir dos dados de /api/dashboard.
     function render(data) {
       const m = data.metrics;
-      const attention = data.team.filter(person => person.todayLateMinutes > 0 || (person.todayStatus === "not_arrived" && person.state === "waiting"));
+      // Atenção hoje: faltas (status "absent"), atrasos e quem ainda não chegou. Falta aparece só como falta, sem atraso.
+      const attention = data.team.filter(person => person.todayStatus === "absent" || person.todayLateMinutes > 0 || (person.todayStatus === "not_arrived" && person.state === "waiting"));
+      // Texto e etiqueta de cada pessoa da lista de atenção.
+      const attentionInfo = person => {
+        if (person.todayStatus === "absent") {
+          return [person.todayArrivalDelayMinutes > 0
+            ? `Chegou ${fmt.duration(person.todayArrivalDelayMinutes)} depois do horário: conta como falta`
+            : `Sem registro da jornada prevista para ${esc(person.schedule?.start || "")}`, "Falta", "danger"];
+        }
+        if (person.todayLateMinutes > 0) return [`Chegou com atraso de ${fmt.duration(person.todayLateMinutes)}`, "Atraso", "warning"];
+        return [`Ainda não iniciou a jornada prevista para ${esc(person.schedule?.start || "")}`, "Atrasado", "warning"];
+      };
       const order = { working: 0, in_transit: 1, on_break: 2, waiting: 3, finished: 4 };
       const team = [...data.team].sort((a, b) => (order[a.state] ?? 9) - (order[b.state] ?? 9) || a.name.localeCompare(b.name, "pt-BR"));
 
@@ -62,8 +73,8 @@ window.ReobotePage = {
         <section class="dashboard-overview dashboard-overview-5" aria-label="Indicadores de hoje">
           ${metric("metric-employees", "fa-users", m.total, "Colaboradores cadastrados", "Cadastros ativos", "colaboradores.html")}
           ${metric("metric-presence", "fa-user-check", m.active, "Colaboradores ativos", `${m.onBreak} em almoço agora`, "mapa-tempo-real.html")}
-          ${metric("metric-absence", "fa-clock", m.late, "Atrasados hoje", "Além da tolerância", "relatorios.html", m.late ? "negative" : "positive")}
-          ${metric("metric-shift", "fa-user-xmark", m.absent, "Ausentes hoje", "Sem início após a tolerância", "notificacoes.html", m.absent ? "negative" : "positive")}
+          ${metric("metric-absence", "fa-clock", m.late, "Atrasados hoje", "Além da tolerância (sem contar faltas)", "relatorios.html", m.late ? "negative" : "positive")}
+          ${metric("metric-shift", "fa-user-xmark", m.absent, "Faltas hoje", "Sem registro após o limite da falta", "notificacoes.html", m.absent ? "negative" : "positive")}
           ${metric("metric-overtime", "fa-business-time", fmt.duration(m.overtimeMinutes), "Horas extras", `Últimos ${data.period} dias`, "relatorios.html")}
         </section>
 
@@ -114,10 +125,10 @@ window.ReobotePage = {
 
           <article class="dashboard-card attention-card">
             <header class="dashboard-card-heading"><h2><i class="fa-solid fa-triangle-exclamation"></i> Atenção hoje</h2></header>
-            <ul class="situation-list">${attention.map(person => `<li><a href="perfil-colaborador.html?id=${encodeURIComponent(person.id)}">${R.avatar(person, "avatar small")}
-              <span class="situation-copy"><strong>${esc(person.name)}</strong><small>${person.todayLateMinutes > 0 ? `Chegou com atraso de ${fmt.duration(person.todayLateMinutes)}` : `Não iniciou a jornada prevista para ${esc(person.schedule?.start || "")}`}</small></span>
-              <span class="state-pill ${person.todayLateMinutes > 0 ? "warning" : "danger"}">${person.todayLateMinutes > 0 ? "Atraso" : "Ausente"}</span></a></li>`).join("")
-              || `<li>${R.emptyState("fa-circle-check", "Tudo em dia", "Nenhum atraso ou ausência até agora.")}</li>`}</ul>
+            <ul class="situation-list">${attention.map(person => { const [text, label, tone] = attentionInfo(person); return `<li><a href="perfil-colaborador.html?id=${encodeURIComponent(person.id)}">${R.avatar(person, "avatar small")}
+              <span class="situation-copy"><strong>${esc(person.name)}</strong><small>${text}</small></span>
+              <span class="state-pill ${tone}">${label}</span></a></li>`; }).join("")
+              || `<li>${R.emptyState("fa-circle-check", "Tudo em dia", "Nenhum atraso ou falta até agora.")}</li>`}</ul>
           </article>
         </section>`;
 
