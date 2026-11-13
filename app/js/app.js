@@ -44,8 +44,8 @@
 
   // Textos exibidos para cada situação da jornada e para cada tipo de registro.
   const STATE_LABELS = { waiting: "Aguardando início", in_transit: "Em deslocamento", working: "Em atendimento", on_break: "Em almoço", finished: "Jornada finalizada" };
-  const EVENT_LABELS = { vehicle_checkin: "Chegada ao veículo", unit_checkin: "Chegada à unidade", arrival: "Entrada", break_start: "Início do almoço", break_end: "Retorno do almoço", departure: "Encerramento da jornada", scan: "Leitura de QR Code" };
-  const EVENT_ICONS = { vehicle_checkin: "fa-car", unit_checkin: "fa-location-dot", arrival: "fa-right-to-bracket", break_start: "fa-utensils", break_end: "fa-flag-checkered", departure: "fa-door-open", scan: "fa-qrcode" };
+  const EVENT_LABELS = { vehicle_checkin: "Chegada ao veículo", unit_checkin: "Chegada à unidade", unit_checkout: "Saída da unidade", arrival: "Entrada", break_start: "Início do almoço", break_end: "Retorno do almoço", departure: "Encerramento da jornada", scan: "Leitura de QR Code" };
+  const EVENT_ICONS = { vehicle_checkin: "fa-car", unit_checkin: "fa-location-dot", unit_checkout: "fa-person-walking-arrow-right", arrival: "fa-right-to-bracket", break_start: "fa-utensils", break_end: "fa-flag-checkered", departure: "fa-door-open", scan: "fa-qrcode" };
   const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
   // Chaves usadas no armazenamento do celular (localStorage).
@@ -251,23 +251,32 @@
 
   // Situação prevista: parte do último estado confirmado pelo servidor e aplica os registros ainda na fila.
   // Isso permite mostrar a situação certa e liberar os botões corretos mesmo sem internet.
+  // Tipo de uma leitura de QR Code: veículo (V) = chegada ao veículo; unidade (U) = chegada à unidade, OU
+  // saída da unidade quando é o QR Code da unidade onde ele já está em atendimento (ex.: vai embora de ônibus).
+  function scanType(qr, state, unitQr) {
+    if (qr.startsWith("REOBOTE:V")) return "vehicle_checkin";
+    return state === "working" && unitQr && qr === unitQr ? "unit_checkout" : "unit_checkin";
+  }
+
   function predicted() {
     const today = store.today;
     let state = today?.state || "waiting";
     let lastScan = null;
+    // QR Code da unidade onde ele está agora (informado pelo servidor e atualizado pelas leituras na fila).
+    let unitQr = state === "working" ? today?.unitCheckinQr || null : null;
     const pendingEvents = [];
     for (const item of store.queue) {
-      // Uma leitura de QR Code vira chegada ao veículo (V) ou à unidade (U) conforme o código.
-      const type = item.type === "scan" ? (item.qr.startsWith("REOBOTE:V") ? "vehicle_checkin" : "unit_checkin") : item.type;
-      if (type === "vehicle_checkin") state = "in_transit";
-      if (type === "unit_checkin") state = "working";
+      const type = item.type === "scan" ? scanType(item.qr, state, unitQr) : item.type;
+      if (type === "vehicle_checkin" || type === "unit_checkout") { state = "in_transit"; unitQr = null; }
+      if (type === "unit_checkin") { state = "working"; unitQr = item.qr; }
+      if (type === "departure") unitQr = null;
       if (type === "break_start") state = "on_break";
       if (type === "break_end") state = "working";
       if (type === "departure") state = "finished";
       if (item.type === "scan") lastScan = item;
       pendingEvents.push({ eventType: type, label: EVENT_LABELS[type], occurredAt: item.occurredAt, pending: true });
     }
-    return { state, pendingEvents, lastScan };
+    return { state, pendingEvents, lastScan, unitQr };
   }
 
   // Mesmas regras de sequência do servidor (server/lib/journey.php), para responder na hora mesmo sem internet.
@@ -387,7 +396,10 @@
       askToTurnOnGps("unavailable");
       return null;
     }
-    const item = { clientId: uuid(), type, occurredAt, ...extra, ...(position || {}) };
+    // eventGuess: tipo previsto da leitura (chegada ou saída da unidade), para mostrar certo mesmo sem internet.
+    const before = predicted();
+    const eventGuess = type === "scan" ? scanType(extra.qr, before.state, before.unitQr) : type;
+    const item = { clientId: uuid(), type, occurredAt, eventGuess, ...extra, ...(position || {}) };
     store.queue.push(item);
     saveStore();
     render();
@@ -574,7 +586,7 @@
   // Confirmação depois de uma leitura: enviado, guardado para envio ou recusado (com o motivo).
   function resultScreen(outcome) {
     const { item, result } = outcome;
-    const type = result?.eventType || (item.type === "departure" ? "departure" : item.qr?.startsWith("REOBOTE:V") ? "vehicle_checkin" : item.qr ? "unit_checkin" : item.type);
+    const type = result?.eventType || item.eventGuess || (item.type === "departure" ? "departure" : item.qr?.startsWith("REOBOTE:V") ? "vehicle_checkin" : item.qr ? "unit_checkin" : item.type);
     if (result?.status === "rejected") {
       return `<section class="m-card m-result error"><i class="fa-solid fa-circle-xmark"></i><h1>Registro não aceito</h1><p>${esc(result.error)}</p>
         <button type="button" class="m-button primary" data-tab-go="home">Voltar ao início</button></section>`;
@@ -777,7 +789,7 @@
   // Notificações do colaborador: registros recusados, aguardando envio e enviados hoje.
   function notificationsScreen() {
     const items = [];
-    store.rejected.forEach(item => items.push({ tone: "bad", icon: "fa-triangle-exclamation", title: `${EVENT_LABELS[item.type === "scan" ? (item.qr?.startsWith("REOBOTE:V") ? "vehicle_checkin" : "unit_checkin") : item.type]} recusado`, text: item.error, at: item.occurredAt }));
+    store.rejected.forEach(item => items.push({ tone: "bad", icon: "fa-triangle-exclamation", title: `${EVENT_LABELS[item.eventGuess || (item.type === "scan" ? (item.qr?.startsWith("REOBOTE:V") ? "vehicle_checkin" : "unit_checkin") : item.type)]} recusado`, text: item.error, at: item.occurredAt }));
     predicted().pendingEvents.slice().reverse().forEach(event => items.push({ tone: "warn", icon: "fa-cloud-arrow-up", title: event.label, text: "Guardado no celular, aguardando envio à Central.", at: event.occurredAt }));
     (store.today?.shiftEvents || []).slice().reverse().forEach(event => items.push({ tone: "good", icon: EVENT_ICONS[event.eventType] || "fa-circle-check", title: event.label, text: `Enviado à Central${event.place ? ` • ${event.place}` : ""}`, at: event.occurredAt }));
     // Uma lista só, da mais recente para a mais antiga (recusas, pendentes e enviados misturados pelo horário).
