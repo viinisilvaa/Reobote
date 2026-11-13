@@ -29,6 +29,47 @@ window.ReobotePage = {
 
     const list = root.querySelector("#notification-list");
 
+    // Pedido de liberação (ponto recusado por falta): botões para decidir ou o resultado da decisão.
+    function releaseActions(item) {
+      if (!item.release) return "";
+      if (item.release.status === "released") return '<span class="state-pill success">Liberado</span>';
+      if (item.release.status === "denied") return '<span class="state-pill danger">Não liberado</span>';
+      if (!R.has("employees")) return '<span class="state-pill warning">Aguardando liberação</span>';
+      return `<button type="button" class="button-primary small-button" data-release="${esc(item.id)}"><i class="fa-solid fa-unlock"></i> Justificar e liberar</button>
+        <button type="button" class="button-secondary small-button" data-deny="${esc(item.id)}"><i class="fa-solid fa-ban"></i> Não liberar</button>`;
+    }
+
+    // Justifica o dia (motivo obrigatório) e libera o técnico para registrar o ponto.
+    async function release(id) {
+      const item = items.find(entry => entry.id === id);
+      const reason = await R.askReason({
+        title: "Justificar e liberar o ponto?",
+        message: `O dia ${item.release.date.split("-").reverse().join("/")} será justificado e o técnico poderá registrar o ponto pelo aplicativo na hora.`,
+        label: "Motivo (ex.: avisou que foi ao médico)", confirmLabel: "Justificar e liberar"
+      });
+      if (!reason) return;
+      try {
+        await api.post(`/api/notifications/${encodeURIComponent(id)}/release`, { reason });
+        R.toast("Liberado. O técnico já pode registrar o ponto.");
+        await load();
+      } catch (error) {
+        R.toast(error.message, "error");
+      }
+    }
+
+    // Não libera: o dia continua como falta e o aplicativo continua recusando o registro.
+    async function deny(id) {
+      const item = items.find(entry => entry.id === id);
+      if (!(await R.confirm({ title: "Não liberar o ponto?", message: `O dia ${item.release.date.split("-").reverse().join("/")} continua como falta e o aplicativo continua recusando o registro.`, confirmLabel: "Não liberar", danger: true }))) return;
+      try {
+        await api.post(`/api/notifications/${encodeURIComponent(id)}/deny`, {});
+        R.toast("Mantido como falta.");
+        await load();
+      } catch (error) {
+        R.toast(error.message, "error");
+      }
+    }
+
     // Desenha os cartões das notificações; alertas (atraso, ausência, fora do raio) ficam destacados.
     function render(unread) {
       root.querySelector("#unread-count").textContent = `${unread} não lida(s)`;
@@ -40,6 +81,7 @@ window.ReobotePage = {
           <time datetime="${esc(item.createdAt)}">${fmt.dateTime(item.createdAt)} • ${fmt.relative(item.createdAt)}</time>
         </div>
         <div class="notification-actions">
+          ${releaseActions(item)}
           ${item.employeeId ? `<a class="button-secondary small-button" href="${item.type === "access_request" ? "colaboradores.html" : `perfil-colaborador.html?id=${encodeURIComponent(item.employeeId)}`}">${item.type === "access_request" ? "Colaboradores" : "Ver perfil"}</a>` : ""}
           ${item.whatsapp ? `<a class="button-secondary small-button whatsapp-button" href="${esc(R.whatsappUrl(item.whatsapp))}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Avisar no WhatsApp</a>` : ""}
           ${item.read ? '<span class="read-label">Lida</span>' : `<button type="button" class="button-secondary small-button" data-read="${esc(item.id)}">Marcar como lida</button>`}
@@ -73,6 +115,10 @@ window.ReobotePage = {
     root.addEventListener("click", event => {
       const read = event.target.closest("[data-read]");
       if (read) markRead({ ids: [read.dataset.read] });
+      const releaseButton = event.target.closest("[data-release]");
+      if (releaseButton) release(releaseButton.dataset.release);
+      const denyButton = event.target.closest("[data-deny]");
+      if (denyButton) deny(denyButton.dataset.deny);
       const action = event.target.closest("[data-action]")?.dataset.action;
       if (action === "read-all") markRead({ all: true }).then(() => R.toast("Todas as notificações foram marcadas como lidas."));
       if (action === "more") load(true).catch(error => R.toast(error.message, "error"));
