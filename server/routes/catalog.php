@@ -373,30 +373,27 @@ route('PUT', '/api/units/(\d+)', static function (PDO $db, string $id): void {
     reobote_json(['unit' => api_unit_public($row)]);
 });
 
-// Exclui a unidade e os QR Codes dela. Sem histórico, apaga de vez; com registros de ponto, some de todas as
-// telas (os QR Codes param de funcionar na hora) e o histórico antigo continua mostrando o nome da unidade.
-// Os colaboradores que trabalhavam nela ficam "Sem unidade fixa".
+// Exclui DE VERDADE a unidade e os QR Codes dela: saem do banco de dados e de todas as telas, os QR Codes
+// param de funcionar na hora e o nome fica livre para cadastrar uma unidade nova com o mesmo nome.
+// Os registros de ponto feitos nela continuam guardados (a lei exige) e mostram o nome antigo, que é
+// copiado para o próprio registro antes de apagar. Os colaboradores que trabalhavam nela ficam "Sem unidade fixa".
 route('DELETE', '/api/units/(\d+)', static function (PDO $db, string $id): void {
     $user = reobote_user();
     reobote_require($user, 'units');
-    $query = $db->prepare('SELECT name FROM units WHERE id = ? AND deleted_at IS NULL');
+    $query = $db->prepare('SELECT name FROM units WHERE id = ?');
     $query->execute([$id]);
     $name = $query->fetchColumn();
     if ($name === false) {
         reobote_fail('Unidade não encontrada.', 404);
     }
-    $query = $db->prepare('SELECT COUNT(*) FROM attendance_events WHERE unit_id = ?');
-    $query->execute([$id]);
-    $hasHistory = (int) $query->fetchColumn() > 0;
     $db->beginTransaction();
     try {
+        // Guarda nos registros de ponto o nome da unidade e dos QR Codes dela (o histórico continua legível).
+        $db->prepare('UPDATE attendance_events a JOIN units u ON u.id = a.unit_id SET a.unit_name = u.name WHERE a.unit_id = ?')->execute([$id]);
+        $db->prepare('UPDATE attendance_events a JOIN qr_codes q ON q.id = a.qr_code_id SET a.qr_label = q.label WHERE q.unit_id = ?')->execute([$id]);
         $db->prepare('UPDATE employees SET unit_id = NULL WHERE unit_id = ?')->execute([$id]);
-        if ($hasHistory) {
-            $db->prepare('UPDATE qr_codes SET active = 0, deleted_at = UTC_TIMESTAMP() WHERE unit_id = ?')->execute([$id]);
-            $db->prepare('UPDATE units SET active = 0, deleted_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$id]);
-        } else {
-            $db->prepare('DELETE FROM units WHERE id = ?')->execute([$id]); // os QR Codes saem junto (ON DELETE CASCADE)
-        }
+        $db->prepare('DELETE FROM qr_codes WHERE unit_id = ?')->execute([$id]);
+        $db->prepare('DELETE FROM units WHERE id = ?')->execute([$id]);
         reobote_audit($db, $user, 'unit_deleted', 'unit', $id, ['name' => $name]);
         $db->commit();
     } catch (Throwable $error) {
@@ -480,25 +477,27 @@ route('PUT', '/api/qr-codes/(\d+)', static function (PDO $db, string $id): void 
 });
 
 // Gera um novo codigo (por exemplo, se a etiqueta foi fotografada ou danificada); o anterior deixa de funcionar.
-// Exclui um QR Code: para de funcionar na hora e some da lista. Se já foi usado em registros de ponto,
-// fica guardado (sem aparecer) para o histórico continuar mostrando o local.
+// Exclui DE VERDADE um QR Code: sai do banco de dados e da lista e para de funcionar na hora.
+// Os registros de ponto feitos com ele continuam mostrando a descrição, copiada para o registro antes de apagar.
 route('DELETE', '/api/qr-codes/(\d+)', static function (PDO $db, string $id): void {
     $user = reobote_user();
     reobote_require($user, 'units');
-    $query = $db->prepare('SELECT label FROM qr_codes WHERE id = ? AND deleted_at IS NULL');
+    $query = $db->prepare('SELECT label FROM qr_codes WHERE id = ?');
     $query->execute([$id]);
     $label = $query->fetchColumn();
     if ($label === false) {
         reobote_fail('QR Code não encontrado.', 404);
     }
-    $query = $db->prepare('SELECT COUNT(*) FROM attendance_events WHERE qr_code_id = ?');
-    $query->execute([$id]);
-    if ((int) $query->fetchColumn() > 0) {
-        $db->prepare('UPDATE qr_codes SET active = 0, deleted_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$id]);
-    } else {
+    $db->beginTransaction();
+    try {
+        $db->prepare('UPDATE attendance_events a JOIN qr_codes q ON q.id = a.qr_code_id SET a.qr_label = q.label WHERE a.qr_code_id = ?')->execute([$id]);
         $db->prepare('DELETE FROM qr_codes WHERE id = ?')->execute([$id]);
+        reobote_audit($db, $user, 'qr_deleted', 'qr_code', $id, ['label' => $label]);
+        $db->commit();
+    } catch (Throwable $error) {
+        $db->rollBack();
+        throw $error;
     }
-    reobote_audit($db, $user, 'qr_deleted', 'qr_code', $id, ['label' => $label]);
     reobote_json(['deleted' => true]);
 });
 
