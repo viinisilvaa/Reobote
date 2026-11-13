@@ -57,6 +57,21 @@ function reobote_start_session(): void
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
     ini_set('session.gc_maxlifetime', (string) (REOBOTE_REMEMBER_DAYS * 86400));
+
+    // Central no GitHub Pages: a sessão vem no cabeçalho X-Reobote-Session (token) em vez de cookie,
+    // porque o navegador bloqueia cookies entre sites diferentes. "-" = ainda sem token (antes do login).
+    // O modo estrito acima recusa tokens inventados (o PHP cria uma sessão nova nesse caso).
+    $token = $_SERVER['HTTP_X_REOBOTE_SESSION'] ?? null;
+    if ($token !== null) {
+        if (preg_match('/^[A-Za-z0-9,-]{22,256}$/', $token)) {
+            session_id($token);
+        }
+        // Devolve o token atual em toda resposta: ele muda no login (session_regenerate_id) e fica
+        // vazio no logout. O cliente guarda o valor recebido (compartilhado/js/api-client.js).
+        header_register_callback(static function (): void {
+            header('X-Reobote-Session: ' . (session_status() === PHP_SESSION_ACTIVE ? session_id() : ''));
+        });
+    }
     session_start();
 
     // A expiracao real e controlada aqui: sessoes comuns duram algumas horas; "manter conectado" dura dias.
