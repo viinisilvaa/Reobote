@@ -145,6 +145,10 @@ route('POST', '/api/me/attendance', static function (PDO $db): void {
         // Falta: inicio do dia depois do limite (1 h por padrao) sem justificativa da Central e recusado.
         if (in_array($item['type'], ['vehicle_checkin', 'unit_checkin'], true) && ($block = reobote_absence_block($db, $employee, $item['at'])) !== null) {
             $results[$item['index']] = ['clientId' => $item['clientId'], 'eventType' => $item['type'], 'status' => 'rejected', 'error' => $block];
+            // Avisa a Central (uma vez por dia por colaborador), para justificar a falta e liberar o registro.
+            reobote_notify($db, 'absence', $employee['name'] . ' tentou registrar o ponto, mas o dia está como falta',
+                'Tentativa às ' . reobote_local_time($item['at']) . ' (' . (REOBOTE_EVENT_TYPES[$item['type']] ?? 'registro') . ') recusada pelo aplicativo. Se ele avisou, justifique a falta no perfil para liberar o registro.',
+                (string) $employee['id'], null, 'absence-blocked:' . $employee['id'] . ':' . $item['at']->setTimezone(reobote_timezone())->format('Y-m-d'));
             continue;
         }
         // GPS falso: registro com posicao impossivel em relacao a anterior ("teletransporte") e recusado.
