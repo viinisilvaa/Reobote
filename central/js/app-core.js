@@ -114,7 +114,7 @@
   }
 
   const eventIcons = {
-    vehicle_checkin: "fa-van-shuttle", unit_checkin: "fa-hospital", arrival: "fa-right-to-bracket",
+    vehicle_checkin: "fa-van-shuttle", unit_checkin: "fa-hospital", unit_checkout: "fa-person-walking-arrow-right", arrival: "fa-right-to-bracket",
     break_start: "fa-utensils", break_end: "fa-mug-hot", departure: "fa-flag-checkered"
   };
 
