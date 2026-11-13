@@ -85,17 +85,20 @@ route('GET', '/api/dashboard', static function (PDO $db): void {
         if ($state['state'] === 'finished') {
             $metrics['finished']++;
         }
-        if ($todayDay !== null && $todayDay['lateMinutes'] > 0) {
-            $metrics['late']++;
-        }
-        if ($todayDay !== null && $todayDay['status'] === 'not_arrived' && $state['state'] === 'waiting') {
+        // Atrasados hoje: chegou depois da tolerância, ou ainda não chegou mas não passou do limite da falta.
+        // Faltas hoje: dia marcado como falta (sem registro após o limite, ou chegou tão tarde que contou falta).
+        // Quem já está como falta NÃO conta também como atrasado: é só falta.
+        if ($todayDay !== null && $todayDay['status'] === 'absent') {
             $metrics['absent']++;
+        } elseif ($todayDay !== null && ($todayDay['lateMinutes'] > 0 || ($todayDay['status'] === 'not_arrived' && $state['state'] === 'waiting'))) {
+            $metrics['late']++;
         }
         $metrics['overtimeMinutes'] += $journey['totals']['overtimeMinutes'];
         $metrics['lateMinutes'] += $journey['totals']['lateMinutes'];
         $team[] = reobote_employee_public($db, $row, $state) + [
             'todayStatus' => $todayDay['status'] ?? 'off',
             'todayLateMinutes' => $todayDay['lateMinutes'] ?? 0,
+            'todayArrivalDelayMinutes' => $todayDay['arrivalDelayMinutes'] ?? 0, // > 0: chegou tão tarde que contou falta
         ];
     }
 
