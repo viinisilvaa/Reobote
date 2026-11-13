@@ -119,7 +119,7 @@ route('GET', '/api/dashboard', static function (PDO $db): void {
 
     $query = $db->query(
         'SELECT a.id, a.employee_id, a.event_type, a.occurred_at, a.received_at, a.unit_id, a.qr_code_id, a.source, a.notes, a.distance_m,
-                un.name AS unit_name, q.label AS qr_label, e.name, e.photo_path, j.name AS job_name
+                COALESCE(un.name, a.unit_name) AS unit_name, COALESCE(q.label, a.qr_label) AS qr_label, e.name, e.photo_path, j.name AS job_name
          FROM attendance_events a
          JOIN employees e ON e.id = a.employee_id
          LEFT JOIN jobs j ON j.id = e.job_id
@@ -253,7 +253,7 @@ route('GET', '/api/notifications', static function (PDO $db): void {
     $limit = max(1, min(200, (int) ($_GET['limit'] ?? 50)));
     // Para chegadas à unidade, traz também o responsável da unidade (botão "Avisar no WhatsApp").
     $sql = 'SELECT n.id, n.type, n.title, n.detail, n.employee_id, n.created_at, r.read_at, e.photo_path, e.name AS employee_name,
-                   ev.occurred_at AS event_at, un.name AS unit_name, un.responsible_name, un.responsible_phone
+                   ev.occurred_at AS event_at, COALESCE(un.name, ev.unit_name) AS unit_name, un.responsible_name, un.responsible_phone
             FROM notifications n
             LEFT JOIN notification_reads r ON r.notification_id = n.id AND r.user_id = ?
             LEFT JOIN employees e ON e.id = n.employee_id
