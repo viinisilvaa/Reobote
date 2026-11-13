@@ -146,6 +146,11 @@ function reobote_record_event(PDO $db, array $employee, string $type, DateTimeIm
     if ($validate) {
         $previous = reobote_load_events($db, (string) $employee['id'], $at->modify('-36 hours')->format('Y-m-d H:i:s'), $at->modify('+1 second')->format('Y-m-d H:i:s'));
         $state = reobote_state_from_events($previous, $at);
+        // Saída da unidade: em atendimento, ler de novo o QR Code da MESMA unidade da chegada (ex.: vai embora
+        // de ônibus, sem veículo) registra a saída e o técnico passa para "Em deslocamento".
+        if ($type === 'unit_checkin' && ($options['source'] ?? 'mobile') === 'mobile' && $unitId !== null && reobote_current_unit_checkin($state)['unitId'] === $unitId) {
+            $type = 'unit_checkout';
+        }
         $problem = reobote_check_transition($state, $type, $unitId, $qrCodeId, $at);
         if ($problem === 'duplicate') {
             return ['status' => 'duplicate', 'eventId' => $state['lastEvent']['id']];
@@ -229,7 +234,8 @@ function reobote_record_event(PDO $db, array $employee, string $type, DateTimeIm
     }
     reobote_notify_event($db, $employee, $event, $journeyDay);
 
-    return ['status' => 'recorded', 'eventId' => $eventId, 'distanceM' => $distance, 'place' => $event['unitName'] ?? $event['qrLabel']];
+    // eventType: tipo final do registro (a leitura do QR da unidade pode virar "Saída da unidade").
+    return ['status' => 'recorded', 'eventId' => $eventId, 'eventType' => $type, 'distanceM' => $distance, 'place' => $event['unitName'] ?? $event['qrLabel']];
 }
 
 // Fotos de identificacao (storage/photos) e de atestados (storage/atestados): armazenadas fora da pasta
