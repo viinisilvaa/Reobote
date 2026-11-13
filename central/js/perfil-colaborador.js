@@ -374,7 +374,7 @@ window.ReobotePage = {
         subtitle: `${data.employee.name} • use quando o colaborador não conseguiu registrar pelo aplicativo.`,
         submitLabel: "Lançar registro",
         body: `<label class="field"><span>Tipo *</span><select class="text-control" name="eventType" required>
-            <option value="vehicle_checkin">Chegada ao veículo</option><option value="unit_checkin" selected>Chegada à unidade</option>
+            <option value="vehicle_checkin">Chegada ao veículo</option><option value="unit_checkin" selected>Chegada à unidade</option><option value="unit_checkout">Saída da unidade</option>
             <option value="break_start">Início do almoço</option><option value="break_end">Retorno do almoço</option><option value="departure">Encerramento da jornada</option></select></label>
           <label class="field"><span>Data e hora *</span><input class="text-control" type="datetime-local" name="occurredAt" required value="${esc(now)}" max="${esc(now)}"></label>
           <label class="field"><span>Unidade</span><select class="text-control" name="unitId"><option value="">Não se aplica</option>${units.filter(u => u.active).map(u => `<option value="${esc(u.id)}" ${u.id === data.employee.unitId ? "selected" : ""}>${esc(u.name)}</option>`).join("")}</select></label>
