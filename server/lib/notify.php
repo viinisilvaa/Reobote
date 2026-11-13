@@ -7,6 +7,7 @@ declare(strict_types=1);
 const REOBOTE_NOTIFICATION_ICONS = [
     'vehicle_checkin' => 'fa-van-shuttle',
     'unit_checkin' => 'fa-hospital',
+    'unit_checkout' => 'fa-person-walking-arrow-right', // saída da unidade (sem veículo)
     'arrival' => 'fa-right-to-bracket',
     'break_start' => 'fa-utensils',
     'break_end' => 'fa-mug-hot',
@@ -70,6 +71,7 @@ function reobote_notify_event(PDO $db, array $employee, array $event, ?array $jo
     $titles = [
         'vehicle_checkin' => "$name chegou ao veículo" . ($place ? " $place" : ''),
         'unit_checkin' => "$name chegou à unidade" . ($place ? " $place" : ''),
+        'unit_checkout' => "$name saiu da unidade" . ($place ? " $place" : '') . ' (em deslocamento)',
         'arrival' => "$name registrou entrada",
         'break_start' => "$name iniciou o almoço",
         'break_end' => "$name retornou do almoço",
