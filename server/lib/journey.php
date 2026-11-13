@@ -294,6 +294,10 @@ function reobote_schedule_description(array $schedule): string
 
 // Calculo diario ------------------------------------------------------------------------------
 
+// Quanto tempo antes do início previsto um registro já conta como chegada para a jornada do dia.
+// Registros mais cedo que isso (e sem continuação) não contam como presença: o dia pode virar falta.
+const REOBOTE_EARLY_ARRIVAL_MINUTES = 180;
+
 // Atraso (em minutos) a partir do qual o dia conta como falta. Vem de Configurações ("Chegou atrasado,
 // conta falta após", em horas; padrão 5 h).
 function reobote_late_absence_minutes(): int
@@ -359,11 +363,21 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
             $flags = array_merge($flags, $shift['flags']);
         }
 
-        if ($dayShifts) {
-            $ongoing = (bool) array_filter($dayShifts, static fn ($s) => $s['ongoing']);
+        // Turnos que contam como presença no dia de trabalho: os que têm registro a partir de 3 h antes do
+        // início previsto (REOBOTE_EARLY_ARRIVAL_MINUTES). Um registro solto de madrugada (ex.: um teste
+        // às 00:42 para uma escala das 08:00, sem continuação) aparece no histórico, mas não impede a falta.
+        $attendShifts = $dayShifts;
+        if ($workday && $expectedStart !== null) {
+            $earliest = $expectedStart->getTimestamp() - REOBOTE_EARLY_ARRIVAL_MINUTES * 60;
+            $attendShifts = array_values(array_filter($dayShifts,
+                static fn ($s) => $s['lastEvent']['at']->getTimestamp() >= $earliest));
+        }
+
+        if ($attendShifts) {
+            $ongoing = (bool) array_filter($attendShifts, static fn ($s) => $s['ongoing']);
             $status = $ongoing ? 'in_progress' : 'worked';
             if ($workday && $expectedStart !== null) {
-                $delay = reobote_minutes($expectedStart, $dayShifts[0]['start']);
+                $delay = reobote_minutes($expectedStart, $attendShifts[0]['start']);
                 $late = $delay > $tolerance ? $delay : 0;
                 $extra = $worked - $expected;
                 $overtime = !$ongoing && $extra > $tolerance ? $extra : 0;
@@ -399,7 +413,7 @@ function reobote_journey(PDO $db, array $employee, string $from, string $to, ?Da
         if ($date <= $today && $workday) {
             $totals['expectedMinutes'] += $expected;
         }
-        if ($dayShifts) {
+        if ($attendShifts) {
             $totals['daysWorked']++;
         }
         if ($status === 'absent') {
@@ -567,8 +581,9 @@ function reobote_absence_block(PDO $db, array $employee, DateTimeImmutable $at):
     if ($at->getTimestamp() <= $start->getTimestamp() + $limit * 60) {
         return null;
     }
-    // Ja registrou algo hoje (jornada em andamento ou retomada): nao bloqueia.
-    $dayStart = (new DateTimeImmutable($date . ' 00:00:00', $tz))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+    // Ja registrou algo na jornada de hoje (em andamento ou retomada): nao bloqueia. Só contam registros a
+    // partir de 3 h antes do início previsto: um registro solto de madrugada não libera o ponto atrasado.
+    $dayStart = $start->modify('-' . REOBOTE_EARLY_ARRIVAL_MINUTES . ' minutes')->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
     $query = $db->prepare('SELECT COUNT(*) FROM attendance_events WHERE employee_id = ? AND voided_at IS NULL AND occurred_at >= ? AND occurred_at < ?');
     $query->execute([$employee['id'], $dayStart, $at->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s')]);
     if ((int) $query->fetchColumn() > 0 || reobote_load_justifications($db, (string) $employee['id'], $date, $date)) {
