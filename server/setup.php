@@ -432,6 +432,21 @@ $migrations[11] = static function (PDO $pdo): void {
     add_column($pdo, 'qr_codes', 'deleted_at', 'DATETIME NULL');
 };
 
+// 12) Excluir unidade ou QR Code apaga de verdade do banco (o nome fica livre para cadastrar de novo).
+//     O registro de ponto guarda uma cópia do nome da unidade e da descrição do QR Code, para o histórico
+//     continuar mostrando o local depois da exclusão. As unidades e QR Codes que a versão anterior só
+//     escondia (deleted_at) são apagados agora.
+$migrations[12] = static function (PDO $pdo): void {
+    add_column($pdo, 'attendance_events', 'unit_name', 'VARCHAR(160) NULL AFTER `unit_id`');
+    add_column($pdo, 'attendance_events', 'qr_label', 'VARCHAR(160) NULL AFTER `qr_code_id`');
+    $pdo->exec('UPDATE attendance_events a JOIN units u ON u.id = a.unit_id SET a.unit_name = u.name WHERE u.deleted_at IS NOT NULL');
+    $pdo->exec('UPDATE attendance_events a JOIN qr_codes q ON q.id = a.qr_code_id LEFT JOIN units u ON u.id = q.unit_id
+                SET a.qr_label = q.label WHERE q.deleted_at IS NOT NULL OR u.deleted_at IS NOT NULL');
+    $pdo->exec('UPDATE employees e JOIN units u ON u.id = e.unit_id SET e.unit_id = NULL WHERE u.deleted_at IS NOT NULL');
+    $pdo->exec('DELETE q FROM qr_codes q LEFT JOIN units u ON u.id = q.unit_id WHERE q.deleted_at IS NOT NULL OR u.deleted_at IS NOT NULL');
+    $pdo->exec('DELETE FROM units WHERE deleted_at IS NOT NULL');
+};
+
 $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
   version INT UNSIGNED NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
