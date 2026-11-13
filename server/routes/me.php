@@ -54,8 +54,23 @@ function api_me_today_payload(PDO $db, array $employee): array
         'shiftEvents' => $state['shift'] ? array_map('reobote_event_public', $state['shift']['events']) : [],
         'day' => $day,
         'actions' => api_allowed_actions($state),
+        // QR Code da unidade onde ele está agora: lido de novo, vira "Saída da unidade" (o app prevê isso mesmo sem internet).
+        'unitCheckinQr' => api_me_unit_checkin_qr($db, $state),
         'serverTime' => $now->format('Y-m-d\TH:i:s\Z'),
     ];
+}
+
+// Conteúdo ("REOBOTE:U:...") do QR Code da unidade onde o técnico está, ou null.
+function api_me_unit_checkin_qr(PDO $db, array $state): ?string
+{
+    $qrCodeId = reobote_current_unit_checkin($state)['qrCodeId'];
+    if ($qrCodeId === null) {
+        return null;
+    }
+    $query = $db->prepare('SELECT token FROM qr_codes WHERE id = ?');
+    $query->execute([$qrCodeId]);
+    $token = $query->fetchColumn();
+    return $token ? 'REOBOTE:U:' . $token : null;
 }
 
 // Situação do dia para o aplicativo.
@@ -166,7 +181,7 @@ route('POST', '/api/me/attendance', static function (PDO $db): void {
             'clientId' => $item['clientId'], 'qr' => $item['qr'], 'latitude' => $item['lat'], 'longitude' => $item['lng'],
             'accuracy' => $item['accuracy'], 'source' => 'mobile', 'notes' => $item['notes'], 'userId' => $user['id'],
         ]);
-        $results[$item['index']] = ['clientId' => $item['clientId'], 'eventType' => $item['type']] + $outcome;
+        $results[$item['index']] = ['clientId' => $item['clientId'], 'eventType' => $outcome['eventType'] ?? $item['type']] + $outcome;
     }
     ksort($results);
     reobote_json(['results' => array_values($results), 'today' => api_me_today_payload($db, $employee)]);
