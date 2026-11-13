@@ -9,9 +9,10 @@
   // Para onde ir depois de salvar a senha: página pedida, aplicativo (sem acesso à Central) ou painel.
   function next() {
     const requested = new URLSearchParams(location.search).get("return");
-    if (!session?.user.centralAccess) return "/app/";
-    if (requested && /^\/central\/[a-z-]+\.html(\?[\w=&%-]*)?$/.test(requested) && !/entrar|trocar-senha/.test(requested)) return requested;
-    return session.user.permissions.includes("dashboard") ? "/central/painel-principal.html" : "/central/configuracoes.html";
+    if (!session?.user.centralAccess) return api.appUrl();
+    // api.page() acrescenta o começo do site quando a Central está no GitHub Pages.
+    if (requested && /^\/central\/[a-z-]+\.html(\?[\w=&%-]*)?$/.test(requested) && !/entrar|trocar-senha/.test(requested)) return api.page(requested);
+    return api.page(session.user.permissions.includes("dashboard") ? "/central/painel-principal.html" : "/central/configuracoes.html");
   }
 
   api.get("/api/auth/me").then(data => {
@@ -41,6 +42,6 @@
   });
 
   document.querySelector("#password-logout").addEventListener("click", () => {
-    api.post("/api/auth/logout", {}).finally(() => location.assign("/central/entrar.html"));
+    api.post("/api/auth/logout", {}).finally(() => location.assign(api.page("/central/entrar.html")));
   });
 })();
