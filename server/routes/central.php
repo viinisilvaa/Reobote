@@ -119,7 +119,8 @@ route('GET', '/api/dashboard', static function (PDO $db): void {
 
     $query = $db->query(
         'SELECT a.id, a.employee_id, a.event_type, a.occurred_at, a.received_at, a.unit_id, a.qr_code_id, a.source, a.notes, a.distance_m,
-                COALESCE(un.name, a.unit_name) AS unit_name, COALESCE(q.label, a.qr_label) AS qr_label, e.name, e.photo_path, j.name AS job_name
+                COALESCE(un.name, a.unit_name) AS unit_name, COALESCE(q.label, a.qr_label) AS qr_label, e.name, e.photo_path, j.name AS job_name,
+                un.radius_m AS unit_radius, e.unit_id AS employee_unit_id
          FROM attendance_events a
          JOIN employees e ON e.id = a.employee_id
          LEFT JOIN jobs j ON j.id = e.job_id
