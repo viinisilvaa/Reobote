@@ -5,7 +5,7 @@ window.ReobotePage = {
   async mount(root, R) {
     const { esc, api, fmt } = R;
     const types = {
-      "": "Todos os tipos", vehicle_checkin: "Chegada ao veículo", unit_checkin: "Chegada à unidade", break_start: "Início do almoço",
+      "": "Todos os tipos", vehicle_checkin: "Chegada ao veículo", unit_checkin: "Chegada à unidade", unit_checkout: "Saída da unidade", break_start: "Início do almoço",
       break_end: "Retorno do almoço", departure: "Encerramento", late: "Atrasos", absence: "Ausências", overtime: "Horas extras",
       out_of_range: "Fora do raio da unidade", fake_gps: "GPS falso", access_request: "Pedidos de acesso"
     };
