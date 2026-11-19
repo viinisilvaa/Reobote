@@ -5,11 +5,23 @@
 [data-page="help"] .help-search { margin: 0 0 10px; }
 
 /* Formato das perguntas expansíveis e respostas. */
-[data-page="help"] .faq-item { padding: 13px 2px; border-bottom: 1px solid #e5e8f1; }
-[data-page="help"] .faq-item summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #302b45; font-size: 11px; font-weight: 600; cursor: pointer; list-style: none; }
+[data-page="help"] .faq-item { padding: 0; border-bottom: 1px solid #e5e8f1; }
+[data-page="help"] .faq-item summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 8px; border-radius: 8px; color: #302b45; font-size: 14px; font-weight: 600; line-height: 1.4; cursor: pointer; list-style: none; }
+[data-page="help"] .faq-item summary:hover { background: #f4efff; }
+[data-page="help"] .faq-item summary:focus-visible { outline: 2px solid #8e6bd0; outline-offset: 2px; }
+[data-page="help"] .faq-item summary i { flex: 0 0 auto; color: #5423bd; font-size: 12px; transition: transform .15s ease; }
 [data-page="help"] .faq-item summary::-webkit-details-marker { display: none; }
 [data-page="help"] .faq-item[open] summary i { transform: rotate(180deg); }
-[data-page="help"] .faq-item p { margin: 10px 0 0; color: #656078; font-size: 10px; line-height: 1.6; }
+[data-page="help"] .faq-item p { margin: 0; padding: 0 8px 16px; color: #5f5873; font-size: 13px; line-height: 1.65; }
+
+/* Tema escuro: perguntas claras, respostas legíveis e linhas discretas (antes ficava texto escuro no fundo escuro). */
+html[data-theme="dark"] [data-page="help"] .faq-item { border-bottom-color: var(--dark-border, #403650); }
+html[data-theme="dark"] [data-page="help"] .faq-item summary { color: var(--dark-text, #f7f4ff); }
+html[data-theme="dark"] [data-page="help"] .faq-item summary:hover { background: #2f2741; }
+html[data-theme="dark"] [data-page="help"] .faq-item summary i { color: #c7adff; }
+html[data-theme="dark"] [data-page="help"] .faq-item p { color: var(--dark-muted, #d0c8df); }
+html[data-theme="dark"] body[data-page="help"] .app-dashboard .help-search input { border: 0; background: transparent; color: var(--dark-text, #f7f4ff); }
+html[data-theme="dark"] [data-page="help"] .help-search input::placeholder { color: #a99cc4; }
 
 /* Mantém busca e suporte em uma coluna em telas menores. */
 @media (max-width: 1050px) {
