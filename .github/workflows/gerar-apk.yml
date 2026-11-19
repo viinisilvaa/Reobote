@@ -44,7 +44,7 @@ jobs:
           node-version: 20
 
       - name: Instalar Java 17 (necessário para compilar Android)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
