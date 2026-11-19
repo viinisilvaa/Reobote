@@ -85,7 +85,7 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk ../reobote.apk
 
       - name: Guardar o APK nos artefatos desta execução
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: reobote-apk
           path: aplicativo-android/reobote.apk
