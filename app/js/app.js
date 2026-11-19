@@ -206,6 +206,16 @@
     return address;
   }
 
+  // Página de privacidade e cookies (fica no servidor; no APK, abre no navegador do celular).
+  // Sem servidor configurado no APK, o link não aparece.
+  function privacyUrl() {
+    if (isNative) return api.baseUrl ? api.url("/central/privacidade.html") : "";
+    return api.page("/central/privacidade.html");
+  }
+
+  // Campo-armadilha contra robôs: invisível para pessoas; se chegar preenchido, o servidor recusa.
+  const BOT_TRAP = '<div class="bot-trap" aria-hidden="true"><label>Site<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>';
+
   // Endereço completo de uma página da Central (no APK, abre no navegador do celular).
   function centralUrl() {
     return isNative ? api.url("/central/painel-principal.html") : "/central/painel-principal.html";
@@ -279,7 +289,7 @@
     return { state, pendingEvents, lastScan, unitQr };
   }
 
-  // Mesmas regras de sequência do servidor (server/lib/journey.php), para responder na hora mesmo sem internet.
+  // Mesmas regras de sequência do servidor (php/lib/journey.php), para responder na hora mesmo sem internet.
   // Retorna a mensagem de erro, ou null quando o registro é permitido.
   function localCheck(type, qr) {
     const { state, lastScan } = predicted();
@@ -1315,15 +1325,18 @@
         <label>E-mail<input name="email" type="email" autocomplete="username" required maxlength="190"></label>
         <label>Senha<input name="password" type="password" autocomplete="current-password" required maxlength="256"></label>
         <label class="m-check"><input type="checkbox" name="remember" checked> Manter conectado neste celular</label>
+        ${BOT_TRAP}
         <p class="m-form-error" role="alert" hidden></p>
         <button type="submit" class="m-button primary">Entrar</button>
       </form>
       <button type="button" class="m-link" data-action="forgot">Esqueci minha senha</button>
       <form id="app-forgot-form" class="m-form" hidden>
         <label>Seu e-mail<input name="email" type="email" required maxlength="190" autocomplete="username"></label>
+        ${BOT_TRAP}
         <button type="submit" class="m-button ghost">Avisar a administração</button>
         <p class="m-hint" role="status" hidden></p>
       </form>
+      ${privacyUrl() ? `<p class="m-hint m-privacy">Ao entrar, você concorda com o uso dos seus dados para o controle da jornada. <a href="${esc(privacyUrl())}" target="_blank" rel="noopener">Privacidade e cookies</a></p>` : ""}
     </section>`;
   }
 
@@ -1353,6 +1366,12 @@
   function logout() {
     stopLocationWatch();
     stopBackgroundTracking();
+    // Privacidade em celular compartilhado: apaga do aparelho o histórico, o dia e a foto da conta.
+    // A fila de registros ainda não enviados FICA guardada (é enviada quando a mesma conta entrar de novo).
+    if (store && storeKey) {
+      store = { queue: store.queue || [], rejected: store.rejected || [], today: null, history: null, photo: null, clockOffset: store.clockOffset || 0 };
+      saveStore();
+    }
     try {
       localStorage.removeItem(SESSION_KEY);
       localStorage.setItem(LOGGED_OUT_KEY, "1");
@@ -1535,11 +1554,11 @@
     try {
       if (isNative && !api.baseUrl) throw Object.assign(new Error("offline"), { offline: true });
       if (form.id === "app-login-form") {
-        const result = await api.post("/api/auth/login", { email: data.get("email"), password: data.get("password"), remember: data.has("remember") }, { handleAuth: false });
+        const result = await api.post("/api/auth/login", { email: data.get("email"), password: data.get("password"), remember: data.has("remember"), website: data.get("website") || "" }, { handleAuth: false });
         await enter(result);
       }
       if (form.id === "app-forgot-form") {
-        const { message } = await api.post("/api/auth/forgot", { email: data.get("email") }, { handleAuth: false });
+        const { message } = await api.post("/api/auth/forgot", { email: data.get("email"), website: data.get("website") || "" }, { handleAuth: false });
         const status = form.querySelector(".m-hint");
         status.textContent = message;
         status.hidden = false;

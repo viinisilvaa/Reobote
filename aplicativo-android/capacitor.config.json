@@ -6,7 +6,8 @@
     "androidScheme": "https"
   },
   "android": {
-    "allowMixedContent": true
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": false
   },
   "plugins": {
     "CapacitorHttp": {

@@ -347,3 +347,9 @@ html[data-theme="dark"] .m-earnings li { border-color: #1f5a3a; color: #dff5e7; 
 
 /* Notificações: botão "Ver mais" (mostra mais 5 por vez). */
 .m-more-button { width: 100%; margin-top: 10px; }
+
+/* Campo-armadilha contra robôs: fora da tela para pessoas; robôs que preenchem tudo são barrados. */
+.bot-trap { position: absolute !important; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+/* Aviso e link de privacidade na tela de entrada. */
+.m-privacy { margin-top: 14px; }
+.m-privacy a { color: var(--m-purple); font-weight: 700; }

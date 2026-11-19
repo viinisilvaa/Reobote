@@ -9,6 +9,8 @@
  *      e a permissão de notificação, usados para acompanhar o técnico com a tela apagada);
  *    - usesCleartextTraffic: permite servidor em http:// (útil em testes na rede Wi-Fi).
  *      Em produção, prefira um servidor com https://.
+ *    - allowBackup="false": os dados do app (sessão e registros guardados) não podem ser copiados
+ *      do celular por backup ou cabo USB.
  * 2. Ícone do aplicativo: usa app/icons/icon-512.png em todas as densidades de tela.
  * 3. Textos da notificação fixa de localização (strings.xml), em português.
  * 3b. Código nativo próprio (pasta ../nativo): detector de GPS falso (MockLocationPlugin) e a
@@ -48,6 +50,12 @@ for (const line of permissions) {
 }
 if (!manifest.includes("usesCleartextTraffic")) {
   manifest = manifest.replace("<application", '<application\n        android:usesCleartextTraffic="true"');
+}
+// Sem backup dos dados do app (o padrão do Capacitor é "true").
+if (manifest.includes('android:allowBackup="true"')) {
+  manifest = manifest.replace('android:allowBackup="true"', 'android:allowBackup="false"');
+} else if (!manifest.includes("android:allowBackup")) {
+  manifest = manifest.replace("<application", '<application\n        android:allowBackup="false"');
 }
 writeFileSync(manifestPath, manifest);
 
