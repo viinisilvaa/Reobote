@@ -6,21 +6,20 @@ Instalação, configuração do mapa, geração do APK, regras de jornada, segur
 ## Instalação
 
 1. Instale o PHP 8.1 ou superior com as extensões `pdo_mysql` e `mbstring`, e de preferência também a `gd` (ela redimensiona as fotos e remove os metadados delas). Instale também o MySQL 8 ou o MariaDB 10.6 ou superior.
-2. Copie `.env.example` para `php/.env` e preencha os dados do banco e o `SESSION_SECRET`, que precisa de pelo menos 32 caracteres aleatórios.
+2. Copie `.env.example` para `php/.env` e preencha os dados do banco e o `SESSION_SECRET`, que precisa de pelo menos 32 caracteres aleatórios. A `DATA_KEY` (chave que criptografa salário e telefones) é criada sozinha no passo 3. **Guarde uma cópia do `php/.env` em lugar seguro**: sem a `DATA_KEY`, esses dados não podem ser lidos.
 3. Execute `php php/setup.php`. Ele cria ou atualiza o banco sem apagar dados. O mesmo comando também cria as jornadas e os cargos iniciais (Ajudante Geral, Técnico Júnior, Técnico Pleno e Supervisor) e os feriados nacionais fixos. Pode ser executado de novo depois de cada atualização do sistema.
 4. Crie o primeiro administrador com `php php/create-user.php`. As demais contas são criadas pela Central, em **Colaboradores**.
 5. Para testar localmente, rode `php -S 127.0.0.1:3000 php/router.php` e acesse `http://localhost:3000/central/` (Central) ou `http://localhost:3000/app/` (aplicativo).
 6. Em produção, use **HTTPS** com Apache e os módulos `mod_rewrite` e `mod_headers` (o `.htaccess` já está pronto). A câmera, o GPS e a instalação do aplicativo só funcionam em HTTPS, com exceção do `localhost`.
 7. O mapa usa o OpenStreetMap, que é gratuito e **não precisa de chave**.
 
-Faça backup diário do banco (`mysqldump`) e da pasta `php/storage`, que guarda as fotos.
+Faça backup diário do banco (`mysqldump`), da pasta `php/storage`, que guarda as fotos, e do arquivo `php/.env`.
 
 ## Rodar no XAMPP (Windows)
 
 O XAMPP pode servir o REOBOTE direto da pasta do projeto, na porta 3000. Assim, basta dar **Start** no **Apache** e no **MySQL** pelo painel do XAMPP e abrir `http://localhost:3000/central/`.
 
-No final de `C:
-mpp\apache\confxtra\httpd-vhosts.conf`, acrescente (troque o caminho pela pasta do projeto):
+No final de `C:\xampp\apache\conf\extra\httpd-vhosts.conf`, acrescente (troque o caminho pela pasta do projeto):
 
 ```apache
 Listen 3000
@@ -123,7 +122,14 @@ O aplicativo guarda cada registro no celular com o **horário original**, já co
 
 ### Segurança e LGPD
 
-- A sessão usa cookie `HttpOnly`, e as senhas são guardadas com hash. As operações de escrita exigem a mesma origem e o cabeçalho `X-Reobote`. O login tem limite de tentativas.
+- A sessão usa cookie `HttpOnly` e `SameSite`, e as senhas são guardadas com hash. As operações de escrita exigem a mesma origem e o cabeçalho `X-Reobote`.
+- **Limite de tentativas:** 5 senhas erradas bloqueiam a conta por 15 minutos (de qualquer lugar), e 10 tentativas erradas bloqueiam o endereço IP. Pelo túnel da Cloudflare, o IP real vem do cabeçalho `CF-Connecting-IP`.
+- **Proteção contra robôs:** o login e o "Esqueci minha senha" (Central e aplicativo) têm um campo-armadilha invisível; quem o preenche é recusado.
+- **Dados sensíveis criptografados:** salário e telefones ficam no banco com AES-256-GCM (chave `DATA_KEY` do `php/.env`). Um backup do banco sozinho não revela esses dados, e a auditoria registra só que eles mudaram.
+- **HTTPS e cabeçalhos:** pela internet, `http://` vai para `https://` e o navegador recebe HSTS; CSP, `X-Frame-Options`, `nosniff` e outros cabeçalhos protegem as páginas, e a versão do PHP não é revelada. Pastas internas (`php/`) e arquivos ocultos respondem 404.
+- **Privacidade e cookies:** a página `central/html/privacidade.html` explica os dados usados, os prazos e os direitos pela LGPD. O sistema usa só cookies necessários.
+- **APK:** sem backup dos dados do app e sem depuração do WebView. Ao sair, o app apaga do celular o histórico e a foto da conta (os registros ainda não enviados ficam guardados).
+- **Dependências:** o Dependabot do GitHub avisa sobre falhas conhecidas nas bibliotecas do APK e nas automações.
 - As permissões são verificadas no servidor a cada requisição, conforme o perfil da conta (Administrador, Gestor ou Colaborador) e as permissões do cargo. Desativar um cadastro bloqueia o acesso na hora.
 - As fotos ficam fora da pasta pública (`php/storage/photos`) e só são entregues a quem pode ver o colaborador.
 - A localização é coletada somente durante a jornada (do início ao encerramento), com aviso ao colaborador na tela **Perfil** do aplicativo, e fica guardada por 30 dias.
