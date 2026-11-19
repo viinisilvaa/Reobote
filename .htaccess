@@ -2,18 +2,36 @@
 Options -Indexes
 # A Central fica em /central/ e o aplicativo do colaborador em /app/.
 DirectoryIndex index.html entrar.html
+# Página "não encontrada" com o técnico da REOBOTE (central/html/404.html).
+ErrorDocument 404 /central/html/404.html
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  # Arquivos internos (API, configuração, fotos) e arquivos ocultos nunca são públicos.
+  # Força HTTPS: pela internet (túnel da Cloudflare), um acesso feito em http:// volta para https://.
+  # Na rede local (Wi-Fi, http://192.168...:3000) o cabeçalho não existe e nada muda.
+  RewriteCond %{HTTP:X-Forwarded-Proto} =http
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+  # Arquivos internos (API, configuração, fotos, registros de log) e arquivos ocultos nunca são públicos.
+  # Respondem "não encontrado" (404), para nem revelar que existem.
   # A condição vale só para o endereço pedido pelo navegador: o redirecionamento interno da API
-  # para server/router.php (regra abaixo) não pode ser bloqueado.
+  # para php/router.php (regra abaixo) não pode ser bloqueado.
   RewriteCond %{ENV:REDIRECT_STATUS} ^$
-  RewriteRule ^server(?:/|$) - [NC,F,L]
-  RewriteRule (^|/)\. - [NC,F,L]
-  RewriteRule ^api(?:/|$) server/router.php [QSA,L]
-  RewriteRule ^$ central/entrar.html [R=302,L]
-  RewriteRule ^app$ app/ [R=302,L]
+  RewriteRule ^(php|server)(?:/|$) - [NC,R=404,L]
+  RewriteRule (^|/)\. - [NC,R=404,L]
+  RewriteRule ^api(?:/|$) php/router.php [QSA,L]
+  # %{REQUEST_URI} mantém o começo certo do endereço (antes ia para /C:/xampp/... por engano).
+  RewriteRule ^$ %{REQUEST_URI}central/entrar.html [R=302,L]
+  RewriteRule ^(app|central)$ %{REQUEST_URI}/ [R=302,L]
+
+  # Páginas: os arquivos ficam em central/html/ e app/html/, mas os endereços continuam os mesmos
+  # (/central/entrar.html, /app/). Como o endereço no navegador não muda, os caminhos usados dentro
+  # das páginas (css/, js/, assets/, ../compartilhado/) continuam funcionando.
+  # Quem abrir direto a pasta html/ é levado ao endereço normal.
+  RewriteCond %{ENV:REDIRECT_STATUS} ^$
+  RewriteRule ^(central|app)/html/(.*)$ /$1/$2 [R=301,L]
+  RewriteRule ^central/$ central/html/entrar.html [L]
+  RewriteRule ^central/([^/]+\.html)$ central/html/$1 [L]
+  RewriteRule ^app/(?:index\.html)?$ app/html/index.html [L]
 </IfModule>
 
 <IfModule mod_mime.c>
@@ -27,7 +45,13 @@ DirectoryIndex index.html entrar.html
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "geolocation=(self), camera=(self), microphone=()"
   Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://github.com https://*.githubusercontent.com; connect-src 'self'; frame-src 'self'; worker-src 'self' blob:; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
-  Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on'"
+  # HSTS: o navegador passa a usar sempre HTTPS. Vale também pelo túnel, onde o HTTPS termina na Cloudflare.
+  Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on' || %{HTTP:X-Forwarded-Proto} == 'https'"
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set X-Permitted-Cross-Domain-Policies "none"
+  # Não revela a versão do PHP (ajuda quem procura falhas conhecidas).
+  Header always unset X-Powered-By
+  Header unset X-Powered-By
   # Páginas, scripts e estilos: o navegador sempre confere com o servidor se há versão nova (resposta
   # rápida "não mudou" quando é igual). Assim cada atualização aparece sem precisar de Ctrl+F5.
   <FilesMatch "\.(html|js|mjs|css|webmanifest)$">

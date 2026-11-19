@@ -93,3 +93,26 @@
   .login-page { padding: 16px; }
   .login-card { padding: 28px 22px; }
 }
+
+/* Campo-armadilha contra robôs: fora da tela para pessoas; robôs que preenchem tudo são barrados. */
+.bot-trap { position: absolute !important; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* Link de privacidade e aviso de cookies (só cookies necessários: apenas informa). */
+.login-privacy-link { margin-top: 6px; font-size: 12px; }
+.login-privacy-link a { color: inherit; }
+.cookie-notice {
+  position: fixed; left: 50%; bottom: 16px; z-index: 50; transform: translateX(-50%);
+  width: min(620px, calc(100vw - 32px)); padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px;
+  border: 1px solid #e0d9ef; border-radius: 12px; background: #fff; color: #211544;
+  box-shadow: 0 10px 30px rgba(33, 21, 68, .18); font-size: 13px; line-height: 1.45;
+}
+.cookie-notice[hidden] { display: none; }
+.cookie-notice p { margin: 0; flex: 1 1 auto; }
+.cookie-notice i { color: #5423bd; margin-right: 4px; }
+.cookie-notice a { color: #5423bd; font-weight: 700; }
+.cookie-notice button { flex: 0 0 auto; min-height: 38px; padding: 0 18px; border: 0; border-radius: 8px; background: #5423bd; color: #fff; font: 700 13px/1 Inter, "Segoe UI", sans-serif; cursor: pointer; }
+.cookie-notice button:hover { background: #46199f; }
+html[data-theme="dark"] .cookie-notice { border-color: #514367; background: #2a2339; color: #f1ebff; }
+html[data-theme="dark"] :is(.cookie-notice i, .cookie-notice a) { color: #c7adff; }
+@media (max-width: 520px) { .cookie-notice { flex-direction: column; align-items: stretch; } }

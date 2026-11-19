@@ -10,7 +10,7 @@
  *
  * Uso: npm run preparar  (executado automaticamente pelo GitHub antes de gerar o APK)
  */
-import { cpSync, mkdirSync, rmSync, writeFileSync, existsSync, copyFileSync, readFileSync, appendFileSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, renameSync, writeFileSync, existsSync, copyFileSync, readFileSync, appendFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -34,6 +34,10 @@ for (const folder of ["app", "compartilhado"]) {
     filter: path => !path.endsWith("sw.js")
   });
 }
+// No projeto a página do app fica em app/html/index.html; no APK ela vai para app/index.html, ao lado de
+// css/ e js/ (mesmo lugar do endereço /app/ no servidor), para os caminhos relativos funcionarem.
+renameSync(join(www, "app", "html", "index.html"), join(www, "app", "index.html"));
+rmSync(join(www, "app", "html"), { recursive: true, force: true });
 
 // Endereço do servidor embutido no APK. Vem da variável de ambiente SERVIDOR_APP
 // (no GitHub: Settings > Secrets and variables > Actions > Variables > SERVIDOR_APP).

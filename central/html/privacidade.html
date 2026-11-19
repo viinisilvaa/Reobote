@@ -1,0 +1,99 @@
+<!-- REOBOTE | central/html/privacidade.html — Privacidade e cookies (LGPD): quais dados o REOBOTE usa, por quê e por quanto tempo -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#32115f">
+  <title>REOBOTE | Privacidade e cookies</title>
+  <link rel="icon" href="../compartilhado/assets/reobote-mark.png">
+  <style>
+    :root { --bg: #f4f1fa; --card: #fff; --text: #211544; --muted: #5f5379; --line: #e6dff3; --accent: #5423bd; --soft: #f4efff; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #17131f; --card: #221d2e; --text: #f1ebff; --muted: #b3a6cc; --line: #3a3050; --accent: #c7adff; --soft: #2c2440; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.65 Inter, "Segoe UI", system-ui, sans-serif; }
+    header { padding: 28px 16px 64px; background: linear-gradient(135deg, #32115f, #5423bd 60%, #18b841); color: #fff; }
+    .wrap { max-width: 820px; margin: 0 auto; }
+    .brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 800; letter-spacing: .5px; text-decoration: none; }
+    .brand img { width: 36px; height: 36px; }
+    header h1 { margin: 26px 0 6px; font-size: clamp(26px, 5vw, 36px); line-height: 1.2; }
+    header p { margin: 0; opacity: .9; }
+    main { margin: -40px auto 40px; padding: 0 16px; }
+    article { max-width: 820px; margin: 0 auto; padding: clamp(20px, 4vw, 40px); border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: 0 10px 30px rgba(33, 21, 68, .08); }
+    h2 { margin: 32px 0 8px; font-size: 19px; }
+    h2:first-child { margin-top: 0; }
+    p, li { color: var(--muted); }
+    strong { color: var(--text); }
+    ul { padding-left: 20px; }
+    table { width: 100%; margin: 10px 0; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--text); }
+    td { color: var(--muted); }
+    td code { color: var(--text); font-size: 13px; }
+    .table-scroll { overflow-x: auto; }
+    .note { padding: 14px 16px; border-radius: 10px; background: var(--soft); color: var(--text); }
+    a { color: var(--accent); font-weight: 700; }
+    .back { display: inline-block; margin-top: 28px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <a class="brand" href="entrar.html"><img src="../compartilhado/assets/reobote-mark.png" alt=""> REOBOTE</a>
+      <h1>Privacidade e cookies</h1>
+      <p>Quais dados o REOBOTE usa, para quê e por quanto tempo. Atualizado em novembro de 2026.</p>
+    </div>
+  </header>
+  <main>
+    <article>
+      <h2>Para que o REOBOTE usa seus dados</h2>
+      <p>O REOBOTE é o sistema de controle de jornada da sua empresa. Os dados servem para <strong>registrar o ponto</strong> (chegada, almoço, saída), <strong>acompanhar a equipe em campo</strong> durante a jornada e <strong>gerar relatórios</strong> exigidos pela legislação trabalhista. A empresa em que você trabalha é a responsável (controladora) por esses dados, conforme a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018).</p>
+
+      <h2>Quais dados são coletados</h2>
+      <ul>
+        <li><strong>Cadastro:</strong> nome, e-mail, matrícula, cargo, jornada, unidade, telefone e foto.</li>
+        <li><strong>Salário</strong> (quando a empresa cadastra), usado só para calcular o valor das horas trabalhadas.</li>
+        <li><strong>Registros de ponto:</strong> data, hora, unidade e QR Code lido.</li>
+        <li><strong>Localização (GPS):</strong> somente durante a jornada (da primeira leitura de QR Code até o encerramento) e depois da sua autorização no aplicativo. Fora da jornada, nada é enviado.</li>
+        <li><strong>Dados do aparelho:</strong> informações técnicas do aplicativo para detectar falhas e uso de GPS falso.</li>
+      </ul>
+
+      <h2>Como os dados são protegidos</h2>
+      <ul>
+        <li>Senhas guardadas apenas como <strong>hash</strong> (ninguém, nem a administração, consegue ver a sua senha).</li>
+        <li><strong>Salário e telefones criptografados</strong> no banco de dados (AES-256).</li>
+        <li>Fotos regravadas pelo sistema, sem os metadados da câmera (como a localização da foto).</li>
+        <li>Acesso pela internet sempre em <strong>HTTPS</strong>, com bloqueio após tentativas de senha erradas.</li>
+        <li>Cada pessoa só vê o que o perfil dela permite; alterações importantes ficam registradas na auditoria.</li>
+      </ul>
+
+      <h2>Cookies e armazenamento no navegador</h2>
+      <p>O REOBOTE usa <strong>apenas cookies necessários</strong> para funcionar. Não usamos cookies de propaganda, de análise nem de rastreamento, e nenhum dado é vendido ou compartilhado com anunciantes.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Nome</th><th>Para que serve</th><th>Duração</th></tr></thead>
+          <tbody>
+            <tr><td><code>reobote_sid</code></td><td>Mantém você conectado com segurança (cookie protegido, inacessível a scripts).</td><td>Até sair, 10 horas, ou 30 dias com “Manter conectado”</td></tr>
+            <tr><td><code>reobote_cache</code></td><td>Controle técnico para o navegador carregar a versão mais nova das telas.</td><td>1 ano</td></tr>
+            <tr><td>Armazenamento local</td><td>Tema claro/escuro, aviso de cookies já visto, endereço do servidor e registros de ponto feitos sem internet (enviados quando a conexão volta).</td><td>Até você limpar os dados do navegador</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Por quanto tempo os dados ficam guardados</h2>
+      <ul>
+        <li><strong>Localização (GPS):</strong> apagada automaticamente depois de 30 dias.</li>
+        <li><strong>Tentativas de login:</strong> apagadas depois de 1 dia (guardadas só como código irreversível, sem o IP em texto).</li>
+        <li><strong>Notificações:</strong> exibidas por 90 dias.</li>
+        <li><strong>Registros de ponto:</strong> mantidos pelo prazo exigido pela legislação trabalhista, mesmo após o desligamento.</li>
+      </ul>
+
+      <h2>Seus direitos</h2>
+      <p>Pela LGPD, você pode pedir para <strong>confirmar e acessar</strong> seus dados, <strong>corrigir</strong> dados errados, saber <strong>com quem foram compartilhados</strong> e pedir a <strong>exclusão</strong> do que não for obrigatório por lei. Faça o pedido à <strong>administração da sua empresa</strong>, responsável pelo REOBOTE.</p>
+      <p class="note">Dúvidas sobre os seus dados? Fale com a administração da sua empresa ou com o encarregado de dados (DPO) dela.</p>
+
+      <a class="back" href="entrar.html">← Voltar para o REOBOTE</a>
+    </article>
+  </main>
+</body>
+</html>

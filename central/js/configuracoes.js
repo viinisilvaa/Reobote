@@ -56,7 +56,7 @@ window.ReobotePage = {
           <li>Fotos de identificação ficam armazenadas no servidor e só são exibidas para quem tem acesso à equipe.</li>
           <li>A localização por GPS só é coletada com autorização do próprio colaborador, que pode revogá-la no aplicativo. As localizações contínuas são mantidas por 30 dias.</li>
           <li>Registros de jornada não são apagados: correções são feitas por lançamento ou anulação justificados, registrados neste histórico.</li>
-          <li>Faça backup diário do banco de dados (por exemplo, com <code>mysqldump</code>) e da pasta <code>server/storage</code>.</li>
+          <li>Faça backup diário do banco de dados (por exemplo, com <code>mysqldump</code>) e da pasta <code>php/storage</code>.</li>
         </ul>
       </section>`;
 

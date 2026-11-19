@@ -1,0 +1,55 @@
+<!-- REOBOTE | app/html/index.html — Aplicativo: página do app do colaborador -->
+<!-- Aplicativo REOBOTE do colaborador (pasta separada da Central): login, registro por QR Code, almoço, encerramento e histórico. -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#32115f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="REOBOTE">
+  <title>REOBOTE | Aplicativo</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+  <!-- Ícones guardados dentro do app para funcionar sem internet (também no APK). -->
+  <link rel="stylesheet" href="vendor/fontawesome/css/fontawesome.min.css">
+  <link rel="stylesheet" href="vendor/fontawesome/css/solid.min.css">
+</head>
+<body>
+  <div class="m-app" id="app">
+    <!-- Cabeçalho: marca REOBOTE, parceiros e sino (vai para a aba Notificações). -->
+    <header class="m-header">
+      <div class="m-header-top">
+        <div class="m-brand"><img src="../compartilhado/assets/reobote-mark.png" alt=""><div><strong>REOBOTE</strong><small>Tecnologia que conecta.</small></div></div>
+        <button type="button" class="m-bell" id="header-bell" data-tab="notifications" aria-label="Notificações"><i class="fa-solid fa-bell"></i><b class="m-badge" id="bell-badge" hidden></b></button>
+      </div>
+      <div class="m-partners">
+        <span>Em parceria com</span>
+        <div><img src="../compartilhado/assets/intelbras-logo.png" alt="Intelbras"><img src="../compartilhado/assets/rede-americas-logo.png" alt="Rede Américas"></div>
+      </div>
+    </header>
+
+    <main class="m-main" id="screen" tabindex="-1">
+      <p class="m-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</p>
+    </main>
+
+    <!-- Barra inferior com as quatro abas. -->
+    <nav class="m-tabs" aria-label="Navegação do aplicativo">
+      <button type="button" data-tab="home" class="active"><i class="fa-solid fa-house"></i><span>Início</span></button>
+      <button type="button" data-tab="profile"><i class="fa-solid fa-user"></i><span>Perfil</span></button>
+      <button type="button" data-tab="notifications"><i class="fa-solid fa-bell"></i><span>Notificações</span><b class="m-badge" id="tab-badge" hidden></b></button>
+      <button type="button" data-tab="more"><i class="fa-solid fa-ellipsis"></i><span>Mais</span></button>
+    </nav>
+  </div>
+  <div class="m-toast" id="toast" role="status" aria-live="polite"></div>
+  <div id="dialog-root"></div>
+  <script src="../compartilhado/js/theme.js"></script>
+  <script src="../compartilhado/js/api-client.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/vendor/jsQR.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!-- REOBOTE | central/html/404.html — Página não encontrada: técnico da REOBOTE conferindo os cabos da rede -->
+<!-- Tudo fica dentro deste arquivo (desenho e estilo), porque ele é mostrado em qualquer endereço do site. -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#32115f">
+  <meta name="robots" content="noindex">
+  <title>REOBOTE | Página não encontrada</title>
+  <link rel="icon" href="/compartilhado/assets/reobote-mark.png">
+  <style>
+    :root { --bg: #f4f1fa; --card: #fff; --text: #211544; --muted: #5f5379; --line: #e6dff3; --accent: #5423bd; --accent-2: #18b841; --rack: #2b2240; --rack-unit: #3b3056; --floor: rgba(33, 21, 68, .10); --ghost: rgba(84, 35, 189, .08); }
+    @media (prefers-color-scheme: dark) { :root { --bg: #17131f; --card: #221d2e; --text: #f1ebff; --muted: #b3a6cc; --line: #3a3050; --accent: #c7adff; --rack: #0f0c16; --rack-unit: #2a2339; --floor: rgba(0, 0, 0, .35); --ghost: rgba(199, 173, 255, .07); } }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px 16px; background: var(--bg); color: var(--text); font: 15px/1.6 Inter, "Segoe UI", system-ui, sans-serif; }
+    main { width: min(760px, 100%); padding: clamp(20px, 4vw, 40px); border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: 0 16px 40px rgba(33, 21, 68, .10); text-align: center; }
+    svg { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto 8px; }
+    .eyebrow { margin: 0 auto; color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: 13px; }
+    h1 { margin: 6px 0 10px; font-size: clamp(24px, 4.5vw, 34px); line-height: 1.2; }
+    p { max-width: 520px; margin: 0 auto; color: var(--muted); }
+    .actions { margin-top: 24px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+    .actions a { min-height: 44px; padding: 0 20px; display: inline-flex; align-items: center; border-radius: 10px; font-weight: 700; text-decoration: none; }
+    .primary { background: #5423bd; color: #fff; }
+    .primary:hover { background: #46199f; }
+    .secondary { border: 1px solid var(--line); color: var(--text); }
+    .secondary:hover { background: var(--ghost); }
+    /* Luzes do rack piscando e faísca do cabo solto. */
+    .led { animation: blink 1.4s steps(2, start) infinite; }
+    .led.d2 { animation-delay: .35s; } .led.d3 { animation-delay: .7s; } .led.d4 { animation-delay: 1.05s; }
+    .spark { transform-origin: 300px 214px; animation: spark .9s ease-in-out infinite; }
+    .arm { transform-origin: 214px 196px; animation: work 2.4s ease-in-out infinite; }
+    @keyframes blink { to { opacity: .15; } }
+    @keyframes spark { 0%, 100% { opacity: 0; transform: scale(.6); } 50% { opacity: 1; transform: scale(1); } }
+    @keyframes work { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-6deg); } }
+    @media (prefers-reduced-motion: reduce) { .led, .spark, .arm { animation: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <svg viewBox="0 0 560 330" role="img" aria-labelledby="art-title">
+      <title id="art-title">Técnico da REOBOTE conferindo os cabos de um rack de rede</title>
+      <!-- 404 grande ao fundo -->
+      <text x="280" y="190" text-anchor="middle" font-size="190" font-weight="900" fill="var(--ghost)" font-family="Inter, Segoe UI, sans-serif">404</text>
+      <!-- chão -->
+      <ellipse cx="290" cy="300" rx="230" ry="16" fill="var(--floor)"/>
+
+      <!-- rack de rede -->
+      <rect x="330" y="70" width="150" height="225" rx="10" fill="var(--rack)"/>
+      <g fill="var(--rack-unit)">
+        <rect x="342" y="84" width="126" height="34" rx="5"/><rect x="342" y="126" width="126" height="34" rx="5"/>
+        <rect x="342" y="168" width="126" height="34" rx="5"/><rect x="342" y="210" width="126" height="34" rx="5"/>
+        <rect x="342" y="252" width="126" height="30" rx="5"/>
+      </g>
+      <!-- portas -->
+      <g fill="#0b0912">
+        <rect x="352" y="96" width="12" height="10" rx="2"/><rect x="370" y="96" width="12" height="10" rx="2"/><rect x="388" y="96" width="12" height="10" rx="2"/><rect x="406" y="96" width="12" height="10" rx="2"/>
+        <rect x="352" y="138" width="12" height="10" rx="2"/><rect x="370" y="138" width="12" height="10" rx="2"/><rect x="388" y="138" width="12" height="10" rx="2"/><rect x="406" y="138" width="12" height="10" rx="2"/>
+        <rect x="352" y="180" width="12" height="10" rx="2"/><rect x="370" y="180" width="12" height="10" rx="2"/><rect x="388" y="180" width="12" height="10" rx="2"/><rect x="406" y="180" width="12" height="10" rx="2"/>
+        <rect x="352" y="222" width="12" height="10" rx="2"/><rect x="370" y="222" width="12" height="10" rx="2"/><rect x="388" y="222" width="12" height="10" rx="2"/><rect x="406" y="222" width="12" height="10" rx="2"/>
+      </g>
+      <!-- luzes -->
+      <circle class="led" cx="440" cy="101" r="4" fill="#18b841"/><circle class="led d2" cx="454" cy="101" r="4" fill="#18b841"/>
+      <circle class="led d3" cx="440" cy="143" r="4" fill="#18b841"/><circle class="led d4" cx="454" cy="143" r="4" fill="#f5b400"/>
+      <circle class="led d2" cx="440" cy="185" r="4" fill="#f32942"/><circle class="led" cx="454" cy="185" r="4" fill="#f32942"/>
+      <circle class="led d3" cx="440" cy="227" r="4" fill="#18b841"/><circle class="led d4" cx="454" cy="227" r="4" fill="#18b841"/>
+      <!-- cabos ligados -->
+      <g fill="none" stroke-width="4" stroke-linecap="round">
+        <path d="M358 106 C 350 130, 344 150, 340 170" stroke="#7c4dff"/>
+        <path d="M376 148 C 366 170, 352 196, 344 230" stroke="#18b841"/>
+        <path d="M394 106 C 400 140, 404 170, 400 200" stroke="#f5b400"/>
+        <path d="M412 232 C 420 250, 426 266, 430 290" stroke="#7c4dff"/>
+      </g>
+      <!-- cabo solto: sai da porta vazia e chega na mão do técnico -->
+      <path d="M394 190 C 360 210, 330 230, 304 216" fill="none" stroke="#f32942" stroke-width="5" stroke-linecap="round"/>
+      <rect x="292" y="208" width="16" height="12" rx="2" fill="#d9d2e8" transform="rotate(-12 300 214)"/>
+      <!-- faísca -->
+      <g class="spark" stroke="#f5b400" stroke-width="3" stroke-linecap="round">
+        <path d="M300 196 L300 186"/><path d="M314 202 L322 195"/><path d="M286 202 L278 195"/>
+      </g>
+
+      <!-- técnico -->
+      <!-- pernas e botas -->
+      <rect x="168" y="222" width="20" height="62" rx="8" fill="#2b2240"/>
+      <rect x="194" y="222" width="20" height="62" rx="8" fill="#2b2240"/>
+      <rect x="160" y="280" width="30" height="14" rx="6" fill="#151020"/>
+      <rect x="192" y="280" width="30" height="14" rx="6" fill="#151020"/>
+      <!-- corpo (uniforme roxo com faixa verde) -->
+      <rect x="156" y="148" width="70" height="86" rx="20" fill="#5423bd"/>
+      <rect x="156" y="196" width="70" height="8" fill="#18b841"/>
+      <!-- cinto de ferramentas -->
+      <rect x="158" y="222" width="66" height="10" rx="3" fill="#3a2a0f"/>
+      <rect x="168" y="226" width="14" height="16" rx="3" fill="#6b4f1d"/>
+      <!-- crachá com o R -->
+      <rect x="166" y="160" width="20" height="24" rx="4" fill="#fff"/>
+      <text x="176" y="178" text-anchor="middle" font-size="15" font-weight="900" fill="#5423bd" font-family="Inter, Segoe UI, sans-serif">R</text>
+      <!-- braço de trás segurando a lanterna -->
+      <rect x="140" y="156" width="18" height="58" rx="9" fill="#4a1fa6"/>
+      <circle cx="149" cy="216" r="9" fill="#c98b5e"/>
+      <!-- braço da frente estendido até o cabo -->
+      <g class="arm">
+        <rect x="206" y="164" width="76" height="18" rx="9" fill="#4a1fa6" transform="rotate(22 214 172)"/>
+        <circle cx="288" cy="208" r="10" fill="#c98b5e"/>
+      </g>
+      <!-- cabeça, capacete e rosto -->
+      <rect x="182" y="132" width="18" height="18" rx="6" fill="#c98b5e"/>
+      <circle cx="191" cy="114" r="26" fill="#c98b5e"/>
+      <path d="M163 108 C 163 84, 219 84, 219 108 Z" fill="#5423bd"/>
+      <rect x="158" y="104" width="66" height="9" rx="4" fill="#4a1fa6"/>
+      <text x="191" y="102" text-anchor="middle" font-size="16" font-weight="900" fill="#fff" font-family="Inter, Segoe UI, sans-serif">R</text>
+      <circle cx="200" cy="120" r="3" fill="#211544"/>
+      <path d="M194 131 Q 202 135, 208 129" fill="none" stroke="#211544" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- balão de fala -->
+      <rect x="44" y="60" width="124" height="44" rx="12" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+      <path d="M140 102 L152 118 L150 102 Z" fill="var(--card)" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="140" y="98" width="14" height="6" fill="var(--card)"/>
+      <text x="106" y="88" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" font-family="Inter, Segoe UI, sans-serif">Achei o cabo!</text>
+    </svg>
+
+    <p class="eyebrow">Erro 404</p>
+    <h1>Essa página saiu da rede</h1>
+    <p>Nosso técnico da REOBOTE está conferindo os cabos, mas a página que você procurou não existe ou mudou de endereço.</p>
+    <div class="actions">
+      <a class="primary" href="/central/entrar.html">Ir para a Central</a>
+      <a class="secondary" href="/app/">Abrir o aplicativo</a>
+    </div>
+  </main>
+</body>
+</html>

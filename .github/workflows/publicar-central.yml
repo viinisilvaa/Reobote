@@ -48,6 +48,8 @@ jobs:
         run: |
           mkdir -p site
           cp -r central compartilhado site/
+          # No projeto as páginas ficam em central/html/; no site elas vão para central/ (mesmos endereços).
+          mv site/central/html/* site/central/ && rmdir site/central/html
           # Endereço principal (https://viinisilvaa.github.io/Reobote/) abre o login da Central.
           cat > site/index.html <<'HTML'
           <!doctype html>

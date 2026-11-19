@@ -39,7 +39,8 @@
     try {
       const data = new FormData(loginForm);
       const session = await window.ReoboteApi.post("/api/auth/login", {
-        email: data.get("email"), password: data.get("password"), remember: data.has("remember")
+        email: data.get("email"), password: data.get("password"), remember: data.has("remember"),
+        website: data.get("website") || "" // campo-armadilha contra robôs (pessoas deixam vazio)
       }, { handleAuth: false });
       location.assign(destination(session));
     } catch (error) {
@@ -63,7 +64,7 @@
     const submit = forgotForm.querySelector("button");
     submit.disabled = true;
     try {
-      const { message } = await window.ReoboteApi.post("/api/auth/forgot", { email: forgotForm.elements.email.value }, { handleAuth: false });
+      const { message } = await window.ReoboteApi.post("/api/auth/forgot", { email: forgotForm.elements.email.value, website: forgotForm.elements.website.value }, { handleAuth: false });
       forgotMessage.textContent = message;
     } catch (error) {
       forgotMessage.textContent = error.message;
@@ -71,5 +72,15 @@
       forgotMessage.hidden = false;
       submit.disabled = false;
     }
+  });
+
+  // Aviso de cookies: aparece até a pessoa clicar em "Entendi" (lembrado neste navegador).
+  const cookieNotice = document.querySelector("#cookie-notice");
+  let cookieSeen = false;
+  try { cookieSeen = localStorage.getItem("reobote-cookies-ok") === "1"; } catch { cookieSeen = false; }
+  if (cookieNotice && !cookieSeen) cookieNotice.hidden = false;
+  document.querySelector("#cookie-ok")?.addEventListener("click", () => {
+    cookieNotice.hidden = true;
+    try { localStorage.setItem("reobote-cookies-ok", "1"); } catch { /* navegador sem armazenamento */ }
   });
 })();

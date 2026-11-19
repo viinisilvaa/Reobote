@@ -1,8 +1,8 @@
 # REOBOTE | .gitignore — Arquivos que não vão para o GitHub (senhas, fotos e APK gerado)
 # Senhas e chaves do servidor: NUNCA enviar para o GitHub.
-server/.env
+php/.env
 # Fotos dos colaboradores (dados pessoais, LGPD) e outros arquivos enviados.
-server/storage/
+php/storage/
 # Dependências do Composer, se um dia forem usadas (só na raiz; as pastas js/vendor do projeto DEVEM ir).
 /vendor/
 # APK gerado (baixe do GitHub e coloque aqui no servidor; não precisa ir para o repositório).

@@ -6,14 +6,14 @@ Instalação, configuração do mapa, geração do APK, regras de jornada, segur
 ## Instalação
 
 1. Instale o PHP 8.1 ou superior com as extensões `pdo_mysql` e `mbstring`, e de preferência também a `gd` (ela redimensiona as fotos e remove os metadados delas). Instale também o MySQL 8 ou o MariaDB 10.6 ou superior.
-2. Copie `.env.example` para `server/.env` e preencha os dados do banco e o `SESSION_SECRET`, que precisa de pelo menos 32 caracteres aleatórios.
-3. Execute `php server/setup.php`. Ele cria ou atualiza o banco sem apagar dados. O mesmo comando também cria as jornadas e os cargos iniciais (Ajudante Geral, Técnico Júnior, Técnico Pleno e Supervisor) e os feriados nacionais fixos. Pode ser executado de novo depois de cada atualização do sistema.
-4. Crie o primeiro administrador com `php server/create-user.php`. As demais contas são criadas pela Central, em **Colaboradores**.
-5. Para testar localmente, rode `php -S 127.0.0.1:3000 server/router.php` e acesse `http://localhost:3000/central/` (Central) ou `http://localhost:3000/app/` (aplicativo).
+2. Copie `.env.example` para `php/.env` e preencha os dados do banco e o `SESSION_SECRET`, que precisa de pelo menos 32 caracteres aleatórios.
+3. Execute `php php/setup.php`. Ele cria ou atualiza o banco sem apagar dados. O mesmo comando também cria as jornadas e os cargos iniciais (Ajudante Geral, Técnico Júnior, Técnico Pleno e Supervisor) e os feriados nacionais fixos. Pode ser executado de novo depois de cada atualização do sistema.
+4. Crie o primeiro administrador com `php php/create-user.php`. As demais contas são criadas pela Central, em **Colaboradores**.
+5. Para testar localmente, rode `php -S 127.0.0.1:3000 php/router.php` e acesse `http://localhost:3000/central/` (Central) ou `http://localhost:3000/app/` (aplicativo).
 6. Em produção, use **HTTPS** com Apache e os módulos `mod_rewrite` e `mod_headers` (o `.htaccess` já está pronto). A câmera, o GPS e a instalação do aplicativo só funcionam em HTTPS, com exceção do `localhost`.
 7. O mapa usa o OpenStreetMap, que é gratuito e **não precisa de chave**.
 
-Faça backup diário do banco (`mysqldump`) e da pasta `server/storage`, que guarda as fotos.
+Faça backup diário do banco (`mysqldump`) e da pasta `php/storage`, que guarda as fotos.
 
 ## Rodar no XAMPP (Windows)
 
@@ -34,7 +34,7 @@ Listen 3000
 </VirtualHost>
 ```
 
-Depois, no painel do XAMPP, clique em **Stop** e em **Start** no Apache. O `.htaccess` do projeto cuida das rotas da API e bloqueia o acesso à pasta `server/`.
+Depois, no painel do XAMPP, clique em **Stop** e em **Start** no Apache. O `.htaccess` do projeto cuida das rotas da API e bloqueia o acesso à pasta `php/`.
 
 ## Mapa em tempo real
 
@@ -55,7 +55,7 @@ O APK é gerado automaticamente na nuvem do GitHub, de graça. Não é preciso i
 1. Crie uma conta em https://github.com, se ainda não tiver.
 2. Instale o **GitHub Desktop** (https://desktop.github.com) e entre com a sua conta.
 3. No GitHub Desktop, use **File > Add local repository** e escolha a pasta `Reobote`. Ele vai avisar que a pasta não é um repositório: clique em **create a repository** e depois em **Create repository**.
-4. Clique em **Publish repository**. Pode deixar o repositório como privado. O arquivo `server/.env`, que tem as senhas, **não** é enviado, porque está no `.gitignore`.
+4. Clique em **Publish repository**. Pode deixar o repositório como privado. O arquivo `php/.env`, que tem as senhas, **não** é enviado, porque está no `.gitignore`.
 5. No site do GitHub, abra o repositório e vá em **Actions**. A automação **Gerar APK do aplicativo** começa sozinha e leva uns 5 minutos. Se ela não aparecer, clique nela e depois em **Run workflow**.
 6. Quando terminar, o arquivo `reobote.apk` aparece em **Releases**, na coluna da direita da página do repositório.
 
@@ -77,7 +77,7 @@ A página **Aplicativo** da Central (no menu lateral) apresenta o aplicativo e m
 
 ### Testar no celular antes de ter um servidor na internet
 
-1. Inicie o servidor aceitando conexões da rede: `php -S 0.0.0.0:3000 server/router.php`.
+1. Inicie o servidor aceitando conexões da rede: `php -S 0.0.0.0:3000 php/router.php`.
 2. Descubra o IP do computador. No Windows, rode `ipconfig` e anote o "Endereço IPv4", por exemplo `192.168.0.10`.
 3. No app, na tela de login, **toque 5 vezes no logotipo REOBOTE**. Abre a tela **Servidor**: informe `http://192.168.0.10:3000` e toque em **Salvar**. O celular precisa estar no mesmo Wi-Fi. Se não conectar, libere a porta 3000 no Firewall do Windows.
 
@@ -109,7 +109,7 @@ Em **Unidades e QR Codes**, cada unidade pode ter um **responsável** e o **What
 
 Os registros de ponto nunca são apagados. No aplicativo (**Meu Histórico**) e no perfil do colaborador na Central, dá para consultar os últimos 7 dias, um mês inteiro (até 12 meses atrás), o último ano ou um período personalizado de até 1 ano, com horário de chegada, atrasos, faltas e horas extras.
 
-### Regras de jornada (calculadas no servidor, em `server/lib/journey.php`)
+### Regras de jornada (calculadas no servidor, em `php/lib/journey.php`)
 
 - **Turno**: começa na primeira leitura de QR Code e termina no encerramento. Turnos que atravessam a meia-noite contam para o dia em que começaram. Se o colaborador esquecer de encerrar, o turno é fechado depois do intervalo configurado (16 h por padrão) e aparece como pendência.
 - **Atraso**: diferença entre o primeiro registro do dia e a entrada prevista. Só é contado quando passa da tolerância.
@@ -125,24 +125,26 @@ O aplicativo guarda cada registro no celular com o **horário original**, já co
 
 - A sessão usa cookie `HttpOnly`, e as senhas são guardadas com hash. As operações de escrita exigem a mesma origem e o cabeçalho `X-Reobote`. O login tem limite de tentativas.
 - As permissões são verificadas no servidor a cada requisição, conforme o perfil da conta (Administrador, Gestor ou Colaborador) e as permissões do cargo. Desativar um cadastro bloqueia o acesso na hora.
-- As fotos ficam fora da pasta pública (`server/storage/photos`) e só são entregues a quem pode ver o colaborador.
+- As fotos ficam fora da pasta pública (`php/storage/photos`) e só são entregues a quem pode ver o colaborador.
 - A localização é coletada somente durante a jornada (do início ao encerramento), com aviso ao colaborador na tela **Perfil** do aplicativo, e fica guardada por 30 dias.
 - Registros de ponto nunca são apagados. Uma correção é feita por **lançamento manual** ou por **anulação**, sempre com justificativa, e fica no **histórico de alterações** (Configurações).
 - Recuperação de acesso: pela opção "Esqueci minha senha", a administração recebe um aviso e gera uma nova senha temporária.
 
 ## Organização do código
 
-A Central e o aplicativo ficam em pastas separadas. Cada um tem as próprias páginas, estilos, scripts e tela de login:
+A Central e o aplicativo ficam em pastas separadas. Cada um tem as próprias páginas (html/), estilos (css/), scripts (js/) e tela de login. Todo o PHP fica em php/.
+As páginas ficam dentro de html/, mas os endereços continuam os mesmos (ex.: /central/entrar.html e /app/): o `.htaccess` (Apache) e o `php/router.php` (php -S) buscam o arquivo na pasta html/.
 
 ```
 central/          Central REOBOTE (painel administrativo)
-  *.html          uma página por área (entrar, painel-principal, colaboradores, cargos, jornadas, unidades, ...)
+  html/           uma página por área (entrar, painel-principal, colaboradores, cargos, jornadas, unidades, ...),
+                  a página 404 (técnico mexendo na rede) e privacidade.html (privacidade e cookies)
   css/            design.css e theme.css (base e tema escuro), components.css e estilos de cada página
   js/             app-core.js (sessão, menu por permissões, diálogos) e um módulo por página
   js/vendor/      qrcode-generator (gera os QR Codes para impressão)
   assets/         logotipos dos parceiros
 app/              Aplicativo REOBOTE do colaborador (PWA)
-  index.html      tela única: login, início, registro por QR Code, histórico e conta
+  html/index.html tela única: login, início, registro por QR Code, histórico e conta
   css/app.css     estilos do aplicativo
   js/app.js       lógica do aplicativo e fila offline
   js/vendor/      jsQR (leitura de QR Code pela câmera)
@@ -157,7 +159,11 @@ aplicativo-android/  projeto que transforma a pasta app/ em APK Android (Capacit
 .github/workflows/gerar-apk.yml  automação do GitHub que compila e publica o APK
 downloads/        coloque aqui o reobote.apk para ser baixado pelo servidor
 docs/capturas/    imagens das telas usadas neste README
-server/           API PHP: api.php, routes/, lib/ (autenticação, motor de jornada, notificações), setup.php e create-user.php
+php/              todo o PHP (servidor e API)
+  api.php, router.php, config.php   entrada da API, roteador do php -S e configuração
+  routes/, lib/     rotas da API e regras (autenticação, motor de jornada, notificações)
+  setup.php, create-user.php        cria/atualiza o banco e o primeiro administrador
+  .env, storage/    senhas e fotos (fora do Git e bloqueados para o navegador)
 ```
 ## Principais rotas da API
 

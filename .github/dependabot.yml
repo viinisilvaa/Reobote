@@ -1,0 +1,16 @@
+# REOBOTE | .github/dependabot.yml — Escaneamento de dependências: o GitHub avisa (e abre um pedido de
+# atualização) quando uma biblioteca do aplicativo Android ou uma ação das automações tem falha conhecida
+# ou versão nova. Os alertas aparecem em Security > Dependabot no GitHub.
+version: 2
+updates:
+  # Bibliotecas do APK (Capacitor e plugins), em aplicativo-android/package.json.
+  - package-ecosystem: "npm"
+    directory: "/aplicativo-android"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  # Ações usadas nas automações (.github/workflows).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
