@@ -301,7 +301,14 @@
               <div><strong>Olá, ${esc(user.name.split(" ")[0])}</strong><p>${esc(session.company.name)} • ${esc(user.roleLabel)}${user.job ? ` • ${esc(user.job)}` : ""}</p></div></div>
             <div class="top-actions">
               ${canNotify ? '<button type="button" class="desktop-alerts-button" id="desktop-alerts" hidden><i class="fa-solid fa-desktop"></i> Ativar avisos no Windows</button>' : ""}
-              ${canNotify ? '<a class="notification-button" href="notificacoes.html" aria-label="Notificações"><i class="fa-solid fa-bell"></i><span hidden></span></a>' : ""}
+              ${canNotify ? `<div class="notification-menu">
+                <button type="button" class="notification-button" id="notification-toggle" aria-label="Notificações" title="Notificações" aria-haspopup="true" aria-expanded="false" aria-controls="notification-panel"><i class="fa-solid fa-bell"></i><span hidden></span></button>
+                <section class="notification-panel" id="notification-panel" aria-label="Notificações" hidden>
+                  <header class="notification-panel-head"><strong>Notificações</strong><button type="button" class="notification-panel-readall" data-panel-read-all hidden><i class="fa-solid fa-check-double"></i> Marcar todas como lidas</button></header>
+                  <div class="notification-panel-list"></div>
+                  <a class="notification-panel-more" href="notificacoes.html">Ver todas as notificações</a>
+                </section>
+              </div>` : ""}
               <button class="theme-toggle" type="button" data-theme-toggle aria-label="Ativar tema escuro" title="Ativar tema escuro" aria-pressed="false"></button>
               <button class="logout" type="button" data-action="logout" title="Sair" aria-label="Sair"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
             </div>
@@ -333,6 +340,91 @@
     } catch {
       // Falhas no contador não interrompem a página.
     }
+  }
+
+  // Painel do sino (estilo Facebook) ---------------------------------------------------------------
+  // Clicar no sino abre a lista das notificações mais recentes logo abaixo dele, sem sair da página.
+  // Clicar numa notificação marca como lida e abre o perfil do colaborador (ou a página Notificações).
+
+  // Página que a notificação abre (mesma regra da página Notificações).
+  function notificationLink(item) {
+    if (item.type === "access_request") return "colaboradores.html";
+    return item.employeeId ? `perfil-colaborador.html?id=${encodeURIComponent(item.employeeId)}` : "notificacoes.html";
+  }
+
+  // Linhas cinzas enquanto carrega (círculo + barras), como no Facebook.
+  function notificationSkeleton() {
+    return Array.from({ length: 6 }, (_, index) => `<div class="notification-skeleton" aria-hidden="true"><span></span><div><i style="width:${[92, 78, 64, 86, 70, 58][index]}%"></i><i></i></div></div>`).join("");
+  }
+
+  function notificationItem(item) {
+    const name = item.title.split(/ (chegou|iniciou|retornou|encerrou|registrou|ainda|saiu|está|faltou|pediu)/)[0];
+    const picture = item.employeeId
+      ? avatar({ employeeId: item.employeeId, hasPhoto: item.hasPhoto, name }, "avatar notification-item-avatar")
+      : `<span class="avatar notification-item-avatar"><i class="fa-solid ${esc(item.icon)}"></i></span>`;
+    return `<a class="notification-item${item.read ? "" : " unread"}" href="${notificationLink(item)}" data-notification-id="${esc(item.id)}">
+        <span class="notification-item-picture">${picture}<span class="notification-item-type type-${esc(item.type)}"><i class="fa-solid ${esc(item.icon)}"></i></span></span>
+        <span class="notification-item-text"><strong>${esc(item.title)}</strong>${item.detail ? `<small>${esc(item.detail)}</small>` : ""}<time datetime="${esc(item.createdAt)}">${fmt.relative(item.createdAt)}</time></span>
+        ${item.read ? "" : '<span class="notification-item-dot" aria-label="Não lida"></span>'}
+      </a>`;
+  }
+
+  async function loadNotificationPanel() {
+    const list = document.querySelector(".notification-panel-list");
+    const readAll = document.querySelector("[data-panel-read-all]");
+    if (!list) return;
+    if (!list.children.length) list.innerHTML = notificationSkeleton();
+    try {
+      const { notifications, unread } = await api.get("/api/notifications?limit=15");
+      readAll.hidden = !unread;
+      list.innerHTML = notifications.length
+        ? notifications.map(notificationItem).join("")
+        : '<p class="notification-panel-empty"><i class="fa-regular fa-bell"></i>Nenhuma notificação por enquanto.</p>';
+    } catch (error) {
+      list.innerHTML = `<p class="notification-panel-empty"><i class="fa-solid fa-triangle-exclamation"></i>${esc(error.message)}</p>`;
+    }
+  }
+
+  function setNotificationPanel(open) {
+    const toggle = document.querySelector("#notification-toggle");
+    const panel = document.querySelector("#notification-panel");
+    if (!toggle || !panel || panel.hidden === !open) return;
+    panel.hidden = !open;
+    // No celular o painel ocupa a largura da tela e começa logo abaixo do sino.
+    panel.style.top = open && matchMedia("(max-width: 700px)").matches ? `${Math.round(toggle.getBoundingClientRect().bottom + 10)}px` : "";
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.classList.toggle("active", open);
+    if (open) loadNotificationPanel();
+  }
+
+  function setupNotificationPanel() {
+    const toggle = document.querySelector("#notification-toggle");
+    const panel = document.querySelector("#notification-panel");
+    if (!toggle || !panel) return;
+    toggle.addEventListener("click", () => setNotificationPanel(panel.hidden));
+    // Clicar fora do painel ou apertar Esc fecha.
+    document.addEventListener("click", event => {
+      if (!panel.hidden && !event.target.closest(".notification-menu")) setNotificationPanel(false);
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !panel.hidden) {
+        setNotificationPanel(false);
+        toggle.focus();
+      }
+    });
+    panel.addEventListener("click", async event => {
+      if (event.target.closest("[data-panel-read-all]")) {
+        await api.post("/api/notifications/read", { all: true }).catch(() => {});
+        refreshBadge();
+        loadNotificationPanel();
+        return;
+      }
+      const item = event.target.closest(".notification-item");
+      if (!item || !item.classList.contains("unread")) return;
+      event.preventDefault();
+      await api.post("/api/notifications/read", { ids: [item.dataset.notificationId] }).catch(() => {});
+      location.assign(item.getAttribute("href"));
+    });
   }
 
   // Avisos em tempo real (estilo WhatsApp) ---------------------------------------------------------
@@ -492,7 +584,7 @@
   // Inicialização: confere a sessão, aplica as permissões, desenha o menu e monta a página atual.
   async function start() {
     if (location.protocol === "file:") {
-      document.body.innerHTML = '<main class="standalone-message"><h1>Abra pelo servidor</h1><p>A Central REOBOTE usa a API PHP. Inicie com <code>php -S 127.0.0.1:3000 server/router.php</code> e acesse <code>http://localhost:3000</code>.</p></main>';
+      document.body.innerHTML = '<main class="standalone-message"><h1>Abra pelo servidor</h1><p>A Central REOBOTE usa a API PHP. Inicie com <code>php -S 127.0.0.1:3000 php/router.php</code> e acesse <code>http://localhost:3000</code>.</p></main>';
       return;
     }
     let session;
@@ -536,6 +628,7 @@
       root.innerHTML = heading(activePage) + `<section class="panel content-panel">${emptyState("fa-triangle-exclamation", "Não foi possível carregar esta página", error.message, '<button type="button" class="button-primary" data-action="reload">Tentar novamente</button>')}</section>`;
     }
     setupDesktopAlertsButton();
+    setupNotificationPanel();
     refreshBadge();
     setInterval(refreshBadge, 10000); // a cada 10 segundos: contador e avisos em tempo real
   }
